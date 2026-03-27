@@ -6,6 +6,7 @@
   <title>Super Admin — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -71,9 +72,14 @@
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:2rem;font-weight:900;color:var(--gold);margin-bottom:0.25rem;">👑 Super Admin</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Institution Administration Portal</p>
-    <div style="text-align:left;margin-bottom:1rem;"><label>Super Admin ID</label><input type="text" id="auth-id" placeholder="SADMIN001"></div>
-    <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass" placeholder="Enter password"></div>
-    <button class="btn btn-gold" style="width:100%" onclick="saLogin()">Login to Super Admin Panel</button>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Super Admin ID <small style="color:var(--muted)">(9 chars)</small></label><input type="text" id="auth-id" placeholder="OVSADM001" maxlength="9" autocomplete="off"></div>
+    <div style="text-align:left;margin-bottom:0.5rem;"><label>Password <small style="color:var(--muted)">(10 chars · 3 letters · 2 numbers · 1 special)</small></label><input type="password" id="auth-pass" placeholder="Enter password" maxlength="10"></div>
+    <!-- OTP section (hidden by default) -->
+    <div id="otp-section" style="display:none;text-align:left;margin-bottom:1rem;margin-top:1rem">
+      <label>OTP <small style="color:var(--muted)">(Sent to registered email)</small></label>
+      <input type="text" id="auth-otp" placeholder="Enter 6-digit OTP" maxlength="6">
+    </div>
+    <button class="btn btn-gold" id="auth-btn" style="width:100%" onclick="saLoginStep()">Login to Super Admin Panel</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
   </div>
 </div>
@@ -119,11 +125,17 @@
       <div class="card">
         <h3>➕ Create Admin</h3>
         <div class="form-grid">
-          <div class="form-field"><label>Admin ID</label><input type="text" id="a-id" placeholder="ADM-CSE"></div>
-          <div class="form-field"><label>Full Name</label><input type="text" id="a-name" placeholder="Mr. Ramesh"></div>
+          <div class="form-field"><label>Admin ID <small style="color:var(--muted)">(7 chars · A-Z & 0-9)</small></label><input type="text" id="a-id" placeholder="ADMCSE01" maxlength="7"></div>
+          <div class="form-field"><label>Full Name <small style="color:var(--muted)">(max 30)</small></label><input type="text" id="a-name" placeholder="Mr. Ramesh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="a-email" placeholder="admin@inst.edu"></div>
-          <div class="form-field"><label>Assigned Branch</label><input type="text" id="a-branch" placeholder="CSE" oninput="this.value=this.value.toUpperCase()"></div>
-          <div class="form-field"><label>Password <small style="color:var(--muted)">(8 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="a-pass" placeholder="e.g. Admin@12"></div>
+          <div class="form-field"><label>Assigned Branch</label>
+            <select id="a-branch">
+              <option value="">-- Select Branch --</option>
+              <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
+              <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
+            </select>
+          </div>
+          <div class="form-field"><label>Password <small style="color:var(--muted)">(8 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="a-pass" placeholder="e.g. Admin@12" maxlength="8"></div>
         </div>
         <button class="btn btn-gold" style="margin-top:1rem" onclick="createAdmin()">Create Admin</button>
       </div>
@@ -142,17 +154,31 @@
       <div class="card">
         <h3>➕ Create Sub-Admin</h3>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID</label><input type="text" id="sa-id" placeholder="SADM-CSE5"></div>
-          <div class="form-field"><label>Full Name</label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted)">(9 chars · A-Z & 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMCSE01" maxlength="9"></div>
+          <div class="form-field"><label>Full Name <small style="color:var(--muted)">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
-          <div class="form-field"><label>Branch</label><input type="text" id="sa-branch" placeholder="CSE" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Branch</label>
+            <select id="sa-branch">
+              <option value="">-- Select Branch --</option>
+              <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
+              <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
+            </select>
+          </div>
           <div class="form-field"><label>Class</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
-          <div class="form-field"><label>Password <small style="color:var(--muted)">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1"></div>
+          <div class="form-field"><label>Password <small style="color:var(--muted)">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1" maxlength="6"></div>
         </div>
         <button class="btn btn-purple" style="margin-top:1rem" onclick="createSubAdminSA()">Create Sub-Admin</button>
       </div>
       <div class="card">
         <h3>📋 All Sub-Admins</h3>
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;">
+          <label style="margin:0;white-space:nowrap;">Filter by Branch:</label>
+          <select id="sa-filter-branch" onchange="applySubAdminFilter()" style="max-width:200px;margin:0">
+            <option value="">All Branches</option>
+            <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
+            <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
+          </select>
+        </div>
         <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Class</th><th>Managed By</th><th>Actions</th></tr></thead>
         <tbody id="subadmin-table"></tbody></table>
       </div>
@@ -162,7 +188,22 @@
     <div class="page" id="page-students">
       <div class="page-title">🎓 All Students</div>
       <div class="page-sub">Full student list for your institution</div>
-      <input class="search-bar" placeholder="🔍 Search by name, ID, branch or class..." oninput="filterStudents(this.value)" id="student-search">
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+        <input class="search-bar" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search by name, ID..." oninput="applyStudentFilters()" id="student-search">
+        <select id="sf-branch" onchange="applyStudentFilters()" style="flex:1;min-width:140px;max-width:180px;margin:0">
+          <option value="">All Branches</option>
+          <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
+          <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
+        </select>
+        <input type="text" id="sf-class" onchange="applyStudentFilters()" placeholder="Class (e.g. CSE-5)" style="flex:1;min-width:140px;max-width:180px;margin:0" oninput="this.value=this.value.toUpperCase();applyStudentFilters();">
+        <select id="sf-year" onchange="applyStudentFilters()" style="flex:1;min-width:120px;max-width:160px;margin:0">
+          <option value="">All Years</option>
+          <option value="1st Year">1st Year</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+          <option value="4th Year">4th Year</option>
+        </select>
+      </div>
       <div class="card" style="padding:0.5rem">
         <table><thead><tr><th>Reg No</th><th>Name</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
@@ -193,7 +234,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'http://localhost:3001/api';
+const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let allStudents = [];
 let chartInstance = null;
@@ -221,24 +262,65 @@ function toast(msg, ok=true) {
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-async function saLogin() {
-  const id = document.getElementById('auth-id').value.trim();
-  const pass = document.getElementById('auth-pass').value;
+async function saLoginStep() {
   const err = document.getElementById('auth-err');
+  const otpSection = document.getElementById('otp-section');
+  const btn = document.getElementById('auth-btn');
   err.textContent = '';
-  try {
-    const user = await apiFetch(`/users/${id}`);
-    if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
-    if (user.status !== 'active') throw new Error('Account is not active.');
-    const hashed = btoa(pass);
-    if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+
+  if (otpSection.style.display === 'none') {
+    // Step 1: Validate credentials
+    const id = document.getElementById('auth-id').value.trim().toUpperCase();
+    const pass = document.getElementById('auth-pass').value;
+    if (id.length !== 9) { err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
+    if (pass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
+    if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password must contain at least 3 letters.'; return; }
+    if ((pass.match(/[0-9]/g)||[]).length < 2) { err.textContent = 'Password must contain at least 2 numbers.'; return; }
+    if (!/[^a-zA-Z0-9]/.test(pass)) { err.textContent = 'Password must contain at least 1 special character.'; return; }
+    try {
+      const user = await apiFetch(`/users/${id}`);
+      if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
+      if (user.status !== 'active') throw new Error('Account is not active.');
+      const hashed = btoa(pass);
+      if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+      // Generate 6-digit OTP and send to registered email
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      window._saOtp = otp;
+      window._saUser = user;
+      btn.textContent = 'Sending OTP...';
+      try {
+        const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
+        const SERVICE_ID = 'service_emwze5b';
+        const TEMPLATE_ID = 'template_vcrerg5';
+        await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+          name: user.name || 'Super Admin',
+          otp: otp,
+          context: 'Super Admin Login',
+          to_email: user.email
+        }, PUBLIC_KEY);
+        otpSection.style.display = 'block';
+        btn.textContent = 'Verify OTP & Login';
+        err.style.color = 'var(--green)';
+        err.textContent = `OTP sent to ${user.email}! Check your inbox.`;
+      } catch(emailErr) {
+        btn.textContent = 'Login to Super Admin Panel';
+        err.style.color = 'var(--red)';
+        err.textContent = 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error');
+      }
+    } catch(e) { err.style.color = 'var(--red)'; err.textContent = e.message; }
+  } else {
+    // Step 2: Validate OTP
+    const enteredOtp = document.getElementById('auth-otp').value.trim();
+    if (enteredOtp !== window._saOtp) { err.style.color='var(--red)'; err.textContent = 'Invalid OTP. Try again.'; return; }
+    const user = window._saUser;
     saSession = user;
+    localStorage.setItem('ovs_currentUser', JSON.stringify(user));
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('main-layout').style.display = 'flex';
     document.getElementById('sa-inst-label').textContent = user.institution || 'Super Admin';
     document.getElementById('inst-name-sub').textContent = user.institution || '';
     loadAll();
-  } catch(e) { err.textContent = e.message; }
+  }
 }
 
 function saLogout() { 
@@ -290,6 +372,7 @@ async function loadAll() {
     }
 
     renderAdminTable(admins);
+    allSubAdmins = subadmins;
     renderSubAdminTable(subadmins);
   } catch(e) { toast(e.message, false); }
 }
@@ -339,23 +422,51 @@ function renderStudents(list) {
 }
 
 function filterStudents(q) {
-  const filtered = allStudents.filter(s => [s.regNum,s.name,s.branch,s.class].join(' ').toLowerCase().includes(q.toLowerCase()));
+  applyStudentFilters();
+}
+
+function applyStudentFilters() {
+  const q = (document.getElementById('student-search').value || '').toLowerCase();
+  const branch = document.getElementById('sf-branch').value;
+  const cls = (document.getElementById('sf-class').value || '').toUpperCase();
+  const year = document.getElementById('sf-year').value;
+  const filtered = allStudents.filter(s => {
+    const matchQ = !q || [s.regNum,s.name,s.branch,s.class].join(' ').toLowerCase().includes(q);
+    const matchBranch = !branch || (s.branch||'') === branch;
+    const matchClass = !cls || (s.class||'').includes(cls);
+    // Year stored as '1st Year', '2nd Year', etc. in the database
+    const matchYear = !year || (s.year||s.class||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
+    return matchQ && matchBranch && matchClass && matchYear;
+  });
   renderStudents(filtered);
+}
+
+let allSubAdmins = [];
+
+function applySubAdminFilter() {
+  const branch = document.getElementById('sa-filter-branch').value;
+  const filtered = branch ? allSubAdmins.filter(s => (s.branch||'') === branch) : allSubAdmins;
+  renderSubAdminTable(filtered);
 }
 
 async function createAdmin() {
   const id = document.getElementById('a-id').value.trim();
-  const name = document.getElementById('a-name').value.trim();
+  const nameInput = document.getElementById('a-name').value;
+  if (nameInput.startsWith(' ')) return toast('Name cannot start with a space.', false);
+  const name = nameInput.trim();
   const email = document.getElementById('a-email').value.trim();
-  const branch = document.getElementById('a-branch').value.trim().toUpperCase();
+  const branch = document.getElementById('a-branch').value;
   const pass = document.getElementById('a-pass').value;
   if (!id||!name||!branch||!pass) return toast('Fill all required fields', false);
-  const pwdErr = validatePassword(pass, 8);
-  if (pwdErr) return toast('Admin ' + pwdErr, false);
+  if (id.length !== 7 || !/^[A-Z0-9]{7}$/.test(id)) return toast('Admin ID must be exactly 7 uppercase letters/numbers (no space)', false);
+  if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name) || (name.match(/\./g)||[]).length > 1) return toast('Name: max 30 chars, letters + one dot only', false);
+  const pwdErr = validateStrictPassword(pass, 8, 8, 3, 1, 1);
+  if (pwdErr) return toast('Admin password ' + pwdErr, false);
   try {
     await apiFetch('/users/add', { method:'POST', body:JSON.stringify({ regNum:id, password:btoa(pass), role:'admin', name, email, branch, institution:saSession.institution, status:'active' }) });
     toast(`Admin ${id} created for branch ${branch}`);
-    ['a-id','a-name','a-email','a-branch','a-pass'].forEach(i=>document.getElementById(i).value='');
+    ['a-id','a-name','a-email','a-pass'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('a-branch').value = '';
     loadAll();
   } catch(e) { toast(e.message, false); }
 }
@@ -389,6 +500,16 @@ async function updateStaff(id, updates, newPass, minLen) {
   } catch(e) { toast(e.message, false); }
 }
 
+function validateStrictPassword(pwd, minLen, maxLen, minAlpha, minNum, minSpec) {
+  if (pwd.includes(' ')) return 'cannot contain spaces.';
+  if (pwd.length < minLen || (maxLen && pwd.length > maxLen))
+    return maxLen===minLen ? `must be exactly ${minLen} characters.` : `must be ${minLen}-${maxLen} characters.`;
+  if ((pwd.match(/[a-zA-Z]/g)||[]).length < minAlpha) return `must contain at least ${minAlpha} letters.`;
+  if ((pwd.match(/[0-9]/g)||[]).length < minNum) return `must contain at least ${minNum} numbers.`;
+  if ((pwd.match(/[^a-zA-Z0-9]/g)||[]).length < minSpec) return `must contain at least ${minSpec} special character.`;
+  return null;
+}
+
 function validatePassword(pwd, minLen, maxLen) {
   if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
     return maxLen ? `Password must be ${minLen}-${maxLen} characters.` : `Password must be at least ${minLen} characters.`;
@@ -409,18 +530,23 @@ async function toggleCanVote(regNum, val) {
 
 async function createSubAdminSA() {
   const id=document.getElementById('sa-id').value.trim();
-  const name=document.getElementById('sa-name').value.trim();
+  const nameInput=document.getElementById('sa-name').value;
+  if (nameInput.startsWith(' ')) return toast('Name cannot start with a space.', false);
+  const name=nameInput.trim();
   const email=document.getElementById('sa-email').value.trim();
-  const branch=document.getElementById('sa-branch').value.trim().toUpperCase();
+  const branch=document.getElementById('sa-branch').value;
   const cls=document.getElementById('sa-class').value.trim().toUpperCase();
   const pass=document.getElementById('sa-pass').value;
   if(!id||!name||!branch||!cls||!pass) return toast('Fill all required fields',false);
-  const pwdErr = validatePassword(pass, 6);
-  if (pwdErr) return toast('Sub-Admin ' + pwdErr, false);
+  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers', false);
+  if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name) || (name.match(/\./g)||[]).length > 1) return toast('Name: max 30 chars, letters + one dot only', false);
+  const pwdErr = validateStrictPassword(pass, 6, 6, 3, 1, 1);
+  if (pwdErr) return toast('Sub-Admin password ' + pwdErr, false);
   try{
     await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:branch,class:cls,institution:saSession.institution,managedBy:saSession.regNum,status:'active'})});
     toast(`Sub-Admin ${id} created for class ${cls}`);
-    ['sa-id','sa-name','sa-email','sa-branch','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
+    ['sa-id','sa-name','sa-email','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('sa-branch').value='';
     loadAll();
   }catch(e){toast(e.message,false);}
 }
@@ -478,7 +604,48 @@ async function loadAudit() {
   } catch(e) { toast(e.message, false); }
 }
 
-document.addEventListener('keydown', e => { if (e.key==='Enter' && document.getElementById('auth-overlay').style.display!=='none') saLogin(); });
+// Enter key navigation in auth
+document.getElementById('auth-id').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); document.getElementById('auth-pass').focus(); } });
+document.getElementById('auth-pass').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); const otpSec = document.getElementById('otp-section'); if (otpSec.style.display==='none') saLoginStep(); else document.getElementById('auth-otp').focus(); } });
+document.getElementById('auth-otp').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); saLoginStep(); } });
+
+// Real-time input enforcement on auth
+document.getElementById('auth-id').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 9);
+});
+document.getElementById('auth-pass').addEventListener('input', function() {
+  this.value = this.value.replace(/\s/g, '').slice(0, 10);
+});
+
+// Real-time enforcement on Admin creation
+document.getElementById('a-id').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+});
+document.getElementById('a-name').addEventListener('input', function() {
+  if (this.value.startsWith(' ')) this.value = this.value.trimStart();
+  let val = this.value.replace(/[^a-zA-Z\s.]/g, '');
+  let parts = val.split('.');
+  if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('').replace(/\./g, '');
+  this.value = val.slice(0, 30);
+});
+document.getElementById('a-pass').addEventListener('input', function() {
+  this.value = this.value.replace(/\s/g, '').slice(0, 8);
+});
+
+// Real-time enforcement on Sub-Admin creation
+document.getElementById('sa-id').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 9);
+});
+document.getElementById('sa-name').addEventListener('input', function() {
+  if (this.value.startsWith(' ')) this.value = this.value.trimStart();
+  let val = this.value.replace(/[^a-zA-Z\s.]/g, '');
+  let parts = val.split('.');
+  if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('').replace(/\./g, '');
+  this.value = val.slice(0, 30);
+});
+document.getElementById('sa-pass').addEventListener('input', function() {
+  this.value = this.value.replace(/\s/g, '').slice(0, 6);
+});
 </script>
 </body>
 </html>

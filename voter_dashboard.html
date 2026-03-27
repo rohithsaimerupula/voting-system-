@@ -240,7 +240,7 @@
                 }
 
                 // canVote Gate — Admin/Sub-Admin must grant access
-                const freshUser = await fetch(`http://localhost:3001/api/users/${currentUser.regNum}`).then(r=>r.json()).catch(()=>currentUser);
+                const freshUser = await fetch(`/api/users/${currentUser.regNum}`).then(r=>r.json()).catch(()=>currentUser);
                 if (!freshUser.canVote || freshUser.canVote === 0) {
                     statusHeader.innerText = "Access Not Granted Yet ⏳";
                     statusHeader.style.color = "var(--warning, #f59e0b)";

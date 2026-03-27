@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --bg:#050a14; --surface:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.1); --gold:#f59e0b; --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --purple:#a855f7; --text:#e2e8f0; --muted:#64748b; }
@@ -86,22 +87,43 @@
       <div class="page-title">📊 Branch Overview</div>
       <div class="page-sub" id="branch-sub">Your assigned branch</div>
       <div class="stats-grid">
-        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Students</div></div>
-        <div class="stat"><div class="num" id="s-canvote" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
-        <div class="stat"><div class="num" id="s-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
-        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--purple)">-</div><div class="lbl">Sub-Admins</div></div>
+        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Total Students</div></div>
+        <div class="stat"><div class="num" id="s-accepted" style="color:var(--green)">-</div><div class="lbl">Accepted</div></div>
+        <div class="stat"><div class="num" id="s-pending" style="color:var(--gold)">-</div><div class="lbl">Pending</div></div>
+        <div class="stat"><div class="num" id="s-canvote" style="color:var(--cyan)">-</div><div class="lbl">Can Vote</div></div>
+        <div class="stat"><div class="num" id="s-voted" style="color:var(--purple)">-</div><div class="lbl">Voted</div></div>
+        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--gold)">-</div><div class="lbl">Sub-Admins</div></div>
+      </div>
+      <!-- PIE CHARTS -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:0.5rem;">
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1rem;">📋 Registration Status</h3>
+          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total registrations vs accepted</p>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="chart-registrations"></canvas>
+          </div>
+          <div id="chart-reg-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+        </div>
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1rem;">🗳️ Voting Eligibility</h3>
+          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total students vs allowed to vote</p>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="chart-voting"></canvas>
+          </div>
+          <div id="chart-vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+        </div>
       </div>
     </div>
 
     <!-- STUDENTS -->
     <div class="page" id="page-students">
       <div class="page-title">🎓 Branch Students</div>
-      <div class="page-sub">Students in your assigned branch — grant or revoke voting access</div>
+      <div class="page-sub">Manage student registrations, edits, and vote access for your branch</div>
       <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
         <input class="search-bar" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search students..." oninput="filterStudents(this.value)">
         <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
       </div>
-      <div class="card" style="padding:0.5rem">
+      <div class="card" style="padding:0.5rem; overflow-x:auto;">
         <table><thead><tr><th>Reg No</th><th>Name</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
@@ -113,12 +135,16 @@
       <div class="page-sub">Create and manage sub-admins for classes in your branch</div>
       <div class="card">
         <h3>➕ Create Sub-Admin</h3>
+        <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--cyan);">
+          🔒 Sub-Admins you create are automatically locked to <strong id="admin-branch-tag">your branch</strong>. Branch cannot be changed.
+        </div>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID</label><input type="text" id="sa-id" placeholder="SADM-CSE5"></div>
-          <div class="form-field"><label>Full Name</label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(9 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMCSE01" maxlength="9"></div>
+          <div class="form-field"><label>Full Name <small style="color:var(--muted);text-transform:none">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
+          <div class="form-field"><label>Branch <small style="color:var(--muted);text-transform:none">(auto-assigned)</small></label><input type="text" id="sa-branch-display" readonly style="opacity:0.5;cursor:not-allowed;"></div>
           <div class="form-field"><label>Assigned Class (e.g. CSE-5)</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
-          <div class="form-field"><label>Password</label><input type="password" id="sa-pass" placeholder="Min 6 chars"></div>
+          <div class="form-field"><label>Password <small style="color:var(--muted);text-transform:none">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1" maxlength="6"></div>
         </div>
         <button class="btn btn-cyan" style="margin-top:1rem" onclick="createSubAdmin()">Create Sub-Admin</button>
       </div>
@@ -133,9 +159,11 @@
 
 <div class="toast" id="toast"></div>
 <script>
-const API = 'http://localhost:3001/api';
+const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let branchStudents = [];
+
+let chartReg = null, chartVote = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (session && session.role === 'admin') {
@@ -143,6 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('main-layout').style.display='flex';
         document.getElementById('branch-label').textContent=`Branch: ${session.branch}`;
         document.getElementById('branch-sub').textContent=`Admin for ${session.branch} — ${session.institution}`;
+        document.getElementById('admin-branch-tag').textContent = session.branch;
+        document.getElementById('sa-branch-display').value = session.branch;
         loadAll();
     }
 });
@@ -194,10 +224,16 @@ async function loadAll(){
       apiFetch(`/staff/managed-by/${session.regNum}`)
     ]);
     branchStudents=students;
+    const accepted = students.filter(s=>s.status==='active').length;
+    const pending  = students.filter(s=>s.status==='pending').length;
+    const canVote  = students.filter(s=>s.canVote==1).length;
     document.getElementById('s-students').textContent=students.length;
-    document.getElementById('s-canvote').textContent=students.filter(s=>s.canVote==1).length;
+    document.getElementById('s-accepted').textContent=accepted;
+    document.getElementById('s-pending').textContent=pending;
+    document.getElementById('s-canvote').textContent=canVote;
     document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
     document.getElementById('s-subadmins').textContent=subadmins.length;
+    renderCharts(students.length, accepted, pending, canVote);
     renderStudents(students);
     renderSaTable(subadmins);
   }catch(e){toast(e.message,false);}
@@ -211,11 +247,21 @@ function renderStudents(list){
     <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
-    <td style="display:flex;gap:0.4rem;">
-      <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>
+    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
+      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudent('${s.regNum}','${s.name}','${s.email||''}')">Edit</button>
+      <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');
+}
+
+async function acceptStudent(id) {
+  try {
+    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
+    toast(`Registration accepted for ${id}`);
+    loadAll();
+  } catch(e) { toast(e.message, false); }
 }
 
 function filterStudents(q){renderStudents(branchStudents.filter(s=>[s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q.toLowerCase())));}
@@ -287,18 +333,63 @@ function validatePassword(pwd, minLen) {
   return null;
 }
 
+function renderCharts(total, accepted, pending, canVote) {
+  const notAccepted = total - accepted;
+  const notVoting   = total - canVote;
+
+  // Chart 1 — Registrations
+  if (chartReg) chartReg.destroy();
+  const ctx1 = document.getElementById('chart-registrations').getContext('2d');
+  chartReg = new Chart(ctx1, {
+    type: 'pie',
+    data: {
+      labels: ['Accepted', 'Pending / Not Accepted'],
+      datasets: [{ data: [accepted, notAccepted],
+        backgroundColor: ['rgba(34,197,94,0.75)','rgba(245,158,11,0.75)'],
+        borderColor: ['#22c55e','#f59e0b'], borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { display: false } }, animation: { duration: 600 } }
+  });
+  document.getElementById('chart-reg-legend').innerHTML =
+    `<span style="color:#22c55e;">● Accepted: ${accepted}</span>
+     <span style="color:#f59e0b;">● Pending: ${pending}</span>
+     <span style="color:var(--muted);">Total: ${total}</span>`;
+
+  // Chart 2 — Voting eligibility
+  if (chartVote) chartVote.destroy();
+  const ctx2 = document.getElementById('chart-voting').getContext('2d');
+  chartVote = new Chart(ctx2, {
+    type: 'pie',
+    data: {
+      labels: ['Allowed to Vote', 'Not Yet Allowed'],
+      datasets: [{ data: [canVote, notVoting],
+        backgroundColor: ['rgba(6,182,212,0.75)','rgba(100,116,139,0.5)'],
+        borderColor: ['#06b6d4','#64748b'], borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { display: false } }, animation: { duration: 600 } }
+  });
+  document.getElementById('chart-vote-legend').innerHTML =
+    `<span style="color:#06b6d4;">● Allowed: ${canVote}</span>
+     <span style="color:#64748b;">● Not Allowed: ${notVoting}</span>
+     <span style="color:var(--muted);">Total: ${total}</span>`;
+}
+
 async function createSubAdmin(){
-  const id=document.getElementById('sa-id').value.trim();
-  const name=document.getElementById('sa-name').value.trim();
-  const email=document.getElementById('sa-email').value.trim();
-  const cls=document.getElementById('sa-class').value.trim().toUpperCase();
-  const pass=document.getElementById('sa-pass').value;
+  const id = document.getElementById('sa-id').value.trim().toUpperCase();
+  const nameInput = document.getElementById('sa-name').value;
+  if (nameInput.startsWith(' ')) return toast('Name cannot start with a space.', false);
+  const name = nameInput.trim();
+  const email = document.getElementById('sa-email').value.trim();
+  const cls = document.getElementById('sa-class').value.trim().toUpperCase();
+  const pass = document.getElementById('sa-pass').value;
   if(!id||!name||!cls||!pass) return toast('Fill all required fields',false);
+  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
+  if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
   const pwdErr = validatePassword(pass, 6);
-  if (pwdErr) return toast('Sub-Admin: ' + pwdErr, false);
+  if (pwdErr) return toast('Sub-Admin password: ' + pwdErr, false);
   try{
     await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:session.branch,class:cls,institution:session.institution,managedBy:session.regNum,status:'active'})});
-    toast(`Sub-Admin ${id} created for class ${cls}`);
+    toast(`Sub-Admin ${id} created for ${session.branch} — class ${cls}`);
     ['sa-id','sa-name','sa-email','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
     loadAll();
   }catch(e){toast(e.message,false);}
@@ -310,6 +401,17 @@ async function removeSA(id){
   catch(e){toast(e.message,false);}
 }
 
+// Real-time input enforcement on sub-admin form
+document.getElementById('sa-id').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);
+});
+document.getElementById('sa-name').addEventListener('input', function() {
+  if(this.value.startsWith(' ')) this.value=this.value.trimStart();
+  this.value = this.value.replace(/[^a-zA-Z\s.]/g,'').slice(0,30);
+});
+document.getElementById('sa-pass').addEventListener('input', function() {
+  this.value = this.value.replace(/\s/g,'').slice(0,6);
+});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')adminLogin();});
 </script>
 </body>

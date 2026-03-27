@@ -324,7 +324,37 @@
             onclick="document.getElementById('participation-modal').classList.add('hidden')">Close</button>
     </div>
 
+    <!-- Change Pass Modal -->
+    <div id="change-pass-modal" class="glass-panel hidden"
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 2rem; z-index: 200; width: 90%; max-width: 400px; background:black;">
+        <h3>Change Admin Password</h3>
+        <form id="change-pass-form" style="margin-top: 1rem;">
+            <input type="password" id="new-password" placeholder="New Password (Max 10 chars)" required maxlength="10"
+                style="margin-bottom: 1rem;">
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" class="submit-btn" style="background: var(--glass-border);"
+                    onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancel</button>
+                <button type="submit" class="submit-btn">Update</button>
+            </div>
+        </form>
+    </div>
 
+    <!-- Change ID Modal -->
+    <div id="change-id-modal" class="glass-panel hidden"
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 2rem; z-index: 200; width: 90%; max-width: 400px; background:black;">
+        <h3>Change Admin ID</h3>
+        <form id="change-id-form" style="margin-top: 1rem;">
+            <input type="text" id="new-admin-id" placeholder="New Admin ID (Max 10 chars)" required maxlength="10"
+                style="margin-bottom: 1rem;">
+            <small style="color: var(--text-muted); display:block; margin-bottom:1rem;">You will be logged out after
+                this.</small>
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" class="submit-btn" style="background: var(--glass-border);"
+                    onclick="document.getElementById('change-id-modal').classList.add('hidden')">Cancel</button>
+                <button type="submit" class="submit-btn">Update ID</button>
+            </div>
+        </form>
+    </div>
 
     <!-- Portrait Preview Modal -->
     <div id="portrait-modal" class="glass-panel hidden"

@@ -125,23 +125,40 @@ async function initDb() {
         }
 
         // Developer (GOD) account
-        const devSnap = await turso.execute("SELECT * FROM users WHERE regNum = 'DEV001'");
+        const devSnap = await turso.execute("SELECT * FROM users WHERE role = 'developer'");
         if (devSnap.rows.length === 0) {
             await turso.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status) VALUES (?, ?, ?, ?, ?, ?)`,
-                args: ['DEV001', Buffer.from('Dev@God123').toString('base64'), 'developer', 'Developer', 'tharunmerupula01@gmail.com', 'active']
+                args: ['OVSDEV2026', Buffer.from('OvsDev@2026!').toString('base64'), 'developer', 'OVS Developer', 'admin@ovs.com', 'active']
             });
-            console.log("Developer account created: DEV001 / Dev@God123");
+            console.log("Developer account created: OVSDEV2026 / OvsDev@2026!");
+        } else if (devSnap.rows[0].regNum === 'DEV001') {
+            // Upgrade existing legacy developer account to new rules
+            await turso.execute({
+                sql: `UPDATE users SET regNum = 'OVSDEV2026', password = ? WHERE role = 'developer'`,
+                args: [Buffer.from('OvsDev@2026!').toString('base64')]
+            });
+            console.log("Developer account upgraded to: OVSDEV2026 / OvsDev@2026!");
         }
 
         // Default Super Admin (for legacy institution)
-        const saSnap = await turso.execute("SELECT * FROM users WHERE regNum = 'SADMIN001'");
+        const saSnap = await turso.execute("SELECT * FROM users WHERE role = 'superadmin'");
         if (saSnap.rows.length === 0) {
             await turso.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status, institution) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                args: ['SADMIN001', Buffer.from('SuperAdmin123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
+                args: ['OVSADM001', Buffer.from('OvsAdm@123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
             });
-            console.log("Super Admin account created: SADMIN001 / SuperAdmin123");
+            console.log("Super Admin account created: OVSADM001 / OvsAdm@12");
+        } else {
+            // Upgrade SADMIN001 if still present
+            const oldSA = saSnap.rows.find(r => r.regNum === 'SADMIN001');
+            if (oldSA) {
+                await turso.execute({
+                    sql: `UPDATE users SET regNum = 'OVSADM001', password = ? WHERE regNum = 'SADMIN001'`,
+                    args: [Buffer.from('OvsAdm@123').toString('base64')]
+                });
+                console.log("Super Admin upgraded to: OVSADM001 / OvsAdm@12");
+            }
         }
 
         // Keep old ADMIN001 but mark as superadmin for backwards compat
@@ -465,15 +482,8 @@ app.post('/api/globalChat', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
-//  START (Local Dev) + Export (Vercel)
+//  START
 // ─────────────────────────────────────────
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-    });
-} else {
-    // On Vercel, just log that the module loaded
-    console.log(`OVS Server module loaded.`);
-}
-
-module.exports = app;
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});

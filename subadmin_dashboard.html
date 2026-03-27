@@ -124,7 +124,7 @@
 
 <div class="toast" id="toast"></div>
 <script>
-const API = 'http://localhost:3001/api';
+const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let classStudents = [];
 
@@ -200,20 +200,21 @@ function renderStudents(list){
     <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
-    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-      <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>
-      <button class="btn-sm btn-e" onclick="editStudent('${s.regNum}','${s.name}','${s.email||''}')">Edit</button>
+    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
+      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
+      <button class="btn-sm btn-e" onclick="openEdit('${s.regNum}','${s.name}','${s.email||''}')">Edit</button>
+      <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');
 }
 
-function editStudent(id, name, email) {
-  const newName = prompt('Full Name:', name); if (newName === null) return;
-  const newEmail = prompt('Email:', email); if (newEmail === null) return;
-  apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify({ name:newName.trim(), email:newEmail.trim() }) })
-    .then(() => { toast(`${id} updated!`); loadAll(); })
-    .catch(e => toast(e.message, false));
+async function acceptStudent(id) {
+  try {
+    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
+    toast(`Registration accepted for ${id}`);
+    loadAll();
+  } catch(e) { toast(e.message, false); }
 }
 
 function filterStudents(q){renderStudents(classStudents.filter(s=>[s.regNum,s.name].join(' ').toLowerCase().includes(q.toLowerCase())));}

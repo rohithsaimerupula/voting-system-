@@ -51,9 +51,29 @@
         <button onclick="closeSAModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;">✕</button>
         <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;margin-bottom:0.5rem;">👑 Super Admin</div>
         <p style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem;">Institution Administration</p>
-        <input type="text" id="sa-modal-id" placeholder="Super Admin ID" style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;">
-        <input type="password" id="sa-modal-pass" placeholder="Password" style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:1rem;font-family:'Outfit',sans-serif;outline:none;">
-        <button onclick="loginAsSA()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Login as Super Admin</button>
+        <!-- Step 1: Credentials -->
+        <div id="sa-step-1">
+          <div style="text-align:left;margin-bottom:0.5rem;">
+            <label style="color:#64748b;font-size:0.8rem;">Super Admin ID <span style="color:#f59e0b">(9 chars, no space)</span></label>
+            <input type="text" id="sa-modal-id" placeholder="OVSADM001" maxlength="9" autocomplete="off"
+              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;">
+          </div>
+          <div style="text-align:left;margin-bottom:1rem;">
+            <label style="color:#64748b;font-size:0.8rem;">Password <span style="color:#f59e0b">(10 chars · 3 letters · 2 numbers · 1 special)</span></label>
+            <input type="password" id="sa-modal-pass" placeholder="Enter password" maxlength="10"
+              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.5rem;font-family:'Outfit',sans-serif;outline:none;">
+          </div>
+          <button id="sa-modal-btn" onclick="saModalLogin()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Send OTP & Continue</button>
+        </div>
+        <!-- Step 2: OTP -->
+        <div id="sa-step-2" style="display:none;">
+          <div style="text-align:left;margin-bottom:1rem;">
+            <label style="color:#64748b;font-size:0.8rem;">OTP <span style="color:#f59e0b">(Sent to your registered Gmail)</span></label>
+            <input type="text" id="sa-modal-otp" placeholder="Enter 6-digit OTP" maxlength="6"
+              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;letter-spacing:0.3rem;text-align:center;font-size:1.2rem;">
+          </div>
+          <button onclick="saModalVerifyOtp()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Verify OTP & Login</button>
+        </div>
         <div id="sa-modal-err" style="color:#ef4444;margin-top:0.75rem;font-size:0.85rem;min-height:1rem;"></div>
       </div>
     </div>
@@ -91,8 +111,8 @@
 
 
 
-                    <div style="text-align:right; margin-top:0.5rem;">
-                        <button type="button" onclick="showRecoveryModal()"
+                    <div style="text-align:right; margin-top:0.5rem;" id="forgot-password-container">
+                        <button type="button" onclick="showRecoveryModal()" id="forgot-password-link"
                             style="background:none; border:none; color:var(--neon-cyan); font-size:0.9rem; cursor:pointer; padding:0;">Forgot Password?</button>
                     </div>
 
@@ -203,9 +223,11 @@
                     document.getElementById('tab-subadmin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-subadmin').style.border = '1px solid var(--glass-border)';
                     loginTitle.innerText = 'Admin Login';
-                    regLabel.innerText = 'Admin ID';
-                    regInput.placeholder = 'Enter Admin ID';
-                    passInput.placeholder = 'Enter Password';
+                    regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
+                    regInput.placeholder = 'e.g. ADMCSE01';
+                    regInput.maxLength = 7;
+                    passInput.placeholder = 'e.g. Admin@12';
+                    passInput.maxLength = 8;
                     resetInputs();
                 });
                 document.getElementById('tab-subadmin').addEventListener('click', () => {
@@ -215,9 +237,11 @@
                     document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
                     loginTitle.innerText = 'Sub-Admin Login';
-                    regLabel.innerText = 'Sub-Admin ID';
-                    regInput.placeholder = 'Enter Sub-Admin ID';
-                    passInput.placeholder = 'Enter Password';
+                    regLabel.innerText = 'Sub-Admin ID (9 chars · A-Z & 0-9)';
+                    regInput.placeholder = 'e.g. SADMCSE01';
+                    regInput.maxLength = 9;
+                    passInput.placeholder = 'e.g. Sa@ab1';
+                    passInput.maxLength = 6;
                     resetInputs();
                 });
 
@@ -237,9 +261,11 @@
                 });
 
                 loginTitle.innerText = 'Admin Login';
-                regLabel.innerText = 'Admin ID';
-                regInput.placeholder = 'Enter Admin ID';
-                passInput.placeholder = 'Enter Password';
+                regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
+                regInput.placeholder = 'e.g. ADMCSE01';
+                regInput.maxLength = 7;
+                passInput.placeholder = 'e.g. Admin@12';
+                passInput.maxLength = 8;
             }
         }
 
@@ -258,29 +284,24 @@
         function updateTabs() {}
 
         // Input Constraints
-        // Input Constraints
         regInput.addEventListener('input', function (e) {
             if (isVoter) {
                 // Voter: Capital Alphanumeric ONLY
                 this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
             } else {
-                // Admin: Allow all characters (no leading space)
-                let val = this.value;
-                if (val.startsWith(' ')) val = val.trimStart();
-                this.value = val;
+                // Admin / Sub-Admin: Uppercase alphanumeric only, maxLength set per tab
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
             }
-            if (this.value.length > 20) this.value = this.value.slice(0, 20); // Increased limit for admin names with spaces
         });
 
         passInput.addEventListener('input', function (e) {
             if (isVoter) {
-                // Voter: Numbers only (as per previous logic/user request)
+                // Voter: Numbers only
                 this.value = this.value.replace(/[^0-9]/g, '');
             } else {
-                // Admin: Small and Capital letters and Numbers ONLY. No space.
-                this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+                // Admin/Sub-Admin: No spaces allowed; special chars ARE allowed (required by policy)
+                this.value = this.value.replace(/\s/g, '');
             }
-            if (this.value.length > 10) this.value = this.value.slice(0, 10);
         });
 
 
@@ -301,10 +322,24 @@
             const errorMsg = document.getElementById('error-msg');
             const submitBtn = document.getElementById('login-btn');
 
-
-
-            if (regNum.length > 20) return showError("ID is too long.");
-            if (isVoter && password.length > 10) return showError("Password Max 10 Characters.");
+            // Credential validation matching super-admin portal creation rules
+            if (!isVoter && !isSubAdmin) {
+                // Admin: ID = 7 chars A-Z0-9, Password = 8 chars, 3 letters, 1 number, 1 special
+                if (regNum.length !== 7) return showError('Admin ID must be exactly 7 characters (A-Z & 0-9).');
+                if (password.length !== 8) return showError('Admin password must be exactly 8 characters.');
+                if ((password.match(/[a-zA-Z]/g)||[]).length < 3) return showError('Admin password must contain at least 3 letters.');
+                if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Admin password must contain at least 1 number.');
+                if (!/[^a-zA-Z0-9]/.test(password)) return showError('Admin password must contain at least 1 special character.');
+            } else if (isSubAdmin) {
+                // Sub-Admin: ID = 9 chars A-Z0-9, Password = 6 chars, 3 letters, 1 number, 1 special
+                if (regNum.length !== 9) return showError('Sub-Admin ID must be exactly 9 characters (A-Z & 0-9).');
+                if (password.length !== 6) return showError('Sub-Admin password must be exactly 6 characters.');
+                if ((password.match(/[a-zA-Z]/g)||[]).length < 3) return showError('Sub-Admin password must contain at least 3 letters.');
+                if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Sub-Admin password must contain at least 1 number.');
+                if (!/[^a-zA-Z0-9]/.test(password)) return showError('Sub-Admin password must contain at least 1 special character.');
+            } else if (isVoter && password.length > 10) {
+                return showError('Password Max 10 Characters.');
+            }
 
             errorMsg.classList.add('hidden');
             submitBtn.innerText = "Verifying...";
@@ -581,25 +616,94 @@
         function closeSAModal() {
             document.getElementById('sa-login-modal').style.display = 'none';
             document.getElementById('sa-modal-err').textContent = '';
+            // Reset back to step 1
+            document.getElementById('sa-step-1').style.display = 'block';
+            document.getElementById('sa-step-2').style.display = 'none';
+            document.getElementById('sa-modal-id').value = '';
+            document.getElementById('sa-modal-pass').value = '';
+            document.getElementById('sa-modal-otp').value = '';
+            document.getElementById('sa-modal-btn').textContent = 'Send OTP & Continue';
         }
 
-        async function loginAsSA() {
-            const id = document.getElementById('sa-modal-id').value.trim();
+        async function saModalLogin() {
+            const id = document.getElementById('sa-modal-id').value.trim().toUpperCase();
             const pass = document.getElementById('sa-modal-pass').value;
             const err = document.getElementById('sa-modal-err');
+            const btn = document.getElementById('sa-modal-btn');
             err.textContent = '';
+
+            // Validate ID
+            if (id.length !== 9 || /\s/.test(id)) {
+                err.textContent = 'ID must be exactly 9 characters with no spaces.';
+                return;
+            }
+            // Validate password composition
+            if (pass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
+            if (/\s/.test(pass)) { err.textContent = 'Password cannot contain spaces.'; return; }
+            if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password needs at least 3 letters.'; return; }
+            if ((pass.match(/[0-9]/g)||[]).length < 2) { err.textContent = 'Password needs at least 2 numbers.'; return; }
+            if (!/[^a-zA-Z0-9]/.test(pass)) { err.textContent = 'Password needs at least 1 special character.'; return; }
+
+            btn.textContent = 'Verifying...';
+            btn.disabled = true;
             try {
                 const user = await StorageManager.login(id, pass, true);
                 if (!user) throw new Error('Invalid credentials.');
                 if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
-                window.location.href = 'superadmin_dashboard.html';
+
+                // Generate OTP and send via EmailJS
+                const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                window._saModalOtp = otp;
+                window._saModalUser = user;
+                btn.textContent = 'Sending OTP...';
+                const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
+                const SERVICE_ID = 'service_emwze5b';
+                const TEMPLATE_ID = 'template_vcrerg5';
+                await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+                    name: user.name || 'Super Admin',
+                    otp: otp,
+                    context: 'Super Admin Login',
+                    to_email: user.email
+                }, PUBLIC_KEY);
+                document.getElementById('sa-step-1').style.display = 'none';
+                document.getElementById('sa-step-2').style.display = 'block';
+                err.style.color = '#22c55e';
+                err.textContent = `OTP sent to ${user.email}!`;
             } catch(e) {
-                err.textContent = e.message;
+                btn.textContent = 'Send OTP & Continue';
+                btn.disabled = false;
+                err.style.color = '#ef4444';
+                err.textContent = e.message || (e.text ? 'Email error: ' + e.text : 'Error');
             }
         }
 
-        document.getElementById('sa-modal-pass').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') loginAsSA();
+        async function saModalVerifyOtp() {
+            const entered = document.getElementById('sa-modal-otp').value.trim();
+            const err = document.getElementById('sa-modal-err');
+            if (entered !== window._saModalOtp) {
+                err.style.color = '#ef4444';
+                err.textContent = 'Invalid OTP. Try again.';
+                return;
+            }
+            localStorage.setItem('ovs_currentUser', JSON.stringify(window._saModalUser));
+            window.location.href = 'superadmin_dashboard.html';
+        }
+
+        // Real-time restrictions on SA modal inputs
+        document.getElementById('sa-modal-id').addEventListener('input', function() {
+            this.value = this.value.replace(/\s/g, '').toUpperCase().slice(0, 9);
+        });
+        document.getElementById('sa-modal-pass').addEventListener('input', function() {
+            this.value = this.value.replace(/\s/g, '').slice(0, 10);
+        });
+        document.getElementById('sa-modal-otp').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+        document.getElementById('sa-modal-id').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('sa-modal-pass').focus(); }
+        });
+        document.getElementById('sa-modal-pass').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); saModalLogin(); }
         });
 
         // Add back button in buildUI voter section
@@ -620,13 +724,13 @@
                     console.warn("buildUI() function not found. Cannot re-render UI after back button click.");
                     // Example: Manually update elements if buildUI is not available
                     document.getElementById('login-title').innerText = "Staff Login";
-                    document.getElementById('reg-label').innerText = "Admin ID";
+                    document.getElementById('reg-label').innerText = "Admin/Sub-Admin ID";
                     document.getElementById('password-label').innerText = "Password";
-                    document.getElementById('forgot-password-link').innerText = "Forgot Admin Password?";
+                    const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'none';
                     document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
                     document.getElementById('back-button').classList.add('hidden'); // Hide back button
                     // Update input placeholders and types if necessary
-                    document.getElementById('registration-number').placeholder = "Enter Admin ID";
+                    document.getElementById('regNum').placeholder = "Enter ID";
                     document.getElementById('password').placeholder = "Enter Password";
                 }
             });
@@ -642,23 +746,29 @@
             if (isVoter) {
                 document.getElementById('login-title').innerText = "Voter Login";
                 document.getElementById('reg-label').innerText = "Registration Number";
-                document.getElementById('password-label').innerText = "10-Digit PIN";
-                document.getElementById('forgot-password-link').innerText = "Forgot PIN?";
+                document.getElementById('password-label').innerText = "10-Digit Password";
+                const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'inline-block';
                 document.getElementById('register-link').classList.add('hidden'); // Hide register for voters
                 if (backButton) backButton.classList.remove('hidden'); // Show back button for voters
-                document.getElementById('registration-number').placeholder = "Enter Registration Number";
-                document.getElementById('password').placeholder = "Enter 10-Digit PIN";
+                document.getElementById('regNum').placeholder = "Enter Registration Number";
+                document.getElementById('password').placeholder = "Enter Password";
             } else {
                 document.getElementById('login-title').innerText = "Staff Login";
-                document.getElementById('reg-label').innerText = "Admin ID";
+                document.getElementById('reg-label').innerText = "Admin/Sub-Admin ID";
                 document.getElementById('password-label').innerText = "Password";
-                document.getElementById('forgot-password-link').innerText = "Forgot Admin Password?";
+                const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'none';
                 document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
                 if (backButton) backButton.classList.add('hidden'); // Hide back button for staff
-                document.getElementById('registration-number').placeholder = "Enter Admin ID";
+                document.getElementById('regNum').placeholder = "Enter ID";
                 document.getElementById('password').placeholder = "Enter Password";
             }
         }
+        document.getElementById('regNum').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('password').focus();
+            }
+        });
     </script>
 </body>
 </html>
