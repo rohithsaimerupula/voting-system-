@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 
 // Shared utilities
 async function fetchApi(path, options = {}) {
