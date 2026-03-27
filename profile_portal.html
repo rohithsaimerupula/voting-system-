@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Portal - OVS</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="storage.js?v=3"></script>
+</head>
+
+<body class="theme-register">
+    <nav>
+        <div class="brand" onclick="window.location.href='index.html'">OVS</div>
+        <div class="nav-links">
+            <button onclick="window.location.href='index.html'" class="btn-outline">Home</button>
+            <button onclick="window.location.href='login.html'" class="submit-btn" style="width: auto;">Voter Login</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade-in" style="max-width: 500px;">
+        <!-- Login Section -->
+        <div id="login-section" class="glass-panel" style="padding: 2.5rem;">
+            <h2 class="text-center" style="margin-bottom: 2rem;">Profile Management</h2>
+            
+            <!-- Role Selection Buttons -->
+            <div class="login-tabs" style="display: flex; gap:10px; margin-bottom: 2rem;">
+                <button id="btn-voter-mode" class="tab-btn active" onclick="switchLoginMode('voter')" style="flex:1; padding:0.8rem; background:rgba(6,182,212,0.1); border:1px solid var(--neon-cyan); border-radius:8px; color:var(--neon-cyan); cursor:pointer;">Voter Login</button>
+                <button id="btn-candidate-mode" class="tab-btn" onclick="switchLoginMode('candidate')" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">Candidate Login</button>
+            </div>
+
+            <form id="portal-login-form">
+                <div class="form-group">
+                    <label id="login-id-label">Registration Number</label>
+                    <input type="text" id="login-id" required placeholder="Enter ID">
+                </div>
+                <div class="form-group" id="login-pass-group">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" required placeholder="Enter Password">
+                    <div style="text-align:right; margin-top:0.5rem;">
+                        <a href="login.html" style="color:var(--neon-cyan); font-size:0.85rem; text-decoration:none;">Forgot Password?</a>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn" id="login-btn">Enter Portal</button>
+            </form>
+            <p id="login-error" class="text-danger text-center mt-3 hidden"></p>
+        </div>
+
+        <!-- Update Section -->
+        <div id="update-section" class="glass-panel hidden" style="padding: 2.5rem;">
+            <h2 class="text-center" style="margin-bottom: 2rem;">Update Details</h2>
+            <form id="profile-update-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" required maxlength="50">
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Year</label>
+                        <select id="year">
+                            <option value="1st">1st Year</option>
+                            <option value="2nd">2nd Year</option>
+                            <option value="3rd">3rd Year</option>
+                            <option value="4th">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Branch</label>
+                        <select id="branch">
+                            <option>CSE</option><option>ECE</option><option>EEE</option><option>CSC</option>
+                            <option>MECH</option><option>IT</option><option>ECM</option><option>AIDS</option>
+                            <option>CSM</option><option>CIVIL</option><option>CAI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Section</label>
+                        <input type="text" id="section" required maxlength="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Gmail Address</label>
+                    <input type="email" id="email" required>
+                </div>
+                
+                <div class="form-group hidden" id="password-group">
+                    <label id="password-label">New Password</label>
+                    <input type="password" id="new-password" placeholder="Leave blank to keep current">
+                    <small id="password-hint" class="text-muted"></small>
+                </div>
+
+                <div id="candidate-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Election Symbol (Emoji)</label>
+                        <input type="text" id="symbol">
+                    </div>
+                    <div class="form-group">
+                        <label>Manifesto / Slogan</label>
+                        <textarea id="manifesto" maxlength="150" rows="3" style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" class="btn-outline" onclick="location.reload()" style="flex:1;">Cancel</button>
+                    <button type="submit" id="save-btn" class="submit-btn" style="flex:2;">Update Details</button>
+                </div>
+            </form>
+
+            <!-- OTP Verification Section (Inline) -->
+            <div id="otp-verify-section" class="hidden mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                <h3 class="text-center" style="color: var(--gold-primary); margin-bottom: 1rem;">Verify via OTP</h3>
+                <p id="otp-hint" class="text-muted text-center" style="margin-bottom: 1rem;"></p>
+                <div class="form-group">
+                    <input type="text" id="update-otp-input" placeholder="Enter 6-digit Code" maxlength="6" style="text-align: center; font-size: 1.2rem; letter-spacing: 0.3rem;">
+                </div>
+                <button type="button" onclick="confirmUpdateWithOtp()" class="submit-btn" id="confirm-otp-btn">Confirm Changes</button>
+                <p id="otp-error" class="text-danger text-center mt-2 hidden"></p>
+            </div>
+
+            <div id="status-msg" class="hidden mt-3 text-center" style="padding: 1rem; border-radius: 8px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let sessionUser = null;
+
+        let currentLoginMode = 'voter';
+
+        function switchLoginMode(mode) {
+            currentLoginMode = mode;
+            const bVoter = document.getElementById('btn-voter-mode');
+            const bCand = document.getElementById('btn-candidate-mode');
+            const passGroup = document.getElementById('login-pass-group');
+            const passInput = document.getElementById('login-pass');
+
+            if (mode === 'voter') {
+                bVoter.style.background = "rgba(6,182,212,0.1)"; bVoter.style.color = "var(--neon-cyan)"; bVoter.style.borderColor = "var(--neon-cyan)";
+                bCand.style.background = "rgba(255,255,255,0.05)"; bCand.style.color = "white"; bCand.style.borderColor = "var(--glass-border)";
+                passGroup.classList.remove('hidden');
+                passInput.required = true;
+            } else {
+                bCand.style.background = "rgba(6,182,212,0.1)"; bCand.style.color = "var(--neon-cyan)"; bCand.style.borderColor = "var(--neon-cyan)";
+                bVoter.style.background = "rgba(255,255,255,0.05)"; bVoter.style.color = "white"; bVoter.style.borderColor = "var(--glass-border)";
+                passGroup.classList.add('hidden');
+                passInput.required = false;
+            }
+        }
+
+        // Portal Login
+        document.getElementById('portal-login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
+            const btn = document.getElementById('login-btn');
+            const err = document.getElementById('login-error');
+
+            btn.disabled = true;
+            btn.innerText = "Verifying...";
+            err.classList.add('hidden');
+
+            try {
+                let user;
+                if (currentLoginMode === 'voter') {
+                    // Voter: Auth with ID and Password
+                    user = await StorageManager.login(id, pass, true);
+                } else {
+                    // Candidate: Auth with ID ONLY (no password)
+                    // We check if account exists and is approved, but no password check for candidate login to portal
+                    const doc = await db.collection('users').doc(id).get();
+                    if (doc.exists && doc.data().role === 'contestant') {
+                        user = doc.data();
+                        if (user.status === 'pending') throw new Error("Account Pending Approval.");
+                    } else {
+                        throw new Error("Candidate ID not found.");
+                    }
+                }
+
+                if (user && user.role !== 'admin') {
+                    sessionUser = user;
+                    showUpdateForm();
+                } else if (user && user.role === 'admin') {
+                    throw new Error("Admins should use the Admin Dashboard.");
+                } else {
+                    throw new Error("Invalid credentials.");
+                }
+            } catch (e) {
+                err.innerText = e.message;
+                err.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enter Portal";
+            }
+        };
+
+        function showUpdateForm() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('update-section').classList.remove('hidden');
+
+            // Populate
+            document.getElementById('name').value = sessionUser.name || '';
+            document.getElementById('year').value = sessionUser.year || '1st';
+            document.getElementById('branch').value = sessionUser.branch || 'CSE';
+            document.getElementById('section').value = sessionUser.section || '';
+            document.getElementById('email').value = sessionUser.email || '';
+
+            if (sessionUser.role === 'contestant') {
+                document.getElementById('candidate-fields').classList.remove('hidden');
+                document.getElementById('symbol').value = sessionUser.symbol || '';
+                document.getElementById('manifesto').value = sessionUser.manifesto || '';
+                document.getElementById('password-group').classList.add('hidden');
+            } else {
+                document.getElementById('candidate-fields').classList.add('hidden');
+                const pGroup = document.getElementById('password-group');
+                pGroup.classList.remove('hidden');
+                document.getElementById('password-label').innerText = "New 10-digit PIN";
+                document.getElementById('new-password').placeholder = "Enter 10 numbers";
+                document.getElementById('password-hint').innerText = "Only change if you want to update your login PIN.";
+            }
+        }
+
+        // Real-time validation for new password
+        document.getElementById('new-password').addEventListener('input', function() {
+            if (sessionUser && sessionUser.role === 'voter') {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            }
+        });
+
+        let portalGeneratedOtp = null;
+        let pendingUpdates = null;
+
+        // Profile Update (Initially just triggers OTP)
+        document.getElementById('profile-update-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-btn');
+            
+            btn.disabled = true;
+            btn.innerText = "Sending OTP...";
+
+            pendingUpdates = {
+                name: document.getElementById('name').value,
+                year: document.getElementById('year').value,
+                branch: document.getElementById('branch').value,
+                section: document.getElementById('section').value,
+                email: document.getElementById('email').value
+            };
+
+            const newPass = document.getElementById('new-password').value.trim();
+            if (newPass) {
+                if (sessionUser.role === 'voter' && newPass.length !== 10) {
+                    btn.disabled = false;
+                    btn.innerText = "Update Details";
+                    return alert("Voter PIN must be exactly 10 digits.");
+                }
+                pendingUpdates.password = newPass;
+            }
+
+            if (sessionUser.role === 'contestant') {
+                pendingUpdates.symbol = document.getElementById('symbol').value;
+                pendingUpdates.manifesto = document.getElementById('manifesto').value;
+            }
+
+            try {
+                // Generate and send OTP
+                portalGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                await StorageManager.sendEmailOtp(sessionUser.email, sessionUser.name, portalGeneratedOtp, "Profile Update");
+                
+                document.getElementById('otp-hint').innerText = `Enter the code sent to ${sessionUser.email}`;
+                document.getElementById('otp-verify-section').classList.remove('hidden');
+                btn.innerText = "OTP Sent ✓";
+            } catch (err) {
+                alert("Error sending OTP: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "Update Details";
+            }
+        };
+
+        async function confirmUpdateWithOtp() {
+            const input = document.getElementById('update-otp-input').value.trim();
+            const err = document.getElementById('otp-error');
+            const btn = document.getElementById('confirm-otp-btn');
+            const msg = document.getElementById('status-msg');
+
+            if (input !== portalGeneratedOtp) {
+                err.innerText = "Invalid OTP code";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            err.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerText = "Saving Changes...";
+
+            try {
+                await StorageManager.updateUserDetails(sessionUser.regNum, pendingUpdates);
+                msg.innerText = "Profile updated successfully! ✅";
+                msg.style.background = "rgba(16, 185, 129, 0.2)";
+                msg.style.color = "#10b981";
+                msg.classList.remove('hidden');
+                setTimeout(() => window.location.reload(), 2000);
+            } catch (err) {
+                msg.innerText = "Update Failed: " + err.message;
+                msg.style.background = "rgba(239, 68, 68, 0.2)";
+                msg.style.color = "#ef4444";
+                msg.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Confirm Changes";
+            }
+        }
+    </script>
+</body>
+</html>

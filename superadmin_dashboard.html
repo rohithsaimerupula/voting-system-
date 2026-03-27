@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin — OVS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050a14; --surface: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.1);
+      --gold: #f59e0b; --cyan: #06b6d4; --green: #22c55e; --red: #ef4444;
+      --purple: #a855f7; --text: #e2e8f0; --muted: #64748b;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; }
+    input, select { width: 100%; padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 0.95rem; font-family: 'Outfit', sans-serif; outline: none; transition: border 0.3s; margin-bottom: 0; }
+    input:focus, select:focus { border-color: var(--gold); }
+    select option { background: #1e293b; }
+    label { display: block; color: var(--muted); font-size: 0.78rem; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn { padding: 0.75rem 1.5rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; font-family: 'Outfit', sans-serif; transition: all 0.3s; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #d97706); color: #000; }
+    .btn-cyan { background: linear-gradient(135deg, var(--cyan), #0284c7); color: white; }
+    .btn-green { background: linear-gradient(135deg, var(--green), #16a34a); color: white; }
+    .btn-red { background: linear-gradient(135deg, var(--red), #b91c1c); color: white; }
+    .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .btn-sm { padding: 0.3rem 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-family: 'Outfit', sans-serif; font-weight: 600; }
+    .btn-danger-sm { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-success-sm { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .btn-info-sm { background: rgba(6,182,212,0.15); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); }
+    /* Sidebar Layout */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: rgba(245,158,11,0.05); border-right: 1px solid rgba(245,158,11,0.15); padding: 1.5rem 1rem; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; }
+    .sidebar-brand { font-size: 1.4rem; font-weight: 900; color: var(--gold); margin-bottom: 0.25rem; }
+    .sidebar-role { font-size: 0.75rem; color: var(--muted); margin-bottom: 2rem; }
+    .nav-item { padding: 0.7rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 0.25rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.6rem; color: var(--muted); }
+    .nav-item:hover { background: rgba(245,158,11,0.1); color: var(--gold); }
+    .nav-item.active { background: rgba(245,158,11,0.15); color: var(--gold); font-weight: 600; }
+    .main { margin-left: 240px; flex: 1; padding: 2rem; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .page-sub { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; text-align: center; }
+    .stat .num { font-size: 2rem; font-weight: 900; }
+    .stat .lbl { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .form-field { display: flex; flex-direction: column; gap: 0.3rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 0.7rem 0.8rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+    .badge-active { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-pending { background: rgba(245,158,11,0.15); color: var(--gold); }
+    .badge-banned { background: rgba(239,68,68,0.15); color: var(--red); }
+    .empty { text-align: center; color: var(--muted); padding: 2rem; }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.5rem; font-size: 0.9rem; transform: translateY(100px); opacity: 0; transition: all 0.4s; z-index: 999; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .search-bar { width: 100%; padding: 0.7rem 1rem; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-family: 'Outfit', sans-serif; outline: none; margin-bottom: 1rem; }
+    @media(max-width:700px) { .sidebar{display:none;} .main{margin-left:0;} }
+  </style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(245,158,11,0.08) 0%,var(--bg) 70%)">
+  <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:2rem;font-weight:900;color:var(--gold);margin-bottom:0.25rem;">👑 Super Admin</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Institution Administration Portal</p>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Super Admin ID</label><input type="text" id="auth-id" placeholder="SADMIN001"></div>
+    <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass" placeholder="Enter password"></div>
+    <button class="btn btn-gold" style="width:100%" onclick="saLogin()">Login to Super Admin Panel</button>
+    <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
+  </div>
+</div>
+
+<div class="layout" id="main-layout" style="display:none">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-brand">👑 OVS</div>
+    <div class="sidebar-role" id="sa-inst-label">Super Admin</div>
+    <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
+    <div class="nav-item" onclick="showPage('admins')">🧑‍💼 Manage Admins</div>
+    <div class="nav-item" onclick="showPage('subadmins')">👥 Sub-Admins</div>
+    <div class="nav-item" onclick="showPage('students')">🎓 All Students</div>
+    <div class="nav-item" onclick="showPage('voting')">🗳️ Voting Control</div>
+    <div class="nav-item" onclick="showPage('audit')">📜 Audit Log</div>
+    <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
+      <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-title">📊 Overview</div>
+      <div class="page-sub" id="inst-name-sub">Your Institution Dashboard</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Students</div></div>
+        <div class="stat"><div class="num" id="s-admins" style="color:var(--gold)">-</div><div class="lbl">Admins</div></div>
+        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--purple)">-</div><div class="lbl">Sub-Admins</div></div>
+        <div class="stat"><div class="num" id="s-voted" style="color:var(--green)">-</div><div class="lbl">Voted</div></div>
+        <div class="stat"><div class="num" id="s-canvote" style="color:var(--gold)">-</div><div class="lbl">Can Vote</div></div>
+      </div>
+      <div class="card"><h3>🗳️ Election Status</h3><div id="election-status-info">Loading...</div></div>
+    </div>
+
+    <!-- ADMINS -->
+    <div class="page" id="page-admins">
+      <div class="page-title">🧑‍💼 Manage Admins</div>
+      <div class="page-sub">Create and manage branch admins for your institution</div>
+
+      <div class="card">
+        <h3>➕ Create Admin</h3>
+        <div class="form-grid">
+          <div class="form-field"><label>Admin ID</label><input type="text" id="a-id" placeholder="ADM-CSE"></div>
+          <div class="form-field"><label>Full Name</label><input type="text" id="a-name" placeholder="Mr. Ramesh"></div>
+          <div class="form-field"><label>Email</label><input type="email" id="a-email" placeholder="admin@inst.edu"></div>
+          <div class="form-field"><label>Assigned Branch</label><input type="text" id="a-branch" placeholder="CSE" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Password <small style="color:var(--muted)">(8 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="a-pass" placeholder="e.g. Admin@12"></div>
+        </div>
+        <button class="btn btn-gold" style="margin-top:1rem" onclick="createAdmin()">Create Admin</button>
+      </div>
+
+      <div class="card">
+        <h3>📋 Branch Admins</h3>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="admin-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- SUBADMINS -->
+    <div class="page" id="page-subadmins">
+      <div class="page-title">👥 Sub-Admins</div>
+      <div class="page-sub">View, manage, and create sub-admins across all branches</div>
+      <div class="card">
+        <h3>➕ Create Sub-Admin</h3>
+        <div class="form-grid">
+          <div class="form-field"><label>Sub-Admin ID</label><input type="text" id="sa-id" placeholder="SADM-CSE5"></div>
+          <div class="form-field"><label>Full Name</label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
+          <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
+          <div class="form-field"><label>Branch</label><input type="text" id="sa-branch" placeholder="CSE" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Class</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Password <small style="color:var(--muted)">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1"></div>
+        </div>
+        <button class="btn btn-purple" style="margin-top:1rem" onclick="createSubAdminSA()">Create Sub-Admin</button>
+      </div>
+      <div class="card">
+        <h3>📋 All Sub-Admins</h3>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Class</th><th>Managed By</th><th>Actions</th></tr></thead>
+        <tbody id="subadmin-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="page" id="page-students">
+      <div class="page-title">🎓 All Students</div>
+      <div class="page-sub">Full student list for your institution</div>
+      <input class="search-bar" placeholder="🔍 Search by name, ID, branch or class..." oninput="filterStudents(this.value)" id="student-search">
+      <div class="card" style="padding:0.5rem">
+        <table><thead><tr><th>Reg No</th><th>Name</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="student-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- VOTING CONTROL -->
+    <div class="page" id="page-voting">
+      <div class="page-title">🗳️ Ultimate Voting Control</div>
+      <div class="page-sub">Comprehensive voting controls, analysis, and verification</div>
+      <div style="background:var(--bg); border-radius:12px; overflow:hidden; border:1px solid var(--border);">
+        <iframe src="admin_dashboard.html" style="width:100%; height:75vh; border:none; display:block;"></iframe>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="page" id="page-audit">
+      <div class="page-title">📜 Audit Log</div>
+      <div class="page-sub">All activity log across the institution</div>
+      <div class="card" style="padding:0.5rem">
+        <table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
+        <tbody id="audit-table"></tbody></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+let allStudents = [];
+let chartInstance = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (saSession && saSession.role === 'superadmin') {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-layout').style.display = 'flex';
+    document.getElementById('sa-inst-label').textContent = saSession.institution || 'Super Admin';
+    document.getElementById('inst-name-sub').textContent = saSession.institution || '';
+    loadAll();
+  }
+});
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) } });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || r.statusText); }
+  return r.json();
+}
+
+function toast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = (ok?'✅ ':'❌ ') + msg;
+  t.style.borderColor = ok ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+async function saLogin() {
+  const id = document.getElementById('auth-id').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-err');
+  err.textContent = '';
+  try {
+    const user = await apiFetch(`/users/${id}`);
+    if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
+    if (user.status !== 'active') throw new Error('Account is not active.');
+    const hashed = btoa(pass);
+    if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+    saSession = user;
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-layout').style.display = 'flex';
+    document.getElementById('sa-inst-label').textContent = user.institution || 'Super Admin';
+    document.getElementById('inst-name-sub').textContent = user.institution || '';
+    loadAll();
+  } catch(e) { err.textContent = e.message; }
+}
+
+function saLogout() { 
+  saSession = null; 
+  localStorage.removeItem('ovs_currentUser');
+  window.location.href = 'login.html'; 
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id==='students') renderStudents(allStudents);
+  if (id==='voting') loadVoting();
+  if (id==='audit') loadAudit();
+}
+
+async function loadAll() {
+  try {
+    const [allUsers, election] = await Promise.all([
+      apiFetch('/users'),
+      apiFetch('/config/election').catch(()=>({}))
+    ]);
+
+    // Filter by institution — also catch NULL institution for legacy admins by regNum
+    const instUsers = allUsers.filter(u => 
+      u.institution === saSession.institution || 
+      u.regNum === saSession.regNum
+    );
+    const students = instUsers.filter(u => ['voter','contestant'].includes(u.role));
+    const admins = instUsers.filter(u => u.role === 'admin');
+    const subadmins = instUsers.filter(u => u.role === 'subadmin');
+    allStudents = students;
+
+    document.getElementById('s-students').textContent = students.length;
+    document.getElementById('s-admins').textContent = admins.length;
+    document.getElementById('s-subadmins').textContent = subadmins.length;
+    document.getElementById('s-voted').textContent = students.filter(u=>u.hasVoted==1).length;
+    document.getElementById('s-canvote').textContent = students.filter(u=>u.canVote==1).length;
+
+    const eInfo = document.getElementById('election-status-info');
+    if (election && election.isActive) {
+      eInfo.innerHTML = `<span style="color:var(--green);font-weight:700;">🟢 Election is ACTIVE</span><br><small style="color:var(--muted)">End: ${election.endTime || 'No end time set'}</small>`;
+    } else if (election && election.isCompleted) {
+      eInfo.innerHTML = `<span style="color:var(--red);font-weight:700;">🔴 Election COMPLETED</span>`;
+    } else {
+      eInfo.innerHTML = `<span style="color:var(--muted);">⚪ Election not started</span>`;
+    }
+
+    renderAdminTable(admins);
+    renderSubAdminTable(subadmins);
+  } catch(e) { toast(e.message, false); }
+}
+
+function renderAdminTable(admins) {
+  const tb = document.getElementById('admin-table');
+  if (!admins.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No admins yet</td></tr>'; return; }
+  tb.innerHTML = admins.map(a => `<tr>
+    <td><strong>${a.regNum}</strong></td><td>${a.name}</td>
+    <td><span class="badge badge-active">${a.branch||'-'}</span></td>
+    <td>${a.email||'-'}</td>
+    <td><span class="badge badge-active">${a.status}</span></td>
+    <td style="display:flex;gap:0.4rem;">
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editAdmin('${a.regNum}','${a.name}','${a.email||''}','${a.branch||''}')">Edit</button>
+      <button class="btn-sm btn-danger-sm" onclick="removeUser('${a.regNum}')">Remove</button>
+    </td>
+  </tr>`).join('');
+}
+
+function renderSubAdminTable(sas) {
+  const tb = document.getElementById('subadmin-table');
+  if (!sas.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No sub-admins yet</td></tr>'; return; }
+  tb.innerHTML = sas.map(s => `<tr>
+    <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
+    <td>${s.branch||'-'}</td><td>${s.class||'-'}</td><td>${s.managedBy||'-'}</td>
+    <td style="display:flex;gap:0.4rem;">
+      <button class="btn-sm" style="background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);" onclick="editSubAdmin('${s.regNum}','${s.name}','${s.email||''}','${s.branch||''}','${s.class||''}')">Edit</button>
+      <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
+    </td>
+  </tr>`).join('');
+}
+
+function renderStudents(list) {
+  const tb = document.getElementById('student-table');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">No students found</td></tr>'; return; }
+  tb.innerHTML = list.map(s => `<tr>
+    <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
+    <td>${s.branch||'-'}</td><td>${s.class||'-'}</td>
+    <td>${s.canVote==1 ? '<span class="badge badge-active">✅ Yes</span>' : '<span class="badge badge-pending">❌ No</span>'}</td>
+    <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
+    <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.status}</span></td>
+    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+      <button class="btn-sm ${s.canVote==1?'btn-danger-sm':'btn-success-sm'}" onclick="toggleCanVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>
+      <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
+    </td>
+  </tr>`).join('');
+}
+
+function filterStudents(q) {
+  const filtered = allStudents.filter(s => [s.regNum,s.name,s.branch,s.class].join(' ').toLowerCase().includes(q.toLowerCase()));
+  renderStudents(filtered);
+}
+
+async function createAdmin() {
+  const id = document.getElementById('a-id').value.trim();
+  const name = document.getElementById('a-name').value.trim();
+  const email = document.getElementById('a-email').value.trim();
+  const branch = document.getElementById('a-branch').value.trim().toUpperCase();
+  const pass = document.getElementById('a-pass').value;
+  if (!id||!name||!branch||!pass) return toast('Fill all required fields', false);
+  const pwdErr = validatePassword(pass, 8);
+  if (pwdErr) return toast('Admin ' + pwdErr, false);
+  try {
+    await apiFetch('/users/add', { method:'POST', body:JSON.stringify({ regNum:id, password:btoa(pass), role:'admin', name, email, branch, institution:saSession.institution, status:'active' }) });
+    toast(`Admin ${id} created for branch ${branch}`);
+    ['a-id','a-name','a-email','a-branch','a-pass'].forEach(i=>document.getElementById(i).value='');
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+function editAdmin(id, name, email, branch) {
+  const newName = prompt('Full Name:', name); if (newName === null) return;
+  const newEmail = prompt('Email:', email); if (newEmail === null) return;
+  const newBranch = prompt('Branch (e.g. CSE):', branch); if (newBranch === null) return;
+  const newPass = prompt('New Password (leave blank to keep current):');
+  updateStaff(id, { name: newName.trim(), email: newEmail.trim(), branch: newBranch.trim().toUpperCase() }, newPass, 8);
+}
+
+function editSubAdmin(id, name, email, branch, cls) {
+  const newName = prompt('Full Name:', name); if (newName === null) return;
+  const newEmail = prompt('Email:', email); if (newEmail === null) return;
+  const newBranch = prompt('Branch:', branch); if (newBranch === null) return;
+  const newClass = prompt('Class (e.g. CSE-5):', cls); if (newClass === null) return;
+  const newPass = prompt('New Password (leave blank to keep current):');
+  updateStaff(id, { name: newName.trim(), email: newEmail.trim(), branch: newBranch.trim().toUpperCase(), class: newClass.trim().toUpperCase() }, newPass, 6);
+}
+
+async function updateStaff(id, updates, newPass, minLen) {
+  if (newPass && newPass.trim() !== '') {
+    const pwdErr = validatePassword(newPass, minLen);
+    if (pwdErr) return toast(pwdErr, false);
+    updates.password = btoa(newPass);
+  }
+  try {
+    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify(updates) });
+    toast(`${id} updated!`); loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+function validatePassword(pwd, minLen, maxLen) {
+  if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+    return maxLen ? `Password must be ${minLen}-${maxLen} characters.` : `Password must be at least ${minLen} characters.`;
+  }
+  if ((pwd.match(/[a-zA-Z]/g) || []).length < 3) return 'Password must contain at least 3 letters.';
+  if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number.';
+  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Password must contain at least 1 special character.';
+  return null;
+}
+
+async function toggleCanVote(regNum, val) {
+  try {
+    await apiFetch('/voters/can-vote', { method:'POST', body:JSON.stringify({ regNum, canVote: val }) });
+    toast(val ? 'Vote access granted!' : 'Vote access revoked');
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function createSubAdminSA() {
+  const id=document.getElementById('sa-id').value.trim();
+  const name=document.getElementById('sa-name').value.trim();
+  const email=document.getElementById('sa-email').value.trim();
+  const branch=document.getElementById('sa-branch').value.trim().toUpperCase();
+  const cls=document.getElementById('sa-class').value.trim().toUpperCase();
+  const pass=document.getElementById('sa-pass').value;
+  if(!id||!name||!branch||!cls||!pass) return toast('Fill all required fields',false);
+  const pwdErr = validatePassword(pass, 6);
+  if (pwdErr) return toast('Sub-Admin ' + pwdErr, false);
+  try{
+    await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:branch,class:cls,institution:saSession.institution,managedBy:saSession.regNum,status:'active'})});
+    toast(`Sub-Admin ${id} created for class ${cls}`);
+    ['sa-id','sa-name','sa-email','sa-branch','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
+    loadAll();
+  }catch(e){toast(e.message,false);}
+}
+
+async function removeUser(id) {
+  if (!confirm(`Remove ${id}? This cannot be undone.`)) return;
+  try {
+    await apiFetch(`/users/${id}`, { method:'DELETE' });
+    toast(`${id} removed`);
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function setElectionTimes() {
+  const start = document.getElementById('v-start').value;
+  const end = document.getElementById('v-end').value;
+  if (!start||!end) return toast('Set both start and end times', false);
+  try {
+    await apiFetch('/config/election', { method:'POST', body:JSON.stringify({ merge:true, data:{ isActive:true, isCompleted:false, startTime:start, endTime:end } }) });
+    toast('Election times set & activated!');
+  } catch(e) { toast(e.message, false); }
+}
+
+async function resetElection() {
+  if (!confirm('Reset entire election? All votes will be cleared.')) return;
+  try {
+    await apiFetch('/election/reset', { method:'POST' });
+    toast('Election reset');
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function loadVoting() {
+  try {
+    const users = await apiFetch('/users');
+    const candidates = users.filter(u => u.role==='contestant' && u.institution===saSession.institution);
+    const voters = users.filter(u => u.role==='voter' && u.institution===saSession.institution);
+    const labels = candidates.map(c=>c.name);
+    const votes = candidates.map(c => voters.filter(v=>v.votedFor===c.regNum).length);
+    if (chartInstance) chartInstance.destroy();
+    const ctx = document.getElementById('results-chart').getContext('2d');
+    chartInstance = new Chart(ctx, { type:'bar', data: { labels, datasets:[{ label:'Votes', data:votes, backgroundColor:'rgba(6,182,212,0.5)', borderColor:'rgba(6,182,212,1)', borderWidth:2 }] }, options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{color:'#64748b'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#64748b'}, grid:{display:false}}} } });
+  } catch(e) { toast(e.message, false); }
+}
+
+async function loadAudit() {
+  try {
+    const logs = await apiFetch('/auditLogs');
+    const tb = document.getElementById('audit-table');
+    if (!logs.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">No logs</td></tr>'; return; }
+    tb.innerHTML = logs.map(l=>`<tr>
+      <td style="white-space:nowrap;color:var(--muted);">${new Date(l.timestamp).toLocaleString()}</td>
+      <td><strong>${l.action}</strong></td><td>${l.user}</td><td style="color:var(--muted);font-size:0.8rem;">${l.details}</td>
+    </tr>`).join('');
+  } catch(e) { toast(e.message, false); }
+}
+
+document.addEventListener('keydown', e => { if (e.key==='Enter' && document.getElementById('auth-overlay').style.display!=='none') saLogin(); });
+</script>
+</body>
+</html>

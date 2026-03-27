@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OVS Developer Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #050a14;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+      --red: #ef4444;
+      --gold: #f59e0b;
+      --cyan: #06b6d4;
+      --green: #22c55e;
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; }
+    /* Auth Screen */
+    #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at center, rgba(239,68,68,0.08) 0%, var(--bg) 70%); }
+    .auth-box { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 3rem; width: 100%; max-width: 420px; text-align: center; }
+    .auth-box h1 { font-size: 2rem; font-weight: 900; color: var(--red); margin-bottom: 0.5rem; }
+    .auth-box p { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
+    input { width: 100%; padding: 0.9rem 1.2rem; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 1rem; font-family: 'Outfit', sans-serif; outline: none; transition: border 0.3s; margin-bottom: 1rem; }
+    input:focus { border-color: var(--red); }
+    .btn { width: 100%; padding: 0.9rem; border-radius: 10px; border: none; cursor: pointer; font-size: 1rem; font-weight: 600; font-family: 'Outfit', sans-serif; transition: all 0.3s; }
+    .btn-red { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; }
+    .btn-red:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(239,68,68,0.4); }
+    .btn-cyan { background: linear-gradient(135deg, var(--cyan), #0284c7); color: white; }
+    .btn-green { background: linear-gradient(135deg, var(--green), #16a34a); color: white; }
+    .btn-red-outline { background: transparent; color: var(--red); border: 1px solid var(--red); padding: 0.5rem 1rem; width: auto; border-radius: 8px; font-size: 0.85rem; }
+    #auth-error { color: var(--red); font-size: 0.9rem; margin-top: 0.5rem; min-height: 1rem; }
+    /* Main Console */
+    #console-screen { display: none; }
+    header { background: rgba(239,68,68,0.08); border-bottom: 1px solid rgba(239,68,68,0.2); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.4rem; font-weight: 900; color: var(--red); }
+    header span { color: var(--muted); font-size: 0.85rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; text-align: center; }
+    .stat-card .number { font-size: 2.5rem; font-weight: 900; }
+    .stat-card .label { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; }
+    .section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .form-row input { margin-bottom: 0; }
+    label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.35rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 0.75rem 1rem; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.9rem; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge { padding: 0.25rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge-sa { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+    .btn-sm { padding: 0.35rem 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-family: 'Outfit', sans-serif; font-weight: 600; }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.3); }
+    .empty { text-align: center; color: var(--muted); padding: 2rem; }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; background: #1e293b; border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.5rem; color: white; font-size: 0.9rem; transform: translateY(100px); opacity: 0; transition: all 0.4s; z-index: 999; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h1>⚡ DEV CONSOLE</h1>
+    <p>Restricted Access — Authorized Personnel Only</p>
+    <div><label>Developer ID</label><input type="text" id="dev-id" placeholder="DEV001" autocomplete="off"></div>
+    <div><label>Password</label><input type="password" id="dev-pass" placeholder="Enter password"></div>
+    <button class="btn btn-red" onclick="devLogin()">Access Developer Console</button>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<!-- CONSOLE -->
+<div id="console-screen">
+  <header>
+    <h1>⚡ OVS Developer Console</h1>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span id="dev-name-label">Developer</span>
+      <button class="btn btn-red-outline" onclick="devLogout()">Logout</button>
+    </div>
+  </header>
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="number" id="stat-sa" style="color:var(--gold)">-</div><div class="label">Super Admins</div></div>
+      <div class="stat-card"><div class="number" id="stat-inst" style="color:var(--cyan)">-</div><div class="label">Institutions</div></div>
+      <div class="stat-card"><div class="number" id="stat-users" style="color:var(--green)">-</div><div class="label">Total Users</div></div>
+    </div>
+
+    <!-- Create Super Admin -->
+    <div class="section">
+      <h2>🏛️ Create Super Admin</h2>
+      <div class="form-row">
+        <div><label>Admin ID (e.g. SADMIN-KLU)</label><input type="text" id="sa-id" placeholder="SADMIN001"></div>
+        <div><label>Full Name</label><input type="text" id="sa-name" placeholder="Dr. John Smith"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Email</label><input type="email" id="sa-email" placeholder="admin@institution.edu"></div>
+        <div><label>Institution Name</label><input type="text" id="sa-institution" placeholder="KL University"></div>
+        <div><label>Password</label><input type="password" id="sa-pass" placeholder="Min 8 chars"></div>
+      </div>
+      <button class="btn btn-cyan" style="max-width:220px;" onclick="createSuperAdmin()">Create Super Admin</button>
+    </div>
+
+    <!-- Super Admins Table -->
+    <div class="section">
+      <h2>📋 All Super Admins</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Institution</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="sa-table-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let devSession = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) } });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || r.statusText); }
+  return r.json();
+}
+
+function showToast(msg, success = true) {
+  const t = document.getElementById('toast');
+  t.textContent = (success ? '✅ ' : '❌ ') + msg;
+  t.style.borderColor = success ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function devLogin() {
+  const id = document.getElementById('dev-id').value.trim();
+  const pass = document.getElementById('dev-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  try {
+    const user = await api(`/users/${id}`);
+    if (user.role !== 'developer') throw new Error('Not a developer account.');
+    const hashed = btoa(pass);
+    if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+    devSession = user;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('console-screen').style.display = 'block';
+    document.getElementById('dev-name-label').textContent = user.name;
+    loadConsole();
+  } catch(e) { errEl.textContent = e.message; }
+}
+
+function devLogout() {
+  devSession = null;
+  localStorage.removeItem('ovs_currentUser');
+  window.location.href = 'login.html';
+}
+
+async function loadConsole() {
+  try {
+    const [allUsers, superAdmins] = await Promise.all([api('/users'), api('/superadmins')]);
+    document.getElementById('stat-sa').textContent = superAdmins.length;
+    const institutions = [...new Set(superAdmins.map(s => s.institution).filter(Boolean))];
+    document.getElementById('stat-inst').textContent = institutions.length;
+    document.getElementById('stat-users').textContent = allUsers.length;
+    renderSaTable(superAdmins);
+  } catch(e) { showToast(e.message, false); }
+}
+
+function renderSaTable(list) {
+  const tbody = document.getElementById('sa-table-body');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No Super Admins yet</td></tr>'; return; }
+  tbody.innerHTML = list.map(sa => `
+    <tr>
+      <td><strong>${sa.regNum}</strong></td>
+      <td>${sa.name}</td>
+      <td>${sa.institution || '-'}</td>
+      <td>${sa.email || '-'}</td>
+      <td><span class="badge badge-sa">${sa.status}</span></td>
+      <td style="display:flex;gap:0.4rem;">
+        <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}','${sa.name}','${sa.email||''}','${sa.institution||''}')">Edit</button>
+        <button class="btn-sm btn-danger" onclick="deleteSuperAdmin('${sa.regNum}')">Remove</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function createSuperAdmin() {
+  const id = document.getElementById('sa-id').value.trim();
+  const name = document.getElementById('sa-name').value.trim();
+  const email = document.getElementById('sa-email').value.trim();
+  const institution = document.getElementById('sa-institution').value.trim();
+  const pass = document.getElementById('sa-pass').value;
+  if (!id || !name || !institution || !pass) return showToast('Please fill all fields', false);
+  const pwdErr = validatePassword(pass, 10, 10);
+  if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
+  try {
+    await api('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) });
+    showToast(`Super Admin ${id} created!`);
+    ['sa-id','sa-name','sa-email','sa-institution','sa-pass'].forEach(i => document.getElementById(i).value = '');
+    loadConsole();
+  } catch(e) { showToast(e.message, false); }
+}
+
+function editSA(id, name, email, institution) {
+  const newName = prompt('Full Name:', name);
+  if (newName === null) return;
+  const newEmail = prompt('Email:', email);
+  if (newEmail === null) return;
+  const newInst = prompt('Institution:', institution);
+  if (newInst === null) return;
+  const newPass = prompt('New Password (leave blank to keep current):');
+  updateSA(id, newName.trim(), newEmail.trim(), newInst.trim(), newPass);
+}
+
+async function updateSA(id, name, email, institution, newPass) {
+  const updates = { name, email, institution };
+  if (newPass && newPass.trim() !== '') {
+    const pwdErr = validatePassword(newPass, 10, 10);
+    if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
+    updates.password = btoa(newPass);
+  }
+  try {
+    await api(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
+    showToast(`${id} updated!`);
+    loadConsole();
+  } catch(e) { showToast(e.message, false); }
+}
+
+function validatePassword(pwd, minLen, maxLen) {
+  if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+    return maxLen === minLen ? `password must be exactly ${minLen} characters.` : `password must be ${minLen}-${maxLen} characters.`;
+  }
+  if ((pwd.match(/[a-zA-Z]/g) || []).length < 3) return 'password must contain at least 3 letters.';
+  if (!/[0-9]/.test(pwd)) return 'password must contain at least 1 number.';
+  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'password must contain at least 1 special character.';
+  return null;
+}
+
+async function deleteSuperAdmin(id) {
+  if (!confirm(`Remove Super Admin ${id}? This cannot be undone.`)) return;
+  try {
+    await api(`/users/${id}`, { method: 'DELETE' });
+    showToast(`${id} removed.`);
+    loadConsole();
+  } catch(e) { showToast(e.message, false); }
+}
+
+// Enter key on auth
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none') devLogin(); });
+</script>
+</body>
+</html>

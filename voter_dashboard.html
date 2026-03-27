@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter Dashboard - OVS</title>
+
+    <link rel="stylesheet" href="style.css">
+    <script src="storage.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* Local overrides */
+        #vote-btn {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        #vote-btn:hover {
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.6);
+        }
+
+        /* Voter Dashboard Additions */
+    .save-cart-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px dashed var(--neon-cyan);
+        color: var(--neon-cyan);
+    }
+    .save-cart-btn:hover { background: rgba(6, 182, 212, 0.2); }
+
+    .debate-section {
+        margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);
+    }
+    .q-box { background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; text-align: left; }
+    .q-ans { color: var(--success); font-size: 0.85rem; margin-top: 0.3rem; margin-left:1rem; border-left: 2px solid var(--success); padding-left:0.5rem;}
+    
+    .social-badge {
+        display: inline-block;
+        background: linear-gradient(45deg, #E1306C, #F56040, #FFDC80);
+        padding: 5px 15px; border-radius: 20px; color: white;
+        font-weight: bold; font-family: sans-serif; cursor: pointer;
+        text-decoration: none; margin-top: 1rem; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.4);
+    }
+    .social-badge:hover { transform: scale(1.05); }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="brand">Voter Portal</div>
+        <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle Light/Dark Mode">☀️</button>
+            <span id="voter-name" style="color: var(--text-muted);">Welcome, Voter</span>
+            <button class="btn-outline" onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade-in" style="max-width: 1000px;">
+
+        <!-- Status Banner -->
+        <div class="glass-panel text-center" style="padding: 3rem; margin-bottom: 2rem;">
+            <h2 id="election-status-header"
+                style="margin-bottom: 0.5rem; font-family: var(--font-heading); font-size: 2rem;">checking...</h2>
+            <p id="election-status-desc" class="text-muted">Connecting to election server...</p>
+        </div>
+
+        <!-- Voting Section -->
+        <div id="voting-section" class="hidden animate-fade-in">
+            <!-- Leaderboard -->
+            <div id="leaderboard-container" style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid var(--glass-border); display:none;">
+                <h3 style="color:var(--gold-primary); margin-bottom:1rem; text-align:center;">🌟 Live Campaign Leaderboard 🌟</h3>
+                <div id="leaderboard-list" style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;"></div>
+            </div>
+
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-muted); font-weight: 500;">Select your candidate</h3>
+            <div class="dashboard-grid" id="candidates-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="text-center mt-4" style="height: 80px;"> <!-- fixed height to prevent jump -->
+                <button id="vote-btn" class="submit-btn hidden animate-fade-in"
+                    style="width: auto; padding: 1rem 4rem; font-size: 1.1rem; border-radius: 99px; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);">
+                    Review & Cast Vote
+                </button>
+            </div>
+        </div>
+
+        <!-- Already Voted View -->
+        <div id="voted-section" class="glass-panel text-center hidden animate-fade-in" style="padding: 4rem 2rem;">
+            <div style="font-size: 5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 20px rgba(16,185,129,0.4));">✅
+            </div>
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Vote Recorded Successfully</h2>
+            <p class="text-muted">Your voice has been counted.</p>
+            <p class="mt-4"
+                style="font-size: 1.2rem; background: rgba(255,255,255,0.05); display: inline-block; padding: 1rem 2rem; border-radius: 99px;">
+                You voted for: <span id="voted-candidate-name"
+                    style="font-weight: 700; color: var(--gold-primary);"></span>
+            </p>
+            <div style="margin-top: 2rem;">
+                <button onclick="downloadReceipt()" class="submit-btn"
+                    style="width: auto; background: var(--glass-border); border: 1px solid var(--gold-primary);">
+                    Download Receipt 📄
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Candidate Details Modal -->
+    <div id="candidate-modal" class="modal">
+        <div class="glass-panel modal-content"
+            style="width: 90%; max-width: 500px; padding: 2.5rem; text-align:center; border-color: var(--gold-primary);">
+            <div id="modal-portrait"></div>
+            <h2 id="modal-cand-name" style="margin-top:1rem; color:var(--gold-primary);"></h2>
+            <p id="modal-cand-details" class="text-muted"></p>
+
+            <div
+                style="margin: 2rem 0; text-align:left; background:rgba(255,255,255,0.05); padding:1rem; border-radius:8px;">
+                <h4 style="margin-bottom:0.5rem; color:var(--neon-blue);">Manifesto / Slogan</h4>
+                <p id="modal-manifesto" style="font-style:italic; line-height:1.6;"></p>
+            </div>
+
+            <button type="button" class="submit-btn"
+                onclick="document.getElementById('candidate-modal').classList.remove('visible')">Close</button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="glass-panel modal-content"
+            style="width: 90%; max-width: 450px; padding: 2.5rem; border-color: var(--gold-primary);">
+            <h3 style="margin-bottom: 1.5rem; text-align: center; font-family: var(--font-heading);">Confirm Your Vote
+            </h3>
+
+            <div
+                style="text-align: center; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px;">
+                <p class="text-muted" style="margin-bottom: 0.5rem;">You are voting for</p>
+                <h2 id="confirm-candidate-name" style="color: var(--gold-primary);"></h2>
+            </div>
+
+            <form id="confirm-form">
+                <!-- STEP 1: PASSWORD -->
+                <div id="step-password" class="step-section">
+                    <div class="form-group">
+                        <label>Enter Password to Confirm</label>
+                        <input type="password" id="confirm-password" required placeholder="Your Password"
+                            style="text-align: center;">
+                    </div>
+                </div>
+
+
+                <!-- Live Turnout Progress -->
+            <div id="live-turnout-container" style="margin-top:2rem; padding:1.5rem; background:rgba(255,255,255,0.05); border-radius:12px; display:none;">
+                <h4 style="color:var(--text-muted); margin-bottom:0.5rem; text-align:center;">Live Election Turnout</h4>
+                <div style="width:100%; background:rgba(0,0,0,0.3); height:24px; border-radius:12px; overflow:hidden; border:1px solid var(--glass-border); position: relative;">
+                    <div id="turnout-fill" style="height:100%; background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); width:0%; transition:width 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    <span id="turnout-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:white; font-size:0.85rem; font-weight:bold; text-shadow:0 1px 3px rgba(0,0,0,0.8);">0%</span>
+                </div>
+            </div>
+
+            <div id="status-card" class="glass-panel" style="padding: 2rem; margin-top: 2rem; text-align: center;">
+                <!-- STEP 3: WEBCAM -->
+                <div id="step-webcam" class="step-section hidden" style="text-align:center;">
+                    <p class="text-muted">Face Verification Required</p>
+                    <div
+                        style="background: black; border-radius: 8px; overflow: hidden; position: relative; margin: 0 auto; width: 200px; height: 150px;">
+                        <video id="vote-video" autoplay playsinline
+                            style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                        <canvas id="vote-canvas" class="hidden"></canvas>
+                        <img id="vote-preview" class="hidden"
+                            style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);">
+                    </div>
+                    <button type="button" class="submit-btn" id="start-vote-cam" style="margin-top:0.5rem;"
+                        onclick="startVoteCam()">Open Camera</button>
+                    <button type="button" class="submit-btn hidden" id="capture-vote-cam"
+                        style="margin-top:0.5rem; background: var(--gold-primary); color:black;"
+                        onclick="captureVoteCam()">Capture & Verify</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="submit-btn"
+                        style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);"
+                        onclick="closeModal()">Cancel</button>
+                    <button type="submit" id="modal-next-btn" class="submit-btn">Next ➔</button>
+                </div>
+            </form>
+            <p id="modal-error" class="text-danger text-center mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = StorageManager.getCurrentUser();
+        if (!currentUser || (currentUser.role !== 'voter' && currentUser.role !== 'contestant')) {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('voter-name').innerText = `Welcome, ${currentUser.name}`;
+
+        let selectedCandidateId = null;
+        let candidates = [];
+        let candidatesGrid = document.getElementById('candidates-grid');
+
+        async function init() {
+            try {
+                // Fetch status and CANDIDATES (Securely)
+                const election = await StorageManager.getElectionStatus();
+                // Check if voted - Trust session or fetch fresh user?
+                // For simplicity and speed, trust session if updated correctly, but let's re-fetch self to be safe against multi-device.
+                // Since we don't have getSelf endpoint, we rely on currentUser from localStorage which is updated by vote().
+                // To be extra safe, we could re-login or fetchUser(id).
+                // Let's stick to currentUser for now as it's sufficient for this scope.
+
+                const statusHeader = document.getElementById('election-status-header');
+                const statusDesc = document.getElementById('election-status-desc');
+                const votingSection = document.getElementById('voting-section');
+                const votedSection = document.getElementById('voted-section');
+
+                // Announcements Ticker
+                const news = await StorageManager.getAnnouncement();
+                if (news) {
+                    const marquee = document.createElement('div');
+                    marquee.style.cssText = "background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); color:black; font-weight:bold; width:100%; position:fixed; top:0; left:0; z-index:9999; padding:0.5rem; white-space:nowrap; overflow:hidden;";
+                    marquee.innerHTML = `<marquee behavior='scroll' direction='left'>📢 IMPORTANT: ${news}</marquee>`;
+                    document.body.prepend(marquee);
+                    document.querySelector('nav').style.marginTop = "2rem"; // Push nav down
+                }
+
+                // 1. Check if voted
+                // Ban Check
+                if (currentUser.isBanned) {
+                    statusHeader.innerText = "Voting Rights Suspended 🚫";
+                    statusHeader.style.color = "var(--danger)";
+                    statusDesc.innerText = "Your account has been restricted by the Administrator.";
+                    votingSection.classList.add('hidden');
+                    document.getElementById('live-turnout-container').style.display = 'none';
+                    return;
+                }
+
+                // canVote Gate — Admin/Sub-Admin must grant access
+                const freshUser = await fetch(`http://localhost:3001/api/users/${currentUser.regNum}`).then(r=>r.json()).catch(()=>currentUser);
+                if (!freshUser.canVote || freshUser.canVote === 0) {
+                    statusHeader.innerText = "Access Not Granted Yet ⏳";
+                    statusHeader.style.color = "var(--warning, #f59e0b)";
+                    statusDesc.innerHTML = `<strong style="color:#f59e0b;">Admin/Sub-Admin has not given you access yet!</strong><br><span style="font-size:0.9rem;color:#64748b;">Please contact your class Sub-Admin or Branch Admin to grant you voting access.</span>`;
+                    votingSection.classList.add('hidden');
+                    return;
+                }
+
+                if (currentUser.hasVoted) {
+                    statusHeader.innerText = "You have already voted! 🎉";
+                    statusHeader.style.color = "var(--success)";
+                    const rec = currentUser.voteReceiptHash || "Pending Generation";
+                    statusDesc.innerHTML = `Your vote has been securely recorded.<br><br>
+                    <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px; border:1px solid var(--glass-border); display:inline-block;">
+                        <span style="color:var(--text-muted); font-size:0.9rem;">Cryptographic Receipt Hash:</span><br>
+                        <strong style="color:var(--neon-cyan); letter-spacing:2px; font-family:monospace;">${rec}</strong>
+                    </div><br>
+                    <a href="https://twitter.com/intent/tweet?text=I%20just%20voted%20securely%20using%20OVS!%20%23IVoted" target="_blank" class="social-badge">Share 'I Voted' Badge 🚀</a>
+                    `;
+                    // timerDisplay.innerText = ""; // Assuming timerDisplay is not present or handled elsewhere
+                    votingSection.classList.add('hidden');
+                    return;
+                }
+                // Old voted section logic removed as per instruction.
+                // The above block replaces the old `voted-section` display.
+
+                // 2. Election Active? (Manual OR Scheduled)
+                const now = new Date().getTime();
+                const startT = election.startTime ? new Date(election.startTime).getTime() : 0;
+                const endT = election.endTime ? new Date(election.endTime).getTime() : 0;
+
+                let isScheduledActive = false;
+                if (startT && endT) {
+                    if (now >= startT && now < endT) isScheduledActive = true;
+                } else if (startT && !endT) {
+                    if (now >= startT) isScheduledActive = true;
+                }
+
+                if (election.isActive || isScheduledActive) {
+                    // Double check if ENDED due to schedule (even if active flag is stuck)
+                    if (endT && now > endT) {
+                        statusHeader.innerText = "Election Closed";
+                        statusHeader.className = "text-danger";
+                        statusDesc.innerText = "Voting time has ended. Results will be declared soon.";
+                        return;
+                    }
+
+                    // CHECK IF TOO EARLY
+                    if (startT && now < startT) {
+                        statusHeader.innerText = "Election Scheduled";
+                        statusHeader.className = "text-warning";
+                        statusDesc.innerText = `Voting starts at ${new Date(election.startTime).toLocaleString()}`;
+                        return;
+                    }
+
+                    statusHeader.innerText = "Active Election";
+                    statusHeader.className = "text-success";
+                    statusDesc.innerText = "Polls are open. Select a candidate below.";
+
+                    await loadCandidates(); // Call the new loadCandidates function
+
+                    votingSection.classList.remove('hidden');
+                } else {
+                    // Not active and Not in schedule
+                    statusHeader.innerText = "Election Closed";
+                    statusHeader.className = "text-danger";
+                    if (endT && now > endT) {
+                        statusDesc.innerText = "Voting has ended.";
+                    } else if (startT && now < startT) {
+                        statusHeader.innerText = "Upcoming Election";
+                        statusHeader.className = "text-info";
+                        statusDesc.innerText = `Voting starts at ${new Date(election.startTime).toLocaleString()}`;
+                    } else {
+                        statusDesc.innerText = "Voting is currently paused or not started.";
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('election-status-header').innerText = "Connection Error";
+                document.getElementById('election-status-desc').innerText = "Is the server running?";
+            }
+        }
+
+        let queuedVoteId = null;
+
+        async function loadCandidates() {
+            candidatesGrid.innerHTML = '<p class="text-center text-muted">Loading candidates...</p>';
+            const fetchedCandidates = await StorageManager.getCandidates();
+            candidates = fetchedCandidates; // Update global candidates array
+
+            if (candidates.length === 0) {
+                candidatesGrid.innerHTML = '<p class="text-center text-muted">No candidates registered yet.</p>';
+                return;
+            }
+
+            candidatesGrid.innerHTML = '';
+            
+            // Build Leaderboard
+            const lbContainer = document.getElementById('leaderboard-list');
+            lbContainer.innerHTML = '';
+            const sorted = [...candidates].sort((a,b)=>(b.campaignPoints||0)-(a.campaignPoints||0)).slice(0,3);
+            if (sorted.length > 0 && sorted[0].campaignPoints > 0) {
+                document.getElementById('leaderboard-container').style.display = 'block';
+                sorted.forEach((c, i) => {
+                    if(!c.campaignPoints) return;
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+                    lbContainer.innerHTML += `<div style="background:rgba(0,0,0,0.4); padding:10px 20px; border-radius:8px; border:1px solid var(--glass-border);">
+                        <span style="font-size:1.5rem; margin-right:10px;">${medal}</span>
+                        <strong style="color:white;">${c.name}</strong>
+                        <span style="color:var(--neon-cyan); margin-left:10px;">${c.campaignPoints} pts</span>
+                    </div>`;
+                });
+            }
+
+            // Render Candidates with Debate Board Injection
+            for(const c of candidates) {
+                const card = document.createElement('div');
+                card.className = 'candidate-card';
+                card.innerHTML = `
+                    <img src="${c.portrait || 'https://via.placeholder.com/150'}" alt="${c.name}" class="candidate-photo">
+                    <div class="candidate-info">
+                        <h3>${c.name}</h3>
+                        <p class="text-muted">${c.regNum} • Sec: ${c.section}</p>
+                        <p style="margin-top:0.5rem;">Symbol: <span style="font-size:1.5rem;">${c.symbol}</span></p>
+                        <p style="margin-top:1rem; font-size:0.9rem; font-style:italic;">"${c.manifesto || "No manifesto provided."}"</p>
+                    </div>
+                    
+                    <div style="width:100%; display:flex; gap:10px; margin-top:1rem;">
+                        <button class="vote-btn" style="flex:1" onclick="queueVote('${c.regNum}', '${c.name}')">Add to Cart 🛒</button>
+                    </div>
+
+                    <div class="debate-section">
+                        <p style="font-weight:bold; font-size:0.9rem; color:var(--text-muted);">Q&A Board</p>
+                        <div id="qa-list-${c.regNum}" style="max-height:100px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.85rem;"></div>
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:4px; color:white; font-size:0.8rem;">
+                            <button onclick="askQuestion('${c.regNum}')" style="background:var(--neon-blue); border:none; color:white; border-radius:4px; padding:0 10px; cursor:pointer;">Ask</button>
+                        </div>
+                    </div>
+                `;
+                candidatesGrid.appendChild(card);
+                loadQuestions(c.regNum);
+            }
+        }
+
+        function queueVote(id, name) {
+            queuedVoteId = id;
+            showToast(`Added ${name} to Voting Cart!`, "success");
+            const actBtn = document.createElement('button');
+            actBtn.className = 'submit-btn';
+            actBtn.innerText = `Finalize Vote for ${name} ➔`;
+            actBtn.style.marginTop = "2rem";
+            actBtn.style.background = "linear-gradient(135deg, var(--success), #059669)";
+            actBtn.onclick = () => startVoteFlow(id, name);
+            
+            // Clear existing cart buttons
+            const existing = document.getElementById('cart-finalize');
+            if(existing) existing.remove();
+            
+            actBtn.id = 'cart-finalize';
+            candidatesGrid.parentElement.appendChild(actBtn);
+        }
+
+        async function loadQuestions(candidateId) {
+            const listObj = document.getElementById(`qa-list-${candidateId}`);
+            if(!listObj) return;
+            const qs = await StorageManager.getQuestions(candidateId);
+            listObj.innerHTML = '';
+            if(qs.length === 0) listObj.innerHTML = '<p class="text-muted" style="font-size:0.75rem;">No questions yet.</p>';
+            qs.forEach(q => {
+                const aHtml = q.answer ? `<div class="q-ans">↳ ${q.answer}</div>` : '';
+                listObj.innerHTML += `<div class="q-box"><strong>${q.voterName}:</strong> ${q.question} ${aHtml}</div>`;
+            });
+        }
+
+        async function askQuestion(candidateId) {
+            const input = document.getElementById(`q-input-${candidateId}`);
+            const text = input.value.trim();
+            if(!text) return;
+            const badge = currentUser.hasVoted ? ' 🏅 Active Citizen' : '';
+            await StorageManager.submitQuestion(candidateId, currentUser.name + badge, text);
+            input.value = '';
+            showToast("Question Submitted!", "success");
+            loadQuestions(candidateId);
+        }
+
+        function startVoteFlow(id, name) {
+            selectedCandidateId = id;
+            const modal = document.getElementById('confirm-modal');
+            document.getElementById('confirm-candidate-name').innerText = name;
+            // Reset State
+            currentStep = 1;
+            voteOtp = null;
+            voteWebcamPhoto = null;
+            voteWebcamStream = null;
+
+            document.getElementById('confirm-password').value = '';
+
+            showStep(1);
+            modal.classList.add('visible');
+        }
+
+        // --- MULTI-STEP VOTING LOGIC ---
+        let currentStep = 1;
+        let voteOtp = null;
+        let voteWebcamPhoto = null;
+        let voteWebcamStream = null;
+
+        // The old event listener for vote-btn is replaced by queueVote and startVoteFlow
+        // document.getElementById('vote-btn').addEventListener('click', () => { ... });
+
+        function showStep(s) {
+            currentStep = s;
+            document.querySelectorAll('.step-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById('modal-error').classList.add('hidden');
+            const nextBtn = document.getElementById('modal-next-btn');
+
+            if (s === 1) {
+                document.getElementById('step-password').classList.remove('hidden');
+                nextBtn.innerText = "Next ➔";
+                nextBtn.type = "submit";
+            } else if (s === 2) {
+                document.getElementById('step-webcam').classList.remove('hidden');
+                nextBtn.innerText = "Cast Vote 🗳️";
+                nextBtn.disabled = true; // Wait for capture
+            }
+        }
+
+
+        // --- STEP 3: WEBCAM ---
+        async function startVoteCam() {
+            const video = document.getElementById('vote-video');
+            try {
+                voteWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = voteWebcamStream;
+                document.getElementById('start-vote-cam').classList.add('hidden');
+                document.getElementById('capture-vote-cam').classList.remove('hidden');
+                document.getElementById('vote-video').classList.remove('hidden');
+                document.getElementById('vote-preview').classList.add('hidden');
+            } catch (err) {
+                alert("Webcam Error: " + err.message);
+            }
+        }
+
+        function captureVoteCam() {
+            const video = document.getElementById('vote-video');
+            const canvas = document.getElementById('vote-canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (!voteWebcamStream) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            voteWebcamPhoto = canvas.toDataURL('image/jpeg');
+
+            // Show preview
+            document.getElementById('vote-preview').src = voteWebcamPhoto;
+            document.getElementById('vote-preview').classList.remove('hidden');
+            video.classList.add('hidden');
+
+            document.getElementById('capture-vote-cam').classList.add('hidden');
+
+            // Enable Final Submit
+            document.getElementById('modal-next-btn').disabled = false;
+        }
+
+        // --- FORM SUBMIT HANDLER ---
+        document.getElementById('confirm-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (currentStep === 1) {
+                // Verify Password
+                const pwd = document.getElementById('confirm-password').value;
+                if (pwd !== currentUser.password) {
+                    // Check if hash matches (in case session has hash)
+                    const hash = await StorageManager.hashPassword(pwd);
+                    if (hash !== currentUser.password && pwd !== currentUser.password) {
+                        // Fail both plain and hash check
+                        const err = document.getElementById('modal-error');
+                        err.innerText = "Incorrect Password";
+                        err.classList.remove('hidden');
+                        return;
+                    }
+                }
+                showStep(2);
+
+            } else if (currentStep === 2) {
+                // Final Submit
+                // Final Submit
+                if (!voteWebcamPhoto) return;
+
+                try {
+                    // Update Storage.js vote method to handle photo
+                    const hash = await StorageManager.vote(currentUser.regNum, selectedCandidateId, voteWebcamPhoto);
+                    showToast("Vote Submitted Successfully! Generating Receipt...", "success");
+
+                    // Generate Receipt PDF
+                    const { jsPDF } = window.jspdf;
+                    
+                    // Trigger Confetti Gamification
+                    confetti({
+                        particleCount: 150,
+                        spread: 100,
+                        origin: { y: 0.6 },
+                        colors: ['#D4AF37', '#06B6D4', '#E1306C']
+                    });
+                    
+                    // Audio Effect
+                    const audio = new Audio('https://www.soundjay.com/misc/sounds/magic-chime-01.mp3');
+                    audio.play().catch(e=>console.log("Audio play prevented"));
+
+                    const doc = new jsPDF();
+
+                    doc.setFontSize(22);
+                    doc.setTextColor(212, 175, 55); // Gold
+                    doc.text("Online Voting System", 105, 20, null, null, "center");
+
+                    doc.setFontSize(16);
+                    doc.setTextColor(0, 0, 0); // Black
+                    doc.text("Official Vote Receipt", 105, 30, null, null, "center");
+
+                    doc.setLineWidth(0.5);
+                    doc.line(20, 35, 190, 35);
+
+                    // Details
+                    doc.setFontSize(12);
+                    doc.text("Voter Name:", 30, 50);
+                    doc.text(currentUser.name, 80, 50);
+
+                    doc.text("Voter ID:", 30, 60);
+                    doc.text(currentUser.regNum, 80, 60);
+
+                    const cand = candidates.find(c => c.regNum === selectedCandidateId);
+                    const votedName = cand ? `${cand.name} (${cand.symbol})` : selectedCandidateId;
+                    doc.text("Voted For:", 30, 70);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(votedName, 80, 70);
+                    doc.setFont("helvetica", "normal");
+
+                    doc.text("Date & Time:", 30, 80);
+                    const timeStr = new Date().toLocaleString();
+                    doc.text(timeStr, 80, 80);
+
+                    doc.text("Status:", 30, 90);
+                    doc.setTextColor(0, 150, 0);
+                    doc.text("VERIFIED & CAST", 80, 90);
+
+                    let yPos = 110;
+                    doc.setTextColor(0, 0, 0); // Black
+                    doc.setFontSize(12);
+                    doc.text("Vote Receipt Hash:", 30, yPos);
+                    doc.setFont("courier", "bold");
+                    doc.text(hash, 80, yPos);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(10);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text("Keep this hash secure. It validates your vote without revealing your choice.", 30, yPos + 10);
+                    
+                    // Footer
+                    doc.setFontSize(8);
+                    doc.text("This receipt confirms your participation in the election.", 105, 140, null, null, "center");
+
+                    doc.save(`OVS_Vote_Receipt_${currentUser.regNum}.pdf`);
+
+                    closeModal();
+                    setTimeout(() => window.location.reload(), 300);
+                } catch (err) {
+                    alert("Error casting vote: " + err.message);
+                }
+            }
+        });
+
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirm-modal') closeModal();
+        });
+
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.remove('visible');
+            if (voteWebcamStream) {
+                voteWebcamStream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        async function downloadReceipt() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Styling
+            doc.setFillColor(10, 10, 20); // Dark Background attempt? PDF doesn't support dark mode well for printing, sticking to white/clean.
+            // Actually, let's keep it professional white.
+
+            // Header
+            doc.setFontSize(22);
+            doc.setTextColor(212, 175, 55); // Gold
+            doc.text("Online Voting System", 105, 20, null, null, "center");
+
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0); // Black
+            doc.text("Official Vote Receipt", 105, 30, null, null, "center");
+
+            doc.setLineWidth(0.5);
+            doc.line(20, 35, 190, 35);
+
+            // Details
+            doc.setFontSize(12);
+            doc.text("Voter Name:", 30, 50);
+            doc.text(currentUser.name, 80, 50);
+
+            doc.text("Voter ID:", 30, 60);
+            doc.text(currentUser.regNum, 80, 60);
+
+            // Fetch Candidate Name again if needed or grab from DOM
+            const votedName = document.getElementById('voted-candidate-name').innerText;
+            doc.text("Voted For:", 30, 70);
+            doc.setFont("helvetica", "bold");
+            doc.text(votedName, 80, 70);
+            doc.setFont("helvetica", "normal");
+
+            doc.text("Date & Time:", 30, 80);
+            const timeStr = currentUser.votedAt ? new Date(currentUser.votedAt).toLocaleString() : new Date().toLocaleString();
+            doc.text(timeStr, 80, 80);
+
+            doc.text("Status:", 30, 90);
+            doc.setTextColor(0, 150, 0);
+            doc.text("VERIFIED & CAST", 80, 90);
+
+            // Unique Hash (Simulated)
+            doc.setTextColor(150, 150, 150);
+            doc.setFontSize(10);
+            const hash = "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase() + "-" + Date.now();
+            doc.text("Transaction ID: " + hash, 105, 110, null, null, "center");
+
+            // Footer
+            doc.setFontSize(8);
+            doc.text("This receipt confirms your participation in the election.", 105, 130, null, null, "center");
+
+            doc.save(`Vote_Receipt_${currentUser.regNum}.pdf`);
+        }
+
+        // --- INACTIVITY AUTO-LOGOUT ---
+        let inactivityTime = function () {
+            let time;
+            // reset timer on any of these events
+            window.onload = resetTimer;
+            document.onmousemove = resetTimer;
+            document.onkeypress = resetTimer;
+            document.onclick = resetTimer;
+            document.onscroll = resetTimer;
+
+            function logout() {
+                alert("You have been logged out due to inactivity.");
+                StorageManager.logout();
+                window.location.href = 'login.html';
+            }
+
+            function resetTimer() {
+                clearTimeout(time);
+                time = setTimeout(logout, 10 * 60 * 1000); // 10 minutes
+            }
+        };
+        inactivityTime();
+
+        init();
+    </script>
+</body>
+
+</html>

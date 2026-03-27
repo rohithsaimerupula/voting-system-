@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - OVS</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        /* Local overrides if needed, but keeping clean for global style.css */
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: var(--text-muted);
+            flex: 1;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .tab-btn.active {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--neon-cyan);
+            border-bottom-color: var(--neon-cyan);
+            font-weight: 600;
+        }
+
+        .login-tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- SUPER ADMIN HIDDEN MODAL (Staff mode only) -->
+    <div id="sa-login-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#0f172a;border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2.5rem;width:100%;max-width:400px;text-align:center;position:relative;">
+        <button onclick="closeSAModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;">✕</button>
+        <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;margin-bottom:0.5rem;">👑 Super Admin</div>
+        <p style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem;">Institution Administration</p>
+        <input type="text" id="sa-modal-id" placeholder="Super Admin ID" style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;">
+        <input type="password" id="sa-modal-pass" placeholder="Password" style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:1rem;font-family:'Outfit',sans-serif;outline:none;">
+        <button onclick="loginAsSA()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Login as Super Admin</button>
+        <div id="sa-modal-err" style="color:#ef4444;margin-top:0.75rem;font-size:0.85rem;min-height:1rem;"></div>
+      </div>
+    </div>
+
+    <nav>
+        <div class="brand" id="ovs-logo" style="cursor:pointer;">OVS</div>
+        <div class="nav-links" id="nav-right">
+            <!-- Populated by JS based on mode -->
+        </div>
+    </nav>
+
+    <div class="container animate-fade-in" style="max-width: 480px;">
+        <div class="glass-panel" style="padding: 3rem 2rem;">
+
+            <div class="login-tabs" id="login-tabs" style="display: flex; gap:10px; margin-bottom: 2rem;">
+                <!-- Tabs populated by JS -->
+            </div>
+
+            <h2 id="login-title" class="text-center" style="margin-bottom: 2rem;">Welcome Back</h2>
+
+            <form id="login-form" autocomplete="off">
+                <div id="credentials-section">
+                    <div class="form-group">
+                        <label id="reg-label">Registration Number</label>
+                        <input type="text" id="regNum" required placeholder="Enter ID" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="password" required placeholder="Enter Password" autocomplete="new-password" style="width: 100%; padding-right: 40px;">
+                            <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">👁️</button>
+                        </div>
+                    </div>
+
+
+
+                    <div style="text-align:right; margin-top:0.5rem;">
+                        <button type="button" onclick="showRecoveryModal()"
+                            style="background:none; border:none; color:var(--neon-cyan); font-size:0.9rem; cursor:pointer; padding:0;">Forgot Password?</button>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="login-btn" style="margin-top: 1rem;">Secure Login</button>
+                </div>
+
+                <!-- 2FA SECTION (INLINE) -->
+                <div id="inline-twofa-section" class="hidden" style="text-align: center;">
+                    <h3 style="color:var(--gold-primary); margin-bottom:1rem;">Two-Factor Authentication</h3>
+                    <p class="text-muted" style="margin-bottom:1rem;">An OTP has been sent to your registered email.</p>
+                    <input type="text" id="twofa-otp" placeholder="Enter 6-digit Code" maxlength="6"
+                        style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:white; margin-bottom:1rem; text-align: center; font-size: 1.2rem; letter-spacing: 0.5rem;">
+                    <button type="button" onclick="verify2FA()" class="submit-btn" id="twofa-btn">Verify Login</button>
+                    <p id="twofa-error" class="hidden text-danger" style="margin-top: 1rem;"></p>
+                </div>
+            </form>
+
+            <div id="error-msg" class="hidden"
+                style="margin-top: 1.5rem; padding: 1rem; border-radius: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); text-align: center;">
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- RECOVERY MODAL -->
+    <div id="recovery-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div class="glass-panel animate-fade-in" style="width:90%; max-width:400px; padding:2rem; position:relative;">
+            <button type="button" onclick="closeRecoveryModal()"
+                style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+
+            <h3 id="rec-title" style="color:var(--gold-primary); margin-bottom:1rem;">Reset Password</h3>
+
+            <!-- Step 1: ID -->
+            <div id="rec-step-1">
+                <p id="rec-desc" class="text-muted" style="margin-bottom:1rem;">Enter your Registration Number/ID to receive a reset
+                    code.</p>
+                <input type="text" id="rec-id" placeholder="Enter Reg Number"
+                    style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:white; margin-bottom:1rem;">
+                <button type="button" onclick="sendRecoveryOtp()" class="submit-btn" id="rec-btn-1">Send Code</button>
+            </div>
+
+            <!-- Step 2: Verify & Reset -->
+            <div id="rec-step-2" class="hidden">
+                <p class="text-muted" id="rec-email-hint" style="margin-bottom:1rem;"></p>
+                <input type="text" id="rec-otp" placeholder="Enter 6-digit Code" maxlength="6"
+                    style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:white; margin-bottom:1rem;">
+                <input type="password" id="rec-new-pass" placeholder="New Password" maxlength="10"
+                    style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:white; margin-bottom:1rem;">
+                <button type="button" onclick="resetPasswordConfirm()" class="submit-btn" id="rec-btn-2">Reset Password</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="storage.js?v=3"></script>
+    <script>
+        console.log("[OVS] Login System Initializing...");
+
+        if (typeof emailjs !== 'undefined') {
+            console.log("[OVS] EmailJS library loaded successfully.");
+        } else {
+            console.error("[OVS] EmailJS library failed to load!");
+        }
+
+        const form = document.getElementById('login-form');
+        const loginTitle = document.getElementById('login-title');
+        const regInput = document.getElementById('regNum');
+        const passInput = document.getElementById('password');
+        const regLabel = document.getElementById('reg-label');
+        const tabsContainer = document.getElementById('login-tabs');
+        const navRight = document.getElementById('nav-right');
+
+        // Determine mode from URL param: ?admin=true shows staff login
+        const urlParams = new URLSearchParams(window.location.search);
+        const isStaffMode = urlParams.get('admin') === 'true';
+        // isVoter = which login form is showing: voter=true, admin=false, subadmin=special
+        let isVoter = !isStaffMode;
+        let isSubAdmin = false;
+
+        function buildUI() {
+            if (!isStaffMode) {
+                // Pure Voter Mode: show Manage Profile, Register, and Back button
+                navRight.innerHTML = `
+                    <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
+                    <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
+                    <button onclick="window.location.href='register.html'">New? Register</button>
+                `;
+                tabsContainer.style.display = 'none';
+                loginTitle.innerText = 'Voter Login';
+                regLabel.innerText = 'Registration Number';
+                regInput.placeholder = 'Enter Reg Number';
+                passInput.placeholder = 'Enter Password (6-10 chars)';
+                // NO logo click trick in voter mode
+            } else {
+                // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
+                navRight.innerHTML = `<a href="index.html" class="btn-outline">← Home</a>`;
+                tabsContainer.style.display = 'flex';
+                tabsContainer.innerHTML = `
+                    <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Admin Login</button>
+                    <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Sub-Admin Login</button>
+                `;
+
+                document.getElementById('tab-admin').addEventListener('click', () => {
+                    isVoter = false; isSubAdmin = false;
+                    document.getElementById('tab-admin').style.background = 'linear-gradient(135deg,var(--warning),var(--danger))';
+                    document.getElementById('tab-admin').style.border = 'none';
+                    document.getElementById('tab-subadmin').style.background = 'rgba(255,255,255,0.05)';
+                    document.getElementById('tab-subadmin').style.border = '1px solid var(--glass-border)';
+                    loginTitle.innerText = 'Admin Login';
+                    regLabel.innerText = 'Admin ID';
+                    regInput.placeholder = 'Enter Admin ID';
+                    passInput.placeholder = 'Enter Password';
+                    resetInputs();
+                });
+                document.getElementById('tab-subadmin').addEventListener('click', () => {
+                    isVoter = false; isSubAdmin = true;
+                    document.getElementById('tab-subadmin').style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
+                    document.getElementById('tab-subadmin').style.border = 'none';
+                    document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
+                    document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
+                    loginTitle.innerText = 'Sub-Admin Login';
+                    regLabel.innerText = 'Sub-Admin ID';
+                    regInput.placeholder = 'Enter Sub-Admin ID';
+                    passInput.placeholder = 'Enter Password';
+                    resetInputs();
+                });
+
+                // 5-click OVS logo reveals Super Admin modal (STAFF MODE ONLY)
+                let logoClicks = 0, logoTimer = null;
+                document.getElementById('ovs-logo').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    logoClicks++;
+                    clearTimeout(logoTimer);
+                    if (logoClicks >= 5) {
+                        logoClicks = 0;
+                        document.getElementById('sa-login-modal').style.display = 'flex';
+                        document.getElementById('sa-modal-id').focus();
+                    } else {
+                        logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+                    }
+                });
+
+                loginTitle.innerText = 'Admin Login';
+                regLabel.innerText = 'Admin ID';
+                regInput.placeholder = 'Enter Admin ID';
+                passInput.placeholder = 'Enter Password';
+            }
+        }
+
+        function resetInputs() {
+            regInput.value = '';
+            passInput.value = '';
+            document.getElementById('error-msg').classList.add('hidden');
+        }
+
+        buildUI();
+
+        // Stub legacy variables so nothing breaks below
+        const tabVoter = null;
+        const tabAdmin = null;
+        // updateTabs is no-op now
+        function updateTabs() {}
+
+        // Input Constraints
+        // Input Constraints
+        regInput.addEventListener('input', function (e) {
+            if (isVoter) {
+                // Voter: Capital Alphanumeric ONLY
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            } else {
+                // Admin: Allow all characters (no leading space)
+                let val = this.value;
+                if (val.startsWith(' ')) val = val.trimStart();
+                this.value = val;
+            }
+            if (this.value.length > 20) this.value = this.value.slice(0, 20); // Increased limit for admin names with spaces
+        });
+
+        passInput.addEventListener('input', function (e) {
+            if (isVoter) {
+                // Voter: Numbers only (as per previous logic/user request)
+                this.value = this.value.replace(/[^0-9]/g, '');
+            } else {
+                // Admin: Small and Capital letters and Numbers ONLY. No space.
+                this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+            }
+            if (this.value.length > 10) this.value = this.value.slice(0, 10);
+        });
+
+
+
+
+
+        // --- SUBMIT HANDLING ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // IF 2FA IS SHOWING, ROUTE TO VERIFY INSTEAD OF RESENDING
+            if (!document.getElementById('inline-twofa-section').classList.contains('hidden')) {
+                return verify2FA();
+            }
+
+            const regNum = regInput.value;
+            const password = passInput.value;
+            const errorMsg = document.getElementById('error-msg');
+            const submitBtn = document.getElementById('login-btn');
+
+
+
+            if (regNum.length > 20) return showError("ID is too long.");
+            if (isVoter && password.length > 10) return showError("Password Max 10 Characters.");
+
+            errorMsg.classList.add('hidden');
+            submitBtn.innerText = "Verifying...";
+            submitBtn.disabled = true;
+
+            try {
+                const timeoutP = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout: Server could not connect after 8 seconds.")), 8000));
+                
+                const userObj = await Promise.race([
+                    StorageManager.login(regNum, password),
+                    timeoutP
+                ]);
+
+                if (userObj) {
+                    // Check if 2FA required (Super Admin Flow)
+                    if (userObj.requires2FA) {
+                        current2faState = userObj;
+                        document.getElementById('credentials-section').classList.add('hidden');
+                        document.getElementById('inline-twofa-section').classList.remove('hidden');
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+                    
+                    const user = userObj;
+
+                    // Role Check 
+                    const staffRoles = ['admin','subadmin','superadmin','developer'];
+                    if (isStaffMode && !staffRoles.includes(user.role)) {
+                        showError("Access Denied. This portal is for Staff only.");
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+                    if (!isStaffMode && staffRoles.includes(user.role)) {
+                        showError("Staff members: use the Admin Access button on the homepage.");
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+                    // Sub-admin tab guard: if sub-admin tab is selected, only allow subadmin role
+                    if (isSubAdmin && user.role !== 'subadmin') {
+                        showError("Not a Sub-Admin account. Try the Admin tab.");
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+                    if (!isSubAdmin && isStaffMode && user.role === 'subadmin') {
+                        showError("Sub-Admins: please use the Sub-Admin tab.");
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+
+                    // Status Check
+                    if (user.status === 'pending') {
+                        showError("Account Pending Approval. Please contact Admin.");
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+
+                    if (user.status === 'rejected') {
+                        showError("Registration Rejected. Please register again.");
+                        // Optional: Delete them? For now just deny.
+                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        return;
+                    }
+
+                    // Success Redirect based on role
+                    if (user.role === 'developer') window.location.href = 'developer.html';
+                    else if (user.role === 'superadmin') window.location.href = 'superadmin_dashboard.html';
+                    else if (user.role === 'admin') window.location.href = 'admin_dashboard_v2.html';
+                    else if (user.role === 'subadmin') window.location.href = 'subadmin_dashboard.html';
+                    else window.location.href = 'voter_dashboard.html';
+
+                } else {
+                    showError("Invalid credentials found.");
+                    submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Login Error: " + err.message);
+                showError("Connection Error: " + err.message);
+                submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+            }
+        });
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
+
+        // --- RECOVERY LOGIC ---
+        let recoveryRegNum = null;
+        let recoveryOtp = null;
+
+        const recIdInput = document.getElementById('rec-id');
+        const recNewPassInput = document.getElementById('rec-new-pass');
+
+        // Apply same constraints as login fields
+        recIdInput.addEventListener('input', function() {
+            if (isVoter) {
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            } else {
+                let val = this.value;
+                if (val.startsWith(' ')) val = val.trimStart();
+                this.value = val;
+            }
+        });
+
+        recNewPassInput.addEventListener('input', function() {
+            if (isVoter) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            } else {
+                // Allow all chars in pass
+            }
+            // Let's remove the length limit for admin passwords since they might be securely generated
+            if (isVoter && this.value.length > 10) this.value = this.value.slice(0, 10);
+        });
+
+        function showRecoveryModal() {
+            console.log("[UI] Recovery Modal Triggered. isVoter:", isVoter);
+            const title = document.getElementById('rec-title');
+            const desc = document.getElementById('rec-desc');
+            const modal = document.getElementById('recovery-modal');
+
+            if (!modal) {
+                console.error("[UI] Error: 'recovery-modal' element not found in DOM!");
+                return alert("UI Error: Modal not found.");
+            }
+
+            title.innerText = isVoter ? "Voter Password Recovery" : "Admin Password Recovery";
+            desc.innerText = isVoter ? "Enter registration number to receive reset code" : "Enter Admin ID to receive reset code";
+
+            modal.style.display = "flex";
+            console.log("[UI] Modal display set to flex.");
+            document.getElementById('rec-step-1').classList.remove('hidden');
+            document.getElementById('rec-step-2').classList.add('hidden');
+            recIdInput.value = '';
+            recNewPassInput.value = '';
+            document.getElementById('rec-otp').value = '';
+            
+            // Set placeholder based on current tab
+            recIdInput.placeholder = isVoter ? "Enter registration number" : "Enter Admin ID";
+            recNewPassInput.placeholder = isVoter ? "Enter 10-digit PIN" : "New Password";
+        }
+
+        function closeRecoveryModal() {
+            document.getElementById('recovery-modal').style.display = "none";
+        }
+
+        async function sendRecoveryOtp() {
+            const btn = document.getElementById('rec-btn-1');
+            const regNum = recIdInput.value.trim();
+            if (!regNum) return alert("Please enter your Registration ID");
+
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+            console.log(`[UI] Initiating password reset for ${regNum}...`);
+
+            try {
+                // Consistency: Voters are usually all-caps in DB. Admins rely on exact match.
+                const finalId = isVoter ? regNum.toUpperCase() : regNum;
+                
+                const res = await StorageManager.sendResetOtp(finalId);
+                if (res.success) {
+                    recoveryRegNum = finalId;
+                    recoveryOtp = res.otp;
+
+                    document.getElementById('rec-step-1').classList.add('hidden');
+                    document.getElementById('rec-step-2').classList.remove('hidden');
+                    
+                    const hintEl = document.getElementById('rec-email-hint');
+                    hintEl.innerText = `Enter code sent to ${res.maskedEmail}`;
+                    
+                    if (res.warning) {
+                        const warn = document.createElement('div');
+                        warn.style.color = 'var(--warning)';
+                        warn.style.fontSize = '0.8rem';
+                        warn.style.marginTop = '0.5rem';
+                        warn.innerText = "⚠️ " + res.warning;
+                        hintEl.parentNode.insertBefore(warn, hintEl.nextSibling);
+                    }
+                } else {
+                    alert("Failure: " + (res.error || "User not found."));
+                }
+            } catch (e) {
+                alert("System Error: " + e.message);
+            }
+            btn.innerText = "Send Code";
+            btn.disabled = false;
+        }
+
+        async function resetPasswordConfirm() {
+            const otpIn = document.getElementById('rec-otp').value.trim();
+            const newPass = recNewPassInput.value;
+            const btn = document.getElementById('rec-btn-2');
+
+            if (otpIn !== recoveryOtp) return alert("Invalid Code");
+            
+            if (isVoter && newPass.length !== 10) return alert("Voter password (PIN) must be exactly 10 digits.");
+            if (!isVoter && newPass.length < 4) return alert("Admin password too short.");
+
+            btn.innerText = "Resetting...";
+            btn.disabled = true;
+
+            try {
+                await StorageManager.resetPassword(recoveryRegNum, newPass);
+                alert("Password Reset Successfully! Please login.");
+                closeRecoveryModal();
+            } catch (e) {
+                alert("Reset Failed: " + e.message);
+            }
+            btn.innerText = "Reset Password";
+            btn.disabled = false;
+        }
+
+        // --- 2FA LOGIC ---
+        let current2faState = null;
+
+        async function verify2FA() {
+            const otpIn = document.getElementById('twofa-otp').value.trim();
+            const err = document.getElementById('twofa-error');
+            const btn = document.getElementById('twofa-btn');
+
+            if (!current2faState) return;
+
+            if (otpIn === current2faState.otpRequired) {
+                err.classList.add('hidden');
+                btn.innerText = "Logging in...";
+                btn.disabled = true;
+
+                try {
+                // Log them in securely bypassing 2FA check
+                await StorageManager.login(regInput.value, passInput.value, true);
+                window.location.href = 'admin_dashboard.html';
+                } catch (e) {
+                    btn.innerText = "Verify Login";
+                    btn.disabled = false;
+                    alert("Verification Error: " + e.message);
+                    err.innerText = "Error: " + e.message;
+                    err.classList.remove('hidden');
+                }
+            } else {
+                err.innerText = "Invalid OTP";
+                err.classList.remove('hidden');
+            }
+        }
+
+        // Toggle Password Visibility
+        function togglePassword() {
+            const passInput = document.getElementById('password');
+            passInput.type = passInput.type === 'password' ? 'text' : 'password';
+        }
+
+        // 5-Click Logo: Super Admin Hidden Portal
+        let logoClicks = 0;
+        let logoTimer = null;
+        document.getElementById('ovs-logo').addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Disable 5-click logo in voter mode, keep in staff mode
+            if (!isStaffMode) return;
+
+            logoClicks++;
+            clearTimeout(logoTimer);
+            if (logoClicks >= 5) {
+                logoClicks = 0;
+                // Move SA hidden modal so it's only visible in staff mode
+                if (isStaffMode) {
+                    document.getElementById('sa-login-modal').style.display = 'flex';
+                    document.getElementById('sa-modal-id').focus();
+                }
+            } else {
+                logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+            }
+        });
+
+        function closeSAModal() {
+            document.getElementById('sa-login-modal').style.display = 'none';
+            document.getElementById('sa-modal-err').textContent = '';
+        }
+
+        async function loginAsSA() {
+            const id = document.getElementById('sa-modal-id').value.trim();
+            const pass = document.getElementById('sa-modal-pass').value;
+            const err = document.getElementById('sa-modal-err');
+            err.textContent = '';
+            try {
+                const user = await StorageManager.login(id, pass, true);
+                if (!user) throw new Error('Invalid credentials.');
+                if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
+                window.location.href = 'superadmin_dashboard.html';
+            } catch(e) {
+                err.textContent = e.message;
+            }
+        }
+
+        document.getElementById('sa-modal-pass').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loginAsSA();
+        });
+
+        // Add back button in buildUI voter section
+        // Assuming 'back-button' is an element that should be shown/hidden based on isVoter
+        // and its click event should toggle isVoter to false (staff mode)
+        const backButton = document.getElementById('back-button');
+        if (backButton) {
+            backButton.addEventListener('click', () => {
+                // This logic assumes a global 'isVoter' variable and a 'buildUI' function
+                // that re-renders the login form based on 'isVoter'.
+                // If 'buildUI' is not defined elsewhere, this will need to be adapted.
+                isVoter = false;
+                // Assuming buildUI() exists and re-renders the form based on isVoter
+                if (typeof buildUI === 'function') {
+                    buildUI();
+                } else {
+                    // Fallback or more specific UI update if buildUI is not a global function
+                    console.warn("buildUI() function not found. Cannot re-render UI after back button click.");
+                    // Example: Manually update elements if buildUI is not available
+                    document.getElementById('login-title').innerText = "Staff Login";
+                    document.getElementById('reg-label').innerText = "Admin ID";
+                    document.getElementById('password-label').innerText = "Password";
+                    document.getElementById('forgot-password-link').innerText = "Forgot Admin Password?";
+                    document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
+                    document.getElementById('back-button').classList.add('hidden'); // Hide back button
+                    // Update input placeholders and types if necessary
+                    document.getElementById('registration-number').placeholder = "Enter Admin ID";
+                    document.getElementById('password').placeholder = "Enter Password";
+                }
+            });
+        }
+
+        // Initial UI setup based on isVoter (if buildUI is not called elsewhere)
+        // This block is added to ensure the back button visibility is handled on load
+        // and to provide a basic implementation if buildUI is not present.
+        if (typeof buildUI === 'function') {
+            buildUI(); // Call buildUI if it exists to set initial state
+        } else {
+            // Manual initial setup if buildUI is not a function
+            if (isVoter) {
+                document.getElementById('login-title').innerText = "Voter Login";
+                document.getElementById('reg-label').innerText = "Registration Number";
+                document.getElementById('password-label').innerText = "10-Digit PIN";
+                document.getElementById('forgot-password-link').innerText = "Forgot PIN?";
+                document.getElementById('register-link').classList.add('hidden'); // Hide register for voters
+                if (backButton) backButton.classList.remove('hidden'); // Show back button for voters
+                document.getElementById('registration-number').placeholder = "Enter Registration Number";
+                document.getElementById('password').placeholder = "Enter 10-Digit PIN";
+            } else {
+                document.getElementById('login-title').innerText = "Staff Login";
+                document.getElementById('reg-label').innerText = "Admin ID";
+                document.getElementById('password-label').innerText = "Password";
+                document.getElementById('forgot-password-link').innerText = "Forgot Admin Password?";
+                document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
+                if (backButton) backButton.classList.add('hidden'); // Hide back button for staff
+                document.getElementById('registration-number').placeholder = "Enter Admin ID";
+                document.getElementById('password').placeholder = "Enter Password";
+            }
+        }
+    </script>
+</body>
+</html>

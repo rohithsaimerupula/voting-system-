@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - OVS</title>
+
+    <link rel="stylesheet" href="style.css">
+    <script src="storage.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Styles moved to style.css -->
+</head>
+
+<body>
+    <nav>
+        <div class="brand">Admin Panel</div>
+        <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle Light/Dark Mode">☀️</button>
+            <span id="admin-name" style="color: var(--text-muted);">Welcome, Admin</span>
+            <button onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade-in">
+        <!-- Controls & Status -->
+        <div class="glass-panel"
+            style="padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-color: var(--gold-primary);">
+            <div>
+                <h3 style="margin-bottom: 0.5rem; font-family: var(--font-heading);">
+                    Election Status: <span id="status-text" class="text-success"
+                        style="filter: brightness(1.2);">Loading...</span>
+                </h3>
+                <div style="display:flex; align-items:center; gap:1rem; margin-top:0.5rem; background:rgba(255,255,255,0.05); padding:0.8rem 1.5rem; border-radius:12px; border:1px solid var(--glass-border); width: fit-content;">
+                    <span style="font-size:1.8rem; filter: drop-shadow(0 0 5px var(--neon-cyan));">📅</span>
+                    <div>
+                        <div style="font-weight:700; font-size:1.8rem; font-family:monospace; color:var(--neon-cyan); letter-spacing:2px; line-height:1;"
+                            id="countdown-display">--:--:--</div>
+                        <span id="timer-label" class="text-muted" style="font-size:0.75rem; font-weight:600; text-transform:uppercase; margin-top:2px; display:block;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <!-- Time Settings -->
+                <div style="display:flex; flex-direction:column; gap:0.5rem; margin-right: 1rem;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--text-muted); width:40px;">Start:</span>
+                        <input type="datetime-local" id="start-time-input"
+                            style="padding:0.3rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.5); color:white; font-size:0.8rem;">
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--text-muted); width:40px;">End:</span>
+                        <input type="datetime-local" id="end-time-input"
+                            style="padding:0.3rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.5); color:white; font-size:0.8rem;">
+                    </div>
+                    <button onclick="saveElectionTimes()" class="action-btn"
+                        style="font-size:0.7rem; padding:0.2rem; margin:0; width:100%;">Set Custom Time</button>
+                </div>
+
+                <button onclick="renderDashboard()" class="submit-btn"
+                    style="width: auto; background: white; color: black; border:none;">Refresh <span id="refresh-icon"
+                        style="display:inline-block">🔄</span></button>
+
+                <button id="toggle-election-btn" class="submit-btn"
+                    style="width: auto; padding-left: 1.5rem; padding-right: 1.5rem; background: var(--glass-border);">Loading...</button>
+
+                <button id="complete-election-btn" class="submit-btn"
+                    style="width: auto; background: linear-gradient(135deg, #f59e0b, #d97706); margin-left:1rem; color:white;">Complete
+                    Election 🏁</button>
+
+                <!-- Post Election Controls: Visible when complete -->
+                <button id="download-btn" class="submit-btn hidden"
+                    style="width: auto; background: var(--accent-blue); color:white;">Export Result
+                    CSV 📥</button>
+
+                <button id="reset-election-btn" class="submit-btn hidden"
+                    style="width: auto; background: var(--danger); color:white; margin-left:1rem;">Start
+                    New Election ⚡</button>
+            </div>
+        </div>
+
+        <!-- Announcements Bar (New) -->
+        <div class="glass-panel" style="padding:1rem; margin-bottom:2rem; display:flex; gap:1rem; align-items:center;">
+            <strong style="color:var(--text-muted);">📢 Announcement:</strong>
+            <input type="text" id="announcement-input" placeholder="Broadcast message to voters..."
+                style="flex:1; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); padding:0.5rem; color:white; border-radius:4px;">
+            <button onclick="postAnnouncement()" class="action-btn"
+                style="width:auto; background:var(--neon-blue);">Post</button>
+            <button onclick="clearAnnouncement()" class="action-btn"
+                style="width:auto; background:var(--glass-border);">Clear</button>
+        </div>
+
+        <!-- Stats Grid (Aligned) -->
+        <div class="dashboard-grid"
+            style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
+            <div class="glass-panel stat-card" onclick="filterTable('voter')">
+                <div>
+                    <div class="text-muted" style="font-weight: 600;">Registered Voters</div>
+                    <div class="stat-number" id="count-voters" style="color:white;">-</div>
+                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;">View Details ➔</div>
+                </div>
+            </div>
+            <div class="glass-panel stat-card" onclick="filterTable('contestant')">
+                <div>
+                    <div class="text-muted" style="font-weight: 600;">Registered Candidates</div>
+                    <div class="stat-number" id="count-candidates" style="color:white;">-</div>
+                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;">View Details ➔</div>
+                </div>
+            </div>
+            <div class="glass-panel stat-card" onclick="openVerificationPanel()">
+                <div>
+                    <div class="text-muted" style="font-weight: 600;">Votes Casted</div>
+                    <div class="stat-number" id="count-votes" style="color:var(--gold-primary);">-</div>
+                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;"
+                        id="pending-count-label">0 Verified • 0 Pending</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Queue Section (New) -->
+        <div class="glass-panel hidden animate-fade-in" id="verification-panel"
+            style="margin-bottom: 2rem; padding: 1.5rem; border-color: var(--warning);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3 style="color: var(--warning);">⚠️ Verification Queue</h3>
+                <button onclick="document.getElementById('verification-panel').classList.add('hidden')"
+                    style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">×</button>
+            </div>
+            <p id="no-verification-msg" class="text-muted hidden">No pending votes to verify.</p>
+            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                <table style="width:100%;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:1px solid var(--glass-border);">
+                            <th style="padding:0.5rem;">Reg Num</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="verification-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 2rem;">
+            <div class="glass-panel" style="padding: 1.5rem; text-align: center; cursor: pointer;"
+                onclick="showParticipationDetails()">
+                <h3>Voter Participation</h3>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="chart-participation-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+                <h3>Election Results</h3>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="chart-results-canvas"></canvas>
+                </div>
+
+                <div id="winner-display" class="hidden"
+                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border: 1px solid var(--success);">
+                    <h4 style="color: var(--success); margin-bottom: 0.5rem;">🏆 Winner(s) Declared</h4>
+                    <span id="winner-name" style="font-size: 1.4rem; font-weight: 700; color: white;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Modal -->
+        <div id="verify-modal" class="modal">
+            <div class="glass-panel modal-content"
+                style="width: 95%; max-width: 900px; padding: 2rem; border-color: var(--warning);">
+                <h2 style="font-family: var(--font-heading); margin-bottom: 1.5rem; text-align: center;">Verify Voter
+                    Identity</h2>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+                    <!-- Registration Data -->
+                    <div style="text-align: center;">
+                        <h4 class="text-muted" style="margin-bottom: 1rem;">Registration Photo</h4>
+                        <img id="verify-reg-img"
+                            style="width: 100%; height: 300px; object-fit: cover; border: 1px solid var(--glass-border); border-radius: 8px; background: #000;">
+                        <div
+                            style="margin-top: 1rem; text-align: left; font-size: 0.9rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <p style="margin-bottom:0.5rem;"><strong>Name:</strong> <span id="verify-name"
+                                    style="color:white;"></span></p>
+                            <p style="margin-bottom:0.5rem;"><strong>Reg Num:</strong> <span id="verify-regNum"
+                                    style="color:var(--gold-primary);"></span></p>
+                            <p><strong>Email:</strong> <span id="verify-email" style="color:var(--text-muted);"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Voting Data -->
+                    <div style="text-align: center;">
+                        <h4 class="text-muted" style="margin-bottom: 1rem;">Voting Camera Capture</h4>
+                        <img id="verify-vote-img"
+                            style="width: 100%; height: 300px; object-fit: cover; border: 2px solid var(--gold-primary); border-radius: 8px; background: #000;">
+                        <p class="text-muted" style="margin-top: 1rem; font-size: 0.8rem;">Capture Time: <span
+                                id="verify-time"></span></p>
+                        <p style="margin-top: 0.5rem; color: var(--warning);">Check if the person matches the
+                            registration photo.</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                    <button class="submit-btn" style="background: var(--danger); width: auto; padding: 0.8rem 2rem;"
+                        onclick="processVerification(false)">Reject Vote ❌</button>
+                    <button class="submit-btn" style="background: var(--success); width: auto; padding: 0.8rem 2rem;"
+                        onclick="processVerification(true)">Accept Vote ✅</button>
+                    <button class="submit-btn"
+                        style="background: transparent; border: 1px solid var(--text-muted); width: auto;"
+                        onclick="closeVerifyModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Election Closed Banner (Moved to bottom) -->
+        <div id="election-closed-banner" class="hidden text-center" style="margin: 3rem 0;">
+            <h1 style="color: #f59e0b; font-size: 3rem; text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);">ELECTION IS
+                COMPLETED</h1>
+        </div>
+
+        <!-- User Lists Table -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                <h3 id="table-title">Registered Users</h3>
+                <div style="display:flex; gap: 1rem;">
+                    <input type="text" id="search-bar" placeholder="Search ID or Name..."
+                        style="padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: white;"
+                        onkeyup="renderTable(currentFilter, this.value)">
+
+                    <button onclick="renderTable('all', '')"
+                        style="background: none; border: 1px solid var(--glass-border); color: white; padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer;">Show
+                        All</button>
+
+                    <select id="filter-role" onchange="filterTable(this.value)"
+                        style="padding: 0.4rem; border-radius: 8px; background: black; color: white; width: auto;">
+                        <option value="all">All Users</option>
+                        <option value="voter">Voters</option>
+                        <option value="contestant">Candidates</option>
+                        <option value="pending">Pending Approval</option>
+                        <option value="banned">Banned Users</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; max-height: 500px; overflow-y: auto;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th width="10%">ID Proof</th>
+                            <th width="10%">Live Face</th>
+                            <th width="15%">Reg No</th>
+                            <th width="20%">Name</th>
+                            <th width="10%">Role</th>
+                            <th width="15%">Joined At</th>
+                            <th width="15%">Status / Vote</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="empty-table-msg" class="text-muted text-center hidden mt-4">No records found.</p>
+        </div>
+
+        <!-- Activity Logs Section (New) -->
+        <div class="glass-panel" style="padding: 1.5rem; margin-top:2rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                <h3>📜 Activity Logs</h3>
+                <button onclick="loadLogs()" class="action-btn" style="width:auto;">Refresh Logs</button>
+            </div>
+            <div style="max-height:300px; overflow-y:auto; font-family:monospace; font-size:0.9rem;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr
+                            style="text-align:left; color:var(--text-muted); border-bottom:1px solid var(--glass-border);">
+                            <th style="padding:0.5rem;">Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body">
+                        <tr>
+                            <td colspan="4" class="text-center text-muted" style="padding:1rem;">Loading logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="glass-panel"
+            style="padding: 1.5rem; margin-top: 2rem; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);">
+            <h3 style="color: #ef4444; margin-bottom: 1rem;">Danger Zone</h3>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
+                <button onclick="performDangerAction('voter')" class="submit-btn"
+                    style="width: auto; background: #ef4444; color: white; font-weight:700;">Reset All Voters
+                    ⚠️</button>
+
+                <button onclick="performDangerAction('contestant')" class="submit-btn"
+                    style="width: auto; background: #ef4444; color: white; font-weight:700;">Reset All Candidates
+                    ⚠️</button>
+
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Participation Modal -->
+    <div id="participation-modal" class="glass-panel hidden"
+        style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width: 80%; max-width: 700px; max-height: 80vh; z-index:200; overflow-y: auto; padding: 2rem;">
+        <h3 style="margin-bottom: 1rem;">Detailed Voter Participation</h3>
+        <div id="participation-list"></div>
+        <button class="submit-btn" style="margin-top: 1rem; width: auto;"
+            onclick="document.getElementById('participation-modal').classList.add('hidden')">Close</button>
+    </div>
+
+
+
+    <!-- Portrait Preview Modal -->
+    <div id="portrait-modal" class="glass-panel hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; flex-direction: column;">
+        <img id="portrait-preview" src=""
+            style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
+        <button class="submit-btn" style="width: auto; margin-top: 1rem; background: var(--glass-border);"
+            onclick="document.getElementById('portrait-modal').classList.add('hidden')">Close Preview</button>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // --- UI UTILS ---
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-mode');
+            const isLight = body.classList.contains('light-mode');
+            document.getElementById('theme-btn').innerText = isLight ? '🌙' : '☀️';
+            localStorage.setItem('ovs_theme', isLight ? 'light' : 'dark');
+            if (participationChartInstance || resultsChartInstance) renderDashboard(); // Redraw charts
+        }
+
+        function initTheme() {
+            if (localStorage.getItem('ovs_theme') === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('theme-btn').innerText = '🌙';
+            }
+        }
+        initTheme();
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            let icon = 'ℹ️';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+
+            toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => toast.classList.add('show'), 100);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400); // Wait for transition
+            }, 3000);
+        }
+
+        const currentUser = StorageManager.getCurrentUser();
+        // Wait for superadmin permission - old dashboard is now a module for Super Admin!
+        if (!currentUser || currentUser.role !== 'superadmin') {
+            window.parent.location.href = 'login.html'; // redirect parent
+        }
+        
+        // Hide the navbar since it's embedded
+        document.querySelector('nav').style.display = 'none';
+
+        document.getElementById('admin-name').innerText = `Admin: ${currentUser.regNum}`;
+
+        let currentFilter = 'all';
+        let cachedStats = null;
+        
+        let globalStats = null;
+        let globalElection = null;
+
+        // --- DASHBOARD RENDER ---
+        async function renderDashboard() {
+            try {
+                if (!globalStats || !globalElection) return; // Wait for both listeners
+
+                const stats = globalStats;
+                const election = globalElection;
+                cachedStats = stats;
+
+                // Animation
+                const rfIcon = document.getElementById('refresh-icon');
+                if (rfIcon) rfIcon.classList.add('spin-anim');
+
+                // Stop Animation after delay (to let it be seen)
+                setTimeout(() => { if (rfIcon) rfIcon.classList.remove('spin-anim'); }, 500);
+
+                // Sync Inputs
+                if (election.startTime) document.getElementById('start-time-input').value = election.startTime;
+                if (election.endTime) document.getElementById('end-time-input').value = election.endTime;
+
+                // Start Timer Tick
+                startTimerTick({ start: election.startTime, end: election.endTime }, election);
+
+                // 1. Controls State
+                const btn = document.getElementById('toggle-election-btn');
+                const compBtn = document.getElementById('complete-election-btn');
+                const dlBtn = document.getElementById('download-btn');
+                const resetBtn = document.getElementById('reset-election-btn');
+                const statusText = document.getElementById('status-text');
+                const closedBanner = document.getElementById('election-closed-banner');
+
+                if (election.isCompleted) {
+                    // Completed State
+                    statusText.innerText = "Completed";
+
+                    // Hide controls related to active election
+                    btn.classList.add('hidden'); // Remove "Election Closed" button from top
+                    compBtn.classList.add('hidden');
+
+                    // Show post-election controls
+                    dlBtn.classList.remove('hidden');
+                    resetBtn.classList.remove('hidden');
+
+                    // Show Bottom Banner
+                    closedBanner.classList.remove('hidden');
+
+                } else if (election.isActive) {
+                    // Active State
+                    statusText.innerText = "Live";
+                    statusText.style.color = "#4ade80"; // Bright Green
+
+                    btn.classList.remove('hidden');
+                    btn.innerText = "Pause Election";
+                    btn.style.background = "#ef4444"; // Red for Pause
+                    btn.style.color = "white";
+                    btn.disabled = false;
+
+                    compBtn.classList.remove('hidden');
+
+                    dlBtn.classList.add('hidden');
+                    resetBtn.classList.add('hidden');
+                    closedBanner.classList.add('hidden');
+                } else {
+                    // Paused State
+                    statusText.innerText = "Paused";
+                    statusText.style.color = "#f87171";
+
+                    btn.classList.remove('hidden');
+                    btn.innerText = "Start Election";
+                    btn.style.background = "#22c55e"; // Bright Green for Start
+                    btn.style.color = "white";
+                    btn.disabled = false;
+
+                    compBtn.classList.remove('hidden');
+
+                    dlBtn.classList.add('hidden');
+                    resetBtn.classList.add('hidden');
+                    closedBanner.classList.add('hidden');
+                }
+
+                // 2. Numbers
+                document.getElementById('count-voters').innerText = stats.totalVoters;
+                document.getElementById('count-candidates').innerText = stats.totalContestants;
+                document.getElementById('count-votes').innerText = stats.votesCast + (stats.votesPending || 0);
+                document.getElementById('pending-count-label').innerText = `${stats.votesCast} Verified • ${stats.votesPending || 0} Pending`;
+
+                // 3. Charts & Queue
+                renderParticipationChart(stats);
+                renderResultsChart(stats);
+
+                // Update Verification Queue if open
+                if (!document.getElementById('verification-panel').classList.contains('hidden')) {
+                    renderVerificationTable(stats.voters);
+                }
+
+                // 4. Winner Display
+                // Show winner if Completed OR manually completed logic.
+                const winnerDisplay = document.getElementById('winner-display');
+                if (election.isCompleted && stats.votesCast > 0) {
+                    winnerDisplay.classList.remove('hidden');
+                    const winners = calculateWinner(stats);
+                    document.getElementById('winner-name').innerText = winners.map(w => `${w.name} (${w.votes} votes)`).join(', ');
+                } else {
+                    winnerDisplay.classList.add('hidden');
+                }
+
+                // 5. Table
+                renderTable(currentFilter, document.getElementById('search-bar').value);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- CHARTS (Chart.js) ---
+        let participationChartInstance = null;
+        let resultsChartInstance = null;
+
+        function renderParticipationChart(stats) {
+            const ctx = document.getElementById('chart-participation-canvas').getContext('2d');
+            const total = stats.totalVoters;
+            const cast = stats.votesCast;
+            const notCast = stats.votesNotCast;
+
+            if (participationChartInstance) participationChartInstance.destroy();
+
+            participationChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Voted', 'Not Voted'],
+                    datasets: [{
+                        data: [cast, notCast],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: 'white' } }
+                    }
+                }
+            });
+        }
+
+        function renderResultsChart(stats) {
+            const ctx = document.getElementById('chart-results-canvas').getContext('2d');
+            const total = stats.votesCast;
+
+            if (resultsChartInstance) resultsChartInstance.destroy();
+
+            // Prepare Data
+            const labels = [];
+            const data = [];
+
+            // Sort by votes
+            const sorted = [...stats.contestants].sort((a, b) => (stats.candidateVotes[b.regNum] || 0) - (stats.candidateVotes[a.regNum] || 0));
+
+            sorted.forEach(c => {
+                labels.push(c.name);
+                data.push(stats.candidateVotes[c.regNum] || 0);
+            });
+
+            // Neon Palette
+            const colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#f472b6', '#3b82f6'];
+
+            resultsChartInstance = new Chart(ctx, {
+                type: 'pie', // Pie or Bar
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Votes',
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: 'white' } }
+                    }
+                }
+            });
+        }
+
+        // --- WINNER LOGIC ---
+        function calculateWinner(stats) {
+            let maxVotes = 0;
+            let winners = [];
+            Object.entries(stats.candidateVotes).forEach(([regNum, count]) => {
+                if (count > maxVotes) {
+                    maxVotes = count;
+                    winners = [regNum];
+                } else if (count === maxVotes && count > 0) {
+                    winners.push(regNum);
+                }
+            });
+            return winners.map(reg => {
+                const c = stats.contestants.find(u => u.regNum === reg);
+                return { name: c ? c.name : reg, votes: maxVotes };
+            });
+        }
+
+        // --- TABLE LOGIC ---
+        function filterTable(type) {
+            currentFilter = type;
+            document.getElementById('filter-role').value = type; // Sync dropdown
+            renderTable(type, document.getElementById('search-bar').value);
+        }
+
+        function renderTable(filter, searchTerm) {
+            if (!cachedStats) return;
+            const users = [...cachedStats.contestants, ...cachedStats.voters];
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            // Filter
+            let filtered = users;
+            if (filter === 'voter') filtered = users.filter(u => u.role === 'voter');
+            else if (filter === 'contestant') filtered = users.filter(u => u.role === 'contestant');
+            else if (filter === 'pending') filtered = users.filter(u => u.status === 'pending');
+            // 'voted' filter logic from stats
+            else if (filter === 'voted') filtered = users.filter(u => u.role === 'voter' && u.hasVoted);
+            else if (filter === 'banned') filtered = users.filter(u => u.isBanned);
+
+            // Search
+            if (searchTerm) {
+                const lower = searchTerm.toLowerCase();
+                filtered = filtered.filter(u => u.name.toLowerCase().includes(lower) || u.regNum.toLowerCase().includes(lower));
+            }
+
+            if (filtered.length === 0) {
+                document.getElementById('empty-table-msg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('empty-table-msg').classList.add('hidden');
+
+            filtered.forEach(u => {
+                const tr = document.createElement('tr');
+
+                // Registration ID Proof (Portrait or PDF)
+                let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+                if (u.portrait) {
+                    if (u.portrait.startsWith('data:image')) {
+                        portraitHtml = `<img src="${u.portrait}" onclick="showPortrait('${u.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
+                    } else if (u.portrait.startsWith('data:application/pdf')) {
+                        portraitHtml = `<div onclick="viewPdf('${u.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
+                    }
+                }
+
+                // Live Face Capture (webcamReg)
+                let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+                if (u.webcamReg) {
+                    faceHtml = `<img src="${u.webcamReg}" onclick="showPortrait('${u.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--gold-primary); cursor:pointer;" title="Click to View Live Capture">`;
+                }
+
+                // Time Formatting
+                const joined = u.createdAt ? new Date(u.createdAt).toLocaleString(undefined, {
+                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : '-';
+
+                // Status / Vote Logic
+                let statusHtml = '';
+                if (u.status === 'pending') statusHtml = '<span style="color:#fbbf24">Pending Approval</span>';
+                else if (u.isBanned) statusHtml = '<span style="color:#ef4444; font-weight:bold;">BANNED 🚫</span>';
+                else if (u.role === 'contestant') statusHtml = 'Active Candidate';
+                else if (u.hasVoted) statusHtml = `<span style="color:#4ade80">Voted<br><small>${u.votedAt ? new Date(u.votedAt).toLocaleString() : ''}</small></span>`;
+                else statusHtml = '<span style="color:#ef4444">Not Voted</span>';
+
+                // Actions
+                let actionsHtml = '';
+                if (u.status === 'pending') {
+                    actionsHtml = `
+                        <button onclick="approveUser('${u.regNum}')" style="background:#22c55e; border:none; border-radius:4px; cursor:pointer; padding:5px 8px; color:black; font-weight:bold;" title="Accept">Accept ✓</button>
+                        <button onclick="rejectUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:5px 8px; margin-left:5px; color:white; font-weight:bold;" title="Decline">Decline ✕</button>
+                    `;
+                } else {
+                    let banBtn = '';
+                    if (u.role !== 'admin') {
+                        if (u.isBanned) {
+                            banBtn = `<button onclick="unbanUser('${u.regNum}')" style="background:#22c55e; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:black; margin-right:5px; font-size:0.8rem;">Unban</button>`;
+                        } else {
+                            banBtn = `<button onclick="banUser('${u.regNum}')" style="background:#f59e0b; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:black; margin-right:5px; font-size:0.8rem;">Ban</button>`;
+                        }
+                    }
+                    actionsHtml = `${banBtn}<button onclick="deleteUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; font-size:0.8rem;">Remove</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td>${portraitHtml}</td>
+                    <td>${faceHtml}</td>
+                    <td>${u.regNum}</td>
+                    <td>
+                        <div style="font-weight: 500;">${u.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--neon-cyan); margin-top: 2px;">${u.email || 'No email provided'}</div>
+                    </td>
+                    <td style="text-transform:capitalize">${u.role === 'contestant' ? 'Candidate' : 'Voter'}</td>
+                    <td>${joined}</td>
+                    <td>${statusHtml}</td>
+                    <td>${actionsHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- ACTIONS ---
+        async function approveUser(id) {
+            await StorageManager.approveUser(id);
+            showToast(`User ${id} Registration Approved`, 'success');
+        }
+
+        async function rejectUser(regNum) {
+            const reason = prompt("Enter reason for rejection (will be emailed to user):", "Data Mismatch");
+            if (reason === null) return; // Cancelled
+
+            if (confirm(`Are you sure you want to REJECT and DELETE ${regNum}?`)) {
+                try {
+                    await StorageManager.rejectUser(regNum, reason);
+                    showToast(`User ${regNum} has been Rejected & Deleted.`, 'error');
+                } catch (err) {
+                    showToast("Error: " + err.message, 'error');
+                }
+            }
+        }
+
+        async function deleteUser(id) {
+            if (confirm("Permanently delete user?")) {
+                await StorageManager.deleteUser(id);
+                showToast(`User ${id} Deleted Permanently`, 'error');
+            }
+        }
+
+        async function banUser(id) {
+            if (confirm(`Suspend voting rights for ${id}?`)) {
+                await StorageManager.banUser(id);
+                showToast(`User ${id} is Banned`, 'warning');
+            }
+        }
+
+        async function unbanUser(id) {
+            await StorageManager.unbanUser(id);
+            showToast(`User ${id} unbanned`, 'success');
+        }
+
+        async function performDangerAction(type) {
+            const roleName = type === 'voter' ? 'VOTERS' : 'CANDIDATES';
+            if (confirm(`WARNING: This will PERMANENTLY DELETE ALL registered ${roleName}.\nAre you sure??`)) {
+                await StorageManager.clearUsersByRole(type);
+                showToast("Reset Complete.", "success");
+            }
+        }
+
+        document.getElementById('toggle-election-btn').addEventListener('click', async () => {
+            if(!globalElection) return;
+            const current = globalElection;
+            if (current.isActive) {
+                // PAUSE - Calculate remaining time
+                const now = new Date().getTime();
+                const end = new Date(current.endTime).getTime();
+                let diff = end - now;
+                if (diff < 0) diff = 0;
+                await StorageManager.pauseElection(diff);
+            } else {
+                // RESUME
+                await StorageManager.resumeElection();
+            }
+            renderDashboard();
+        });
+
+        document.getElementById('complete-election-btn').addEventListener('click', async () => {
+            if (confirm("End Election? Results will be finalized.")) {
+                await StorageManager.setElectionCompletion(true);
+                renderDashboard();
+            }
+        });
+
+        document.getElementById('reset-election-btn').addEventListener('click', async () => {
+            if (confirm("Start New Election?\nThis clears vote data but KEEPS user accounts.")) {
+                await StorageManager.resetElection();
+                // Clear times too? maybe or maybe keep them. Let's clear for fresh start.
+                await StorageManager.setElectionTimes(null, null);
+                document.getElementById('start-time-input').value = "";
+                document.getElementById('end-time-input').value = "";
+                renderDashboard();
+            }
+        });
+
+        // --- TIMER LOGIC ---
+        let electionTimes = { start: null, end: null };
+        let timerInterval = null;
+
+        document.getElementById('start-time-input').addEventListener('change', () => { /* save handled by button for atomic update */ });
+
+        async function saveElectionTimes() {
+            const startVal = document.getElementById('start-time-input').value;
+            const endVal = document.getElementById('end-time-input').value; // YYYY-MM-DDTHH:MM
+
+            if (!startVal || !endVal) {
+                alert("Please set both Start and End times.");
+                return;
+            }
+            if (new Date(startVal) >= new Date(endVal)) {
+                alert("Start time must be before End time.");
+                return;
+            }
+
+            await StorageManager.setElectionTimes(startVal, endVal);
+            showToast("Election times updated.", "success");
+        }
+
+        function startTimerTick(times, currentStatus) {
+            if (timerInterval) clearInterval(timerInterval);
+            if (!times.start || !times.end) {
+                document.getElementById('countdown-display').innerText = "--:--:--";
+                document.getElementById('timer-label').innerText = "";
+                return;
+            }
+
+            const startT = new Date(times.start).getTime();
+            const endT = new Date(times.end).getTime();
+
+            const tick = async () => {
+                // (Old generic pause block removed to allow frozen time check)
+
+                // CHECK FROZEN STATE
+                if (!currentStatus.isActive && currentStatus.frozenRemaining) {
+                    updateTimerUI(currentStatus.frozenRemaining, "Paused (Time Frozen)");
+                    return;
+                }
+
+                const now = new Date().getTime();
+                let diff = 0;
+                let label = "";
+
+                if (now < startT) {
+                    // Waiting to Start
+                    diff = startT - now;
+                    label = "Starts in";
+                } else if (now >= startT && now < endT) {
+                    // Running
+                    // Double check active status
+                    if (!currentStatus.isActive) {
+                        // Should have been caught above, but safety
+                        document.getElementById('countdown-display').innerText = "PAUSED";
+                        document.getElementById('timer-label').innerText = "Election Paused";
+                        return;
+                    }
+
+                    // AUTO START Check (Transition)
+                    if (now >= startT && now <= startT + 5000 && !currentStatus.isActive) {
+                        // This logic is tricky. If we pause, we are !isActive. 
+                        // But we don't want to Auto-Start if we MANUALLY paused.
+                        // "Auto-Start" is usually for when we are "Waiting" and time crosses startT.
+                        // If we are already past startT, we shouldn't auto-start if it's currently false (paused).
+                        // So I will REMOVE auto-start loop here to avoid fighting the Pause button.
+                        // The User can click "Start" manually if they paused it.
+                        // Only auto-start if we were strictly 'Waiting' previously? 
+                        // Simpler: Remove Auto-Start logic to respect Manual Control, OR only do it if we are very close to start.
+                        // Correct approach: If 'Pause' button was clicked, we want it paused. 
+                        // I will remove the auto-flip logic to prevent it from restarting itself when paused.
+                    }
+
+                } else {
+                    // Ended
+                    diff = 0;
+                    label = "Election Finished";
+                    document.getElementById('countdown-display').innerText = "00:00:00";
+
+                    // Auto-End
+                    if (!currentStatus.isCompleted) {
+                        // Mark as completed
+                        await StorageManager.setElectionCompletion(true);
+                        // Refresh UI to show "Election Completed" state
+                        renderDashboard();
+                        return; // Stop this tick
+                    }
+                }
+
+                updateTimerUI(diff, label);
+            };
+
+            timerInterval = setInterval(tick, 1000);
+            tick(); // Run immediately
+        }
+
+        function updateTimerUI(ms, label) {
+            if (ms <= 0) {
+                document.getElementById('countdown-display').innerText = "00:00:00";
+                document.getElementById('timer-label').innerText = label;
+                return;
+            }
+            const h = Math.floor(ms / (1000 * 60 * 60));
+            const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((ms % (1000 * 60)) / 1000);
+            document.getElementById('countdown-display').innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            document.getElementById('timer-label').innerText = label;
+        }
+
+        // --- DASHBOARD RENDER OVERRIDE to Include Timer ---
+        // We modify the original renderDashboard to load times.
+        // Since we can't easily replace just the function content without replacing the whole block if using replace call,
+        // and I am appending this logic, I need to make sure the original 'renderDashboard' calls 'startTimerTick'.
+        // But 'startTimerTick' is new. 
+        // I should have replaced 'renderDashboard' entirely or injected into it. 
+        // Let's rely on the fact that I can edit renderDashboard in previous steps.
+        // Wait, I didn't edit renderDashboard yet in this tool call.
+        // I will do it in a separate ReplacementChunk in this same call.
+
+
+        // --- DOWNLOAD LOGIC ---
+        document.getElementById('download-btn').addEventListener('click', () => {
+            if (!cachedStats) return;
+
+            let csv = "--- CAMDIDATE RESULTS ---\n";
+            csv += "Rank,Name,Reg No,Votes\n";
+
+            // Calculate ranks
+            const candidates = [...cachedStats.contestants].map(c => {
+                return { ...c, votes: cachedStats.candidateVotes[c.regNum] || 0 };
+            }).sort((a, b) => b.votes - a.votes);
+
+            const winnerVotes = candidates.length > 0 ? candidates[0].votes : 0;
+
+            candidates.forEach((c, i) => {
+                csv += `${i + 1},"${c.name}",${c.regNum},${c.votes}`;
+                if (i > 0) {
+                    csv += `,(-${winnerVotes - c.votes} vs Winner)`; // Margin
+                } else {
+                    csv += `,(WINNER)`;
+                }
+                csv += "\n";
+            });
+
+            csv += "\n--- REGISTERED VOTERS ---\n";
+            csv += "Reg No,Name,Joined At,Status,Voted For,Voted At\n";
+            cachedStats.voters.forEach(v => {
+                let voteInfo = v.hasVoted ? v.votedFor : "N/A";
+                let timeInfo = v.votedAt ? new Date(v.votedAt).toLocaleString() : "-";
+                csv += `${v.regNum},"${v.name}",${v.createdAt || '-'},${v.hasVoted ? "Voted" : "Not Voted"},${voteInfo},"${timeInfo}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Election_Full_Result_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+        });
+
+        // --- PASSWORD / ID CHANGE ---
+        // --- INPUT VALIDATION FOR MODALS ---
+        document.getElementById('new-admin-id').addEventListener('input', function (e) {
+            // Admin ID: small and capital letters and numbers... we cannot use spaces ending... 
+            // PRECISE RULE: "admin id we can only enter small and capiter letters and numbers also spaces are cannot use from startiong letter we can we after first letter"
+            let val = this.value.replace(/[^a-zA-Z0-9 ]/g, '');
+            if (val.startsWith(' ')) val = val.trimStart();
+            this.value = val;
+        });
+
+        document.getElementById('new-password').addEventListener('input', function (e) {
+            // Password: small and capital letters and numbers only no space required
+            this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+        });
+
+        document.getElementById('change-pass-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const p = document.getElementById('new-password').value;
+            await StorageManager.resetPassword(currentUser.regNum, p);
+            alert("Password Changed.");
+            document.getElementById('change-pass-modal').classList.add('hidden');
+        });
+
+        document.getElementById('change-id-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newId = document.getElementById('new-admin-id').value;
+            try {
+                await StorageManager.updateAdminId(currentUser.regNum, newId);
+                alert("Admin ID Changed! Please login again.");
+                StorageManager.logout();
+                window.location.href = 'login.html';
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        });
+
+        // --- PORTRAIT VIEWER ---
+        function showPortrait(src) {
+            document.getElementById('portrait-preview').src = src;
+            document.getElementById('portrait-modal').classList.remove('hidden');
+        }
+
+        function viewPdf(dataUrl) {
+            try {
+                const pdfData = dataUrl.split(',')[1];
+                const byteCharacters = atob(pdfData);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], {type: 'application/pdf'});
+                const fileURL = URL.createObjectURL(blob);
+                window.open(fileURL);
+            } catch (err) {
+                alert("Could not open PDF: " + err.message);
+            }
+        }
+
+        // --- VERIFICATION LOGIC ---
+        function openVerificationPanel() {
+            document.getElementById('verification-panel').classList.remove('hidden');
+            renderDashboard(); // Trigger refresh to load table
+        }
+
+        function renderVerificationTable(voters) {
+            const tbody = document.getElementById('verification-table-body');
+            tbody.innerHTML = '';
+
+            // Filter Pending Votes
+            const pending = voters.filter(v => v.hasVoted && v.voteStatus === 'pending');
+
+            if (pending.length === 0) {
+                document.getElementById('no-verification-msg').classList.remove('hidden');
+                document.querySelector('#verification-panel table').classList.add('hidden');
+            } else {
+                document.getElementById('no-verification-msg').classList.add('hidden');
+                document.querySelector('#verification-panel table').classList.remove('hidden');
+
+                pending.forEach(v => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    tr.innerHTML = `
+                        <td style="padding:1rem;">${v.regNum}</td>
+                        <td>${v.name}</td>
+                        <td><span style="background:rgba(245, 158, 11, 0.2); color:#f59e0b; padding:0.2rem 0.5rem; border-radius:4px;">Pending Review</span></td>
+                        <td>
+                            <button class="action-btn" onclick="openVerifyModal('${v.regNum}')">Verify 🔍</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        let currentVerifyId = null;
+
+        async function openVerifyModal(regNum) {
+            currentVerifyId = regNum;
+            const users = await StorageManager.getUsers();
+            const user = users.find(u => u.regNum === regNum);
+
+            if (!user) return alert("User not found");
+
+            document.getElementById('verify-name').innerText = user.name;
+            document.getElementById('verify-regNum').innerText = user.regNum;
+            document.getElementById('verify-email').innerText = user.email || "No Email";
+
+            // Photos Logic for Verification
+            const regImg = document.getElementById('verify-reg-img');
+            
+            // Prefer Live Face for verification if available, else use Portrait
+            // If portrait is PDF, show a placeholder and provide a "View PDF" button
+            if (user.webcamReg) {
+                regImg.src = user.webcamReg;
+                regImg.classList.remove('hidden');
+                document.getElementById('pdf-verify-btn')?.remove();
+            } else if (user.portrait && user.portrait.startsWith('data:image')) {
+                regImg.src = user.portrait;
+                regImg.classList.remove('hidden');
+                document.getElementById('pdf-verify-btn')?.remove();
+            } else if (user.portrait && user.portrait.startsWith('data:application/pdf')) {
+                regImg.src = ''; // Clear img
+                regImg.classList.add('hidden');
+                
+                // Add a button to view PDF if not already there
+                if (!document.getElementById('pdf-verify-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'pdf-verify-btn';
+                    btn.className = 'action-btn';
+                    btn.innerText = 'View ID Proof (PDF) 📄';
+                    btn.onclick = () => viewPdf(user.portrait);
+                    regImg.parentNode.appendChild(btn);
+                }
+            }
+
+            document.getElementById('verify-vote-img').src = user.webcamVote || '';
+            document.getElementById('verify-time').innerText = user.votedAt ? new Date(user.votedAt).toLocaleString() : '-';
+
+            document.getElementById('verify-modal').classList.add('visible');
+        }
+
+        function closeVerifyModal() {
+            document.getElementById('verify-modal').classList.remove('visible');
+            currentVerifyId = null;
+        }
+
+        async function processVerification(isValid) {
+            if (!currentVerifyId) return;
+            try {
+                await StorageManager.verifyVote(currentVerifyId, isValid);
+                closeVerifyModal();
+                renderDashboard(); // Refresh UI
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        // --- ANNOUNCEMENTS ---
+        async function postAnnouncement() {
+            const msg = document.getElementById('announcement-input').value;
+            if (!msg) return;
+            await StorageManager.setAnnouncement(msg);
+            alert("Announcement Posted!");
+        }
+
+        async function clearAnnouncement() {
+            document.getElementById('announcement-input').value = "";
+            await StorageManager.setAnnouncement("");
+            alert("Announcement Cleared");
+        }
+
+        async function loadAnnouncementInput() {
+            const msg = await StorageManager.getAnnouncement();
+            if (msg) document.getElementById('announcement-input').value = msg;
+        }
+
+        // --- LOGS ---
+        async function loadLogs() {
+            const tbody = document.getElementById('logs-table-body');
+            try {
+                const logs = await StorageManager.getAuditLogs();
+                tbody.innerHTML = '';
+
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:1rem;">No activity recorded.</td></tr>';
+                    return;
+                }
+
+                // Sort new to old
+                logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                logs.forEach(l => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    tr.innerHTML = `
+                        <td style="padding:0.5rem; color:var(--text-muted);">${new Date(l.timestamp).toLocaleTimeString()}</td>
+                        <td style="color:var(--neon-cyan);">${l.userId}</td> 
+                        <td style="font-weight:bold;">${l.action}</td>
+                        <td class="text-muted">${l.details}</td>
+                     `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading logs</td></tr>';
+            }
+        }
+
+        // --- INACTIVITY AUTO-LOGOUT ---
+        let inactivityTime = function () {
+            let time;
+            // reset timer on any of these events
+            window.onload = resetTimer;
+            document.onmousemove = resetTimer;
+            document.onkeypress = resetTimer;
+            document.onclick = resetTimer;
+            document.onscroll = resetTimer;
+
+            function logout() {
+                alert("You have been logged out due to inactivity.");
+                StorageManager.logout();
+                window.location.href = 'login.html';
+            }
+
+            function resetTimer() {
+                clearTimeout(time);
+                time = setTimeout(logout, 15 * 60 * 1000); // 15 minutes
+            }
+        };
+        inactivityTime();
+
+        // --- INIT LIVE LISTENERS ---
+        function startLiveListeners() {
+            const statusText = document.getElementById('status-text');
+            if (statusText) statusText.innerText = "Connecting to DB...";
+            
+            try {
+                StorageManager.listenToStats(stats => {
+                    if (statusText) statusText.innerText = "Stats Loaded, Waiting for Config...";
+                    globalStats = stats;
+                    renderDashboard();
+                });
+
+                StorageManager.listenToElection(election => {
+                    if (statusText) statusText.innerText = "Config Loaded, Rendering...";
+                    globalElection = election;
+                    renderDashboard();
+                });
+            } catch (err) {
+                alert("CRITICAL FIREBASE INIT ERROR: " + err.message);
+                if (statusText) statusText.innerText = "Error: " + err.message;
+            }
+        }
+
+        // Init
+        startLiveListeners();
+        loadAnnouncementInput();
+        loadLogs();
+    </script>
+</body>
+
+</html>

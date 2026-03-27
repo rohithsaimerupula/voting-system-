@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - OVS</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+
+<body>
+    <nav>
+        <div class="brand" onclick="window.location.href='index.html'">OVS</div>
+        <div class="nav-links">
+            <button onclick="window.location.href='index.html'" class="btn-outline"
+                style="padding: 0.5rem 1rem; margin-right: 0.5rem;">Back</button>
+            <button onclick="window.location.href='login.html'" class="submit-btn"
+                style="width: auto; padding: 0.5rem 1rem; margin: 0;">Login</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade-in" style="max-width: 600px;">
+        <div class="glass-panel" style="padding: 2.5rem;">
+            <h2 class="text-center" style="margin-bottom: 2rem;">Create Account</h2>
+
+            <form id="register-form">
+                <div class="form-group">
+                    <label>Register As</label>
+                    <select id="role" onchange="toggleFields()">
+                        <option value="voter">Voter</option>
+                        <option value="contestant">Candidate</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" required placeholder="John Doe" maxlength="50">
+                    <small style="color: var(--text-muted); font-size: 0.8rem;">Max 50 characters. No leading
+                        spaces.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Student Registration Number (Unique ID)</label>
+                    <input type="text" id="regNum" required placeholder="e.g. 21B001" maxlength="10">
+                    <small style="color: var(--text-muted); font-size: 0.8rem;">Max 10 characters
+                        (Alphanumeric).</small>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Year</label>
+                        <select id="year">
+                            <option value="1st">1st Year</option>
+                            <option value="2nd">2nd Year</option>
+                            <option value="3rd">3rd Year</option>
+                            <option value="4th">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Branch</label>
+                        <select id="branch">
+                            <option>CSE</option>
+                            <option>ECE</option>
+                            <option>EEE</option>
+                            <option>CSC</option>
+                            <option>MECH</option>
+                            <option>IT</option>
+                            <option>ECM</option>
+                            <option>AIDS</option>
+                            <option>CSM</option>
+                            <option>CIVIL</option>
+                            <option>CAI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Section</label>
+                        <input type="text" id="section" required placeholder="1" maxlength="1">
+                        <small style="color: var(--text-muted);">1 Digit (1-9)</small>
+                    </div>
+                </div>
+
+                <!-- Gmail & OTP (Simulated) -->
+                <div class="form-group">
+                    <label>Gmail Address</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="email" id="email" required placeholder="example@gmail.com"
+                            oninput="resetOtpState()">
+                        <button type="button" class="submit-btn" id="send-otp-btn"
+                            style="width: 120px; font-size: 0.8rem;" onclick="sendOtp()">Get OTP</button>
+                    </div>
+                </div>
+
+                <div class="form-group hidden" id="otp-group">
+                    <label>Enter OTP</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6">
+                        <button type="button" class="submit-btn" id="verify-otp-btn"
+                            style="width: auto; background: var(--success); color: white;"
+                            onclick="verifyOtp()">Verify</button>
+                    </div>
+                    <small id="otp-msg" class="text-muted"></small>
+                </div>
+
+                <!-- Portrait Upload (File) -->
+                <div class="form-group">
+                    <label>Upload ID Proof / Portrait (Image/PDF)</label>
+                    <input type="file" id="portrait" accept=".png, .pdf">
+                    <small style="color: var(--text-muted);">Used for ID verification.</small>
+                </div>
+
+                <!-- Webcam Capture (Registration) -->
+                <!-- Webcam Capture -->
+                <div class="form-group">
+                    <label>Live Face Capture</label>
+                    <div
+                        style="background: black; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--glass-border);">
+                        <video id="webcam-video" autoplay playsinline
+                            style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);"></video>
+                        <canvas id="webcam-canvas" class="hidden"></canvas>
+                        <img id="webcam-preview" class="hidden"
+                            style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);">
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="button" class="btn-outline" id="start-cam-btn" style="width: 100%;"
+                            onclick="startWebcam()">Open Camera</button>
+                        <button type="button" class="submit-btn hidden" id="capture-btn"
+                            onclick="captureWebcam()">Capture Photo</button>
+                        <button type="button" class="btn-outline hidden" id="retake-btn"
+                            onclick="retakeWebcam()">Retake</button>
+                    </div>
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">For identity
+                        verification during voting.</small>
+                </div>
+
+                <!-- Contestant Specific -->
+                <div class="form-group hidden" id="symbol-group">
+                    <label>Election Symbol (Emoji Only)</label>
+                    <input type="text" id="symbol" placeholder="🦁">
+                    <small style="color: var(--text-muted);">Please enter a single Emoji.</small>
+                </div>
+
+                <div class="form-group hidden" id="manifesto-group">
+                    <label>Manifesto / Slogan</label>
+                    <textarea id="manifesto" placeholder="Why should people vote for you? (Max 150 chars)"
+                        maxlength="150" rows="3"
+                        style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
+                </div>
+
+                <div class="form-group hidden" id="invite-group">
+                    <label>Invite Code (Optional)</label>
+                    <input type="text" id="invite-code" placeholder="Candidate's Reg Number" autocomplete="off" maxlength="20">
+                    <small style="color: var(--text-muted);">Support a candidate and give them Campaign Points!</small>
+                </div>
+
+                <div class="form-group" id="password-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required placeholder="e.g. abc@123" maxlength="10">
+                    <small style="color: var(--text-muted);">6-10 chars · 3+ letters · 1+ special char · 1+ number</small>
+                </div>
+
+
+
+                <button type="submit" id="final-submit-btn" class="submit-btn" style="margin-top: 1rem;"
+                    disabled>Complete Registration</button>
+                <p class="text-muted text-center mt-2" style="font-size: 0.8rem;">(Complete OTP & Face Capture to
+                    enable)</p>
+            </form>
+
+            <div id="error-container" class="hidden"
+                style="margin-top: 1rem; padding: 1rem; border-radius: 8px; background: rgba(220, 38, 38, 0.2); border: 1px solid var(--danger);">
+                <p class="text-danger text-center" id="error-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div id="msg-container" class="hidden"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; backdrop-filter: blur(15px); overflow-y: auto;">
+        <div class="glass-panel"
+            style="padding: 3rem; max-width: 90%; border-color: var(--success); box-shadow: 0 0 50px rgba(16, 185, 129, 0.2);">
+            <div style="font-size: 5rem; animation: infoPop 0.5s; margin-bottom: 1rem;">🎉</div>
+            <h2 class="text-success" style="font-size: 2.5rem; margin-bottom: 1rem;">
+                Registration Submitted!</h2>
+            <p id="msg-text"
+                style="font-size: 1.1rem; color: var(--text-muted); max-width: 400px; margin: 0 auto 2rem auto; line-height: 1.6;">
+                Your registration is pending Admin Approval. You will be able to login once approved.
+            </p>
+
+            <div id="msg-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <button class="submit-btn" style="width: auto; padding: 0.8rem 2rem;"
+                    onclick="window.location.href='index.html'">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="storage.js?v=3"></script>
+    <script>
+        // --- OTP & WEBCAM VARIABLES ---
+        let otpVerified = false;
+        let generatedOtp = null;
+        let webcamPhoto = null;
+        let webcamStream = null;
+
+
+
+        // --- OTP LOGIC ---
+        function resetOtpState() {
+            otpVerified = false;
+            document.getElementById('otp-group').classList.add('hidden');
+            document.getElementById('send-otp-btn').innerText = "Get OTP";
+            document.getElementById('send-otp-btn').disabled = false;
+            checkSubmitStatus();
+        }
+
+        function sendOtp() {
+            const email = document.getElementById('email').value;
+            if (!email || !email.includes('@gmail.com')) {
+                return showError("Please enter a valid Gmail address.");
+            }
+
+            // SIMULATED BACKEND SEND
+            // SIMULATED BACKEND SEND -> REAL EMAIL SEND
+            generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            // console.log("SERVER: OTP for " + email + " is " + generatedOtp);
+
+            // Call StorageManager Email
+            const name = document.getElementById('name').value || "New User";
+
+            const btn = document.getElementById('send-otp-btn');
+            btn.disabled = true;
+            btn.innerText = "Sending...";
+
+            async function send() {
+                const sent = await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
+                if (sent) {
+                    alert("OTP Sent to " + email);
+                }
+                btn.disabled = false;
+                btn.innerText = "Resend";
+            }
+            send();
+
+            document.getElementById('otp-group').classList.remove('hidden');
+            document.getElementById('send-otp-btn').innerText = "Resend";
+            document.getElementById('error-container').classList.add('hidden');
+        }
+
+        function verifyOtp() {
+            const input = document.getElementById('otp-input').value;
+            const msg = document.getElementById('otp-msg');
+
+            if (input === generatedOtp) {
+                otpVerified = true;
+                msg.innerText = "Verified ✅";
+                msg.className = "text-success";
+                document.getElementById('otp-input').disabled = true;
+                document.getElementById('verify-otp-btn').disabled = true;
+                document.getElementById('send-otp-btn').disabled = true;
+                checkSubmitStatus();
+            } else {
+                msg.innerText = "Invalid OTP";
+                msg.className = "text-danger";
+            }
+        }
+
+        // --- WEBCAM LOGIC ---
+        async function startWebcam() {
+            const video = document.getElementById('webcam-video');
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                video.srcObject = webcamStream;
+                document.getElementById('start-cam-btn').classList.add('hidden');
+                document.getElementById('capture-btn').classList.remove('hidden');
+                document.getElementById('webcam-video').classList.remove('hidden');
+                document.getElementById('webcam-preview').classList.add('hidden');
+            } catch (err) {
+                showError("Webcam Access Denied: " + err.message);
+            }
+        }
+
+        function captureWebcam() {
+            const video = document.getElementById('webcam-video');
+            const canvas = document.getElementById('webcam-canvas');
+            const context = canvas.getContext('2d');
+
+            if (!webcamStream) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1); // Mirror flip
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            webcamPhoto = canvas.toDataURL('image/jpeg');
+
+            // Show Preview
+            const img = document.getElementById('webcam-preview');
+            img.src = webcamPhoto;
+            img.classList.remove('hidden');
+            video.classList.add('hidden');
+
+            document.getElementById('capture-btn').classList.add('hidden');
+            document.getElementById('retake-btn').classList.remove('hidden');
+
+            checkSubmitStatus();
+        }
+
+        function retakeWebcam() {
+            webcamPhoto = null;
+            document.getElementById('webcam-preview').classList.add('hidden');
+            document.getElementById('webcam-video').classList.remove('hidden');
+            document.getElementById('retake-btn').classList.add('hidden');
+            document.getElementById('capture-btn').classList.remove('hidden');
+            checkSubmitStatus();
+        }
+
+        function checkSubmitStatus() {
+            const btn = document.getElementById('final-submit-btn');
+            if (otpVerified && webcamPhoto) {
+                btn.disabled = false;
+                btn.innerText = "Complete Registration";
+            } else {
+                btn.disabled = true;
+                let missing = [];
+                if (!otpVerified) missing.push("Verify OTP");
+                if (!webcamPhoto) missing.push("Capture Face");
+                btn.innerText = "Complete: " + missing.join(" & ");
+            }
+        }
+
+        // --- OLD VALIDATION LOGIC ---
+        const nameInput = document.getElementById('name');
+        const regInput = document.getElementById('regNum');
+        const passInput = document.getElementById('password');
+        const sectionInput = document.getElementById('section');
+        const symbolInput = document.getElementById('symbol');
+
+        // Name: Alphabets & Spaces only. Max 50. No leading space.
+        nameInput.addEventListener('input', function (e) {
+            let val = this.value.replace(/[^A-Za-z ]/g, '');
+            if (val.startsWith(' ')) val = val.trimStart();
+            if (val.length > 50) val = val.slice(0, 50);
+            this.value = val;
+        });
+
+        // RegNum: Alphanumeric only, Max 10.
+        regInput.addEventListener('input', function (e) {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (this.value.length > 10) this.value = this.value.slice(0, 10);
+        });
+
+        // Section: 1 Digit Only, Not 0. No letters.
+        // User said: "one digit number except 0 ramaining all alphabets ansd symbols are not allowed"
+        // Wait, "remaining all alphabets and symbols are not allowed" -> So ONLY 1-9.
+        sectionInput.addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^1-9]/g, ''); // Remove non 1-9
+            if (this.value.length > 1) this.value = this.value.slice(0, 1);
+        });
+
+        // Password: 6-10 chars, allow all characters
+        passInput.addEventListener('input', function (e) {
+            if (this.value.length > 10) this.value = this.value.slice(0, 10);
+        });
+
+        // Password policy validator
+        function validatePassword(pwd, minLen, maxLen) {
+            if (pwd.length < minLen || pwd.length > maxLen) return `Password must be ${minLen}-${maxLen} characters.`;
+            const alphaCount = (pwd.match(/[a-zA-Z]/g) || []).length;
+            if (alphaCount < 3) return 'Password must contain at least 3 letters.';
+            if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number.';
+            if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Password must contain at least 1 special character.';
+            return null; // valid
+        }
+
+        // Symbol: Emoji Only (Basic Check)
+        symbolInput.addEventListener('input', function (e) {
+            // Strip all ASCII characters (0-127) effectively removing letters, numbers, and standard keyboard symbols.
+            // This leaves high-bit characters like Emojis.
+            // Note: This prevents entering normal text.
+            this.value = this.value.replace(/[\x00-\x7F]/g, '');
+        });
+
+        function toggleFields() {
+            const role = document.getElementById('role').value;
+            const symbolGroup = document.getElementById('symbol-group');
+            const passGroup = document.getElementById('password-group');
+
+            if (role === 'contestant') {
+                symbolGroup.classList.remove('hidden');
+                document.getElementById('symbol').required = true;
+
+                passGroup.classList.add('hidden'); // Candidate: No Password
+                document.getElementById('password').required = false;
+
+                document.getElementById('manifesto-group').classList.remove('hidden');
+                document.getElementById('manifesto').required = true;
+                
+                document.getElementById('invite-group').classList.add('hidden');
+                document.getElementById('invite-code').required = false;
+            } else {
+                symbolGroup.classList.add('hidden');
+                document.getElementById('symbol').required = false;
+
+                passGroup.classList.remove('hidden'); // Voter: Password Required
+                document.getElementById('password').required = true;
+
+                document.getElementById('manifesto-group').classList.add('hidden');
+                document.getElementById('manifesto').required = false;
+                
+                document.getElementById('invite-group').classList.remove('hidden');
+            }
+        }
+
+        // --- SUBMIT LOGIC ---
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const role = document.getElementById('role').value;
+            const errorContainer = document.getElementById('error-container');
+            const msgContainer = document.getElementById('msg-container');
+            const btn = document.getElementById('final-submit-btn');
+
+            // NEW CHECKS
+            if (!otpVerified || !webcamPhoto) {
+                return showError("Please complete OTP verification and Face Capture.");
+            }
+
+            // STRICT CHECKS
+            const name = nameInput.value;
+            const regNum = regInput.value;
+            const section = sectionInput.value;
+            const password = passInput.value;
+            const symbol = symbolInput.value;
+            const email = document.getElementById('email').value;
+            const manifestoVal = role === 'contestant' ? document.getElementById('manifesto').value : null;
+
+            if (name.length > 50) return showError("Name too long (Max 50).");
+            if (name.trim().length === 0) return showError("Name required.");
+            if (!/^[A-Za-z ]+$/.test(name)) return showError("Name must contain only alphabets and spaces.");
+            if (regNum.length > 10) return showError("Reg Num too long (Max 10).");
+            if (!/^[1-9]$/.test(section)) return showError("Section must be a single digit (1-9).");
+            if (role === 'voter') {
+                const pwdError = validatePassword(password, 6, 10);
+                if (pwdError) return showError(pwdError);
+            }
+            
+
+
+            // --- AI MODERATION SIMULATION ---
+            if (role === 'contestant' && manifestoVal) {
+                const blockedWords = ['hate', 'violence', 'bribe', 'fake'];
+                const lowerMan = manifestoVal.toLowerCase();
+                const found = blockedWords.filter(w => lowerMan.includes(w));
+                if (found.length > 0) {
+                    return showError(`[AI Moderation Blocked] Manifesto contains inappropriate content: "${found.join(', ')}". Please revise.`);
+                }
+            }
+
+            if (role === 'contestant') {
+                const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/;
+                if (!emojiRegex.test(symbol)) { return showError("Symbol must be a valid Emoji (e.g. 🦁)."); }
+            }
+
+            errorContainer.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerText = "Checking file...";
+
+            // File Handling (Legacy Portrait)
+            const fileInput = document.getElementById('portrait');
+            let portraitBase64 = null;
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+
+                // PDF HANDLING
+                if (file.type === 'application/pdf') {
+                    if (file.size > 2 * 1024 * 1024) {
+                        btn.disabled = false;
+                        btn.innerText = "Complete Registration";
+                        return showError("PDF too large. Max 2MB allowed for PDFs.");
+                    }
+                    try {
+                        btn.innerText = "Reading PDF...";
+                        portraitBase64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                        });
+                    } catch (err) {
+                        btn.disabled = false; btn.innerText = "Complete Registration";
+                        return showError("PDF Read Failed");
+                    }
+                }
+                // IMAGE HANDLING
+                else {
+                    if (file.size > 10 * 1024 * 1024) {
+                        btn.disabled = false; btn.innerText = "Complete Registration";
+                        return showError("Image too massive (>10MB). Please use a smaller file.");
+                    }
+
+                    try {
+                        btn.innerText = "Compressing Image...";
+                        await new Promise(r => setTimeout(r, 50));
+                        portraitBase64 = await convertToBase64(file);
+                    } catch (err) {
+                        btn.disabled = false;
+                        btn.innerText = "Complete Registration";
+                        return showError("Image processing failed: " + err.message);
+                    }
+                }
+            }
+
+            btn.innerText = "Uploading...";
+
+            const inviteCodeVal = role === 'voter' ? document.getElementById('invite-code').value.trim() : null;
+
+            const user = {
+                role: role,
+                name: name,
+                regNum: regNum,
+                year: document.getElementById('year').value,
+                branch: document.getElementById('branch').value,
+                section: section,
+                password: role === 'voter' ? password : null,
+                symbol: role === 'contestant' ? symbol : null,
+                manifesto: manifestoVal,
+                inviteCode: inviteCodeVal,
+                portrait: portraitBase64,
+                hasVoted: false,
+                email: email,
+                webcamReg: webcamPhoto, // Save the captured face
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                await StorageManager.addUser(user);
+                // Success
+                document.getElementById('register-form').classList.add('hidden');
+                msgContainer.classList.remove('hidden');
+            } catch (err) {
+                showError(err.message);
+                btn.disabled = false;
+                btn.innerText = "Complete Registration";
+            }
+        });
+
+        function showError(msg) {
+            document.getElementById('error-text').innerText = msg;
+            document.getElementById('error-container').classList.remove('hidden');
+        }
+
+        function convertToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 500;
+                        const MAX_HEIGHT = 500;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Compress to JPEG 0.7 quality
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        if (dataUrl.length > 2000000) { // Safety check ~1.5MB base64 (allows >1MB images)
+                            reject(new Error("Image too complex, please use a simpler or smaller image."));
+                        } else {
+                            resolve(dataUrl);
+                        }
+                    };
+                    img.onerror = (err) => reject(new Error("Image load failed"));
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+
+</html>
