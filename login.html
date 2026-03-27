@@ -295,13 +295,8 @@
         });
 
         passInput.addEventListener('input', function (e) {
-            if (isVoter) {
-                // Voter: Numbers only
-                this.value = this.value.replace(/[^0-9]/g, '');
-            } else {
-                // Admin/Sub-Admin: No spaces allowed; special chars ARE allowed (required by policy)
-                this.value = this.value.replace(/\s/g, '');
-            }
+            // Remove space logic for everyone
+            this.value = this.value.replace(/\s/g, '');
         });
 
 

@@ -213,7 +213,10 @@ const StorageManager = {
             let userData;
             try {
                 userData = await fetchApi(`/users/${regNum}`);
-            } catch (e) { return null; }
+            } catch (e) {
+                if (e.message === "Not found") return null;
+                throw new Error("Backend connection failed. Administrator has not set the Database Environment Variables correctly.");
+            }
 
             if (!userData) return null;
 
