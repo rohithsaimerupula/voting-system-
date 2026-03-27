@@ -11,10 +11,15 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
 
-const turso = createClient({
-    url: process.env.TURSO_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN,
-});
+let turso;
+try {
+    turso = createClient({
+        url: process.env.TURSO_DATABASE_URL || "libsql://dummy",
+        authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
+    });
+} catch (e) {
+    console.error("Turso DB init failed (probably missing env variables):", e.message);
+}
 
 // ─────────────────────────────────────────
 //  DATABASE INIT
