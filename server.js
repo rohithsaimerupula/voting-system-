@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { createClient } = require('@libsql/client');
+const { createClient } = require('@libsql/client/web');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
