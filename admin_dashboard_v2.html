@@ -53,6 +53,11 @@
     .toast { position:fixed; bottom:2rem; right:2rem; background:#1e293b; border:1px solid var(--border); border-radius:10px; padding:0.9rem 1.5rem; font-size:0.9rem; transform:translateY(100px); opacity:0; transition:all 0.4s; z-index:999; }
     .toast.show { transform:translateY(0); opacity:1; }
     .search-bar { width:100%; padding:0.7rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-family:'Outfit',sans-serif; outline:none; margin-bottom:1rem; }
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:450px;position:relative;}
+    .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;}
+    .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -158,6 +163,36 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <h3 id="edit-modal-title">✏️ Edit Details</h3>
+    <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--cyan);"></strong></p>
+    <input type="hidden" id="edit-regnum">
+    <input type="hidden" id="edit-role">
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
+      <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
+    </div>
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field">
+          <label>Class (e.g. CSE-5)</label>
+          <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+    
+    <div class="form-field" id="edit-password-group" style="margin-bottom:1.5rem;">
+      <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
+      <input type="password" id="edit-pass" placeholder="Enter new password to change">
+    </div>
+    
+    <button class="btn btn-cyan" style="width:100%" onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
 
 <!-- Portrait Preview Modal -->
 <div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
@@ -276,7 +311,7 @@ function renderStudents(list){
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
       ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
-      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudent('${s.regNum}','${s.name}','${s.email||''}')">Edit</button>
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudent('${s.regNum}','${s.name}','${s.email||''}','${s.class||''}')">Edit</button>
       <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
@@ -326,31 +361,58 @@ function renderSaTable(list){
   </tr>`).join('');
 }
 
-function openEditStudent(id, name, email) {
-  const newName = prompt('Full Name:', name); if (newName === null) return;
-  const newEmail = prompt('Email:', email); if (newEmail === null) return;
-  updateUser(id, { name: newName.trim(), email: newEmail.trim() });
-}
+function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
-async function updateUser(id, updates) {
-  try {
-    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify(updates) });
-    toast(`${id} updated!`); loadAll();
-  } catch(e) { toast(e.message, false); }
+function openEditStudent(id, name, email, cls) {
+  document.getElementById('edit-modal-title').textContent = '✏️ Edit Student Details';
+  document.getElementById('edit-role').value = 'student';
+  document.getElementById('edit-regnum').value = id;
+  document.getElementById('edit-regnum-display').textContent = id;
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-email').value = email;
+  document.getElementById('edit-class').value = cls || '';
+  document.getElementById('edit-password-group').style.display = 'none';
+  document.getElementById('edit-pass').value = '';
+  document.getElementById('edit-modal').classList.add('open');
 }
 
 function editFullSA(id, name, email, cls) {
-  const newName = prompt('Full Name:', name); if (newName === null) return;
-  const newEmail = prompt('Email:', email); if (newEmail === null) return;
-  const newClass = prompt('Class (e.g. CSE-5):', cls); if (newClass === null) return;
-  const newPass = prompt('New Password (leave blank to keep):\n(6+ chars · 3 letters · 1 special · 1 number)');
-  const updates = { name: newName.trim(), email: newEmail.trim(), class: newClass.trim().toUpperCase() };
-  if (newPass && newPass.trim() !== '') {
-    const err = validatePassword(newPass, 6);
+  document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin Details';
+  document.getElementById('edit-role').value = 'subadmin';
+  document.getElementById('edit-regnum').value = id;
+  document.getElementById('edit-regnum-display').textContent = id;
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-email').value = email;
+  document.getElementById('edit-class').value = cls || '';
+  document.getElementById('edit-password-group').style.display = 'block';
+  document.getElementById('edit-pass').value = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+async function saveEdit() {
+  const role = document.getElementById('edit-role').value;
+  const id = document.getElementById('edit-regnum').value;
+  const name = document.getElementById('edit-name').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
+  const cls = document.getElementById('edit-class').value.trim().toUpperCase();
+  const pass = document.getElementById('edit-pass').value;
+
+  if(!name) return toast('Name required', false);
+  
+  const updates = { name, email, class: cls };
+  
+  if (role === 'subadmin' && pass && pass.trim() !== '') {
+    const err = validatePassword(pass, 6);
     if (err) return toast(err, false);
-    updates.password = btoa(newPass);
+    updates.password = btoa(pass);
   }
-  updateUser(id, updates);
+
+  try {
+    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify(updates) });
+    toast(`${id} details updated successfully!`);
+    closeEditModal();
+    loadAll();
+  } catch(e) { toast(e.message, false); }
 }
 
 function validatePassword(pwd, minLen) {

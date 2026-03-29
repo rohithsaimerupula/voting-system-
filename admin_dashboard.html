@@ -11,7 +11,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Styles moved to style.css -->
+    <style>
+      .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;align-items:center;justify-content:center;}
+      .modal-overlay.open{display:flex;}
+      .modal-content-new{background:#111827;border:1px solid var(--glass-border);border-radius:16px;padding:2rem;width:100%;max-width:500px;position:relative;}
+      .modal-content-new h3{font-size:1.3rem;font-weight:700;margin-bottom:1.2rem;color:var(--neon-cyan);}
+      .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
+    </style>
 </head>
 
 <body>
@@ -222,6 +228,38 @@
         <div id="election-closed-banner" class="hidden text-center" style="margin: 3rem 0;">
             <h1 style="color: #f59e0b; font-size: 3rem; text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);">ELECTION IS
                 COMPLETED</h1>
+        </div>
+
+        <!-- GOD EDIT MODAL -->
+        <div class="modal-overlay" id="god-edit-modal">
+          <div class="modal-content-new">
+            <button class="modal-close" onclick="closeGodEditModal()">✕</button>
+            <h3 id="edit-modal-title">God Mode Edit</h3>
+            <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--gold-primary);"></strong></p>
+            <input type="hidden" id="edit-regnum">
+            <input type="hidden" id="edit-role">
+            
+            <div class="form-grid" style="margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div class="form-field"><label style="display:block;margin-bottom:0.3rem">Full Name</label><input type="text" id="edit-name" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
+              <div class="form-field"><label style="display:block;margin-bottom:0.3rem">Email</label><input type="email" id="edit-email" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
+            </div>
+            
+            <div class="form-grid" style="margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div class="form-field" id="edit-inst-group"><label style="display:block;margin-bottom:0.3rem">Institution</label><input type="text" id="edit-institution" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
+              <div class="form-field" id="edit-branch-group"><label style="display:block;margin-bottom:0.3rem">Branch</label><select id="edit-branch" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"><option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option><option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option></select></div>
+            </div>
+            
+            <div class="form-grid" style="margin-bottom:1rem;">
+              <div class="form-field" id="edit-class-group"><label style="display:block;margin-bottom:0.3rem">Class (e.g. CSE-5)</label><input type="text" id="edit-class" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white" oninput="this.value=this.value.toUpperCase()"></div>
+            </div>
+            
+            <div class="form-field" style="margin-bottom:1.5rem;">
+              <label style="display:block;margin-bottom:0.3rem">Password <small>(Leave blank to keep current)</small></label>
+              <input type="password" id="edit-pass" placeholder="Enter new password to change" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white">
+            </div>
+            
+            <button class="submit-btn" style="width:100%; background:var(--neon-blue); border:none;" onclick="saveGodEdit()">Save Data</button>
+          </div>
         </div>
 
         <!-- User Lists Table -->
@@ -714,7 +752,8 @@
                             banBtn = `<button onclick="banUser('${u.regNum}')" style="background:#f59e0b; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:black; margin-right:5px; font-size:0.8rem;">Ban</button>`;
                         }
                     }
-                    actionsHtml = `${banBtn}<button onclick="deleteUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; font-size:0.8rem;">Remove</button>`;
+                    let editBtn = `<button onclick="openGodEdit('${u.regNum}', '${u.role}', '${u.name.replace(/'/g, "\\'")}', '${u.email || ''}', '${u.institution || ''}', '${u.branch || ''}', '${u.class || ''}')" style="background:#3b82f6; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; margin-right:5px; font-size:0.8rem;">Edit</button>`;
+                    actionsHtml = `${editBtn}${banBtn}<button onclick="deleteUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; font-size:0.8rem;">Remove</button>`;
                 }
 
                 tr.innerHTML = `
@@ -1230,6 +1269,65 @@
                 alert("CRITICAL FIREBASE INIT ERROR: " + err.message);
                 if (statusText) statusText.innerText = "Error: " + err.message;
             }
+        }
+
+        function closeGodEditModal() { document.getElementById('god-edit-modal').classList.remove('open'); }
+
+        function openGodEdit(id, role, name, email, institution, branch, cls) {
+            document.getElementById('edit-role').value = role;
+            document.getElementById('edit-regnum').value = id;
+            document.getElementById('edit-regnum-display').textContent = id + ' (' + role.toUpperCase() + ')';
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-email').value = email || '';
+            document.getElementById('edit-institution').value = institution || '';
+            document.getElementById('edit-branch').value = branch || '';
+            document.getElementById('edit-class').value = cls || '';
+            document.getElementById('edit-pass').value = '';
+
+            document.getElementById('edit-inst-group').style.display = (role === 'superadmin' || role === 'developer') ? 'block' : 'none';
+            document.getElementById('edit-branch-group').style.display = (role === 'admin' || role === 'subadmin' || role === 'voter' || role === 'contestant') ? 'block' : 'none';
+            document.getElementById('edit-class-group').style.display = (role === 'subadmin' || role === 'voter' || role === 'contestant') ? 'block' : 'none';
+
+            document.getElementById('god-edit-modal').classList.add('open');
+        }
+
+        async function saveGodEdit() {
+            const role = document.getElementById('edit-role').value;
+            const id = document.getElementById('edit-regnum').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const email = document.getElementById('edit-email').value.trim();
+            const institution = document.getElementById('edit-institution').value.trim();
+            const branch = document.getElementById('edit-branch').value;
+            const cls = document.getElementById('edit-class').value.trim().toUpperCase();
+            const pass = document.getElementById('edit-pass').value;
+
+            if(!name) return alert('Name required');
+            
+            const updates = { name, email };
+            if (role === 'superadmin' || role === 'developer') updates.institution = institution;
+            if (role === 'admin' || role === 'subadmin' || role === 'voter' || role === 'contestant') updates.branch = branch;
+            if (role === 'subadmin' || role === 'voter' || role === 'contestant') updates.class = cls;
+            
+            if (pass && pass.trim() !== '') {
+                updates.password = btoa(pass);
+            }
+
+            try {
+                const apiUrl = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+                const response = await fetch(apiUrl + '/users/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                if (!response.ok) throw new Error('Update failed');
+                alert(id + ' details updated successfully!');
+                closeGodEditModal();
+                if (StorageManager._fetchState) {
+                    StorageManager._fetchState();
+                } else {
+                    window.location.reload();
+                }
+            } catch(e) { alert(e.message); }
         }
 
         // Init

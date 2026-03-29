@@ -119,10 +119,39 @@
   <div class="modal">
     <button class="modal-close" onclick="closeEdit()">✕</button>
     <h3>✏️ Edit Student Details</h3>
+    <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--purple);"></strong></p>
     <input type="hidden" id="edit-regnum">
-    <div class="form-field" style="margin-bottom:1rem;"><label>Full Name</label><input type="text" id="edit-name"></div>
-    <div class="form-field" style="margin-bottom:1rem;"><label>Email</label><input type="email" id="edit-email"></div>
-    <button class="btn btn-purple" onclick="saveEdit()">Save Changes</button>
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
+      <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
+    </div>
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field">
+          <label>Year</label>
+          <select id="edit-year">
+              <option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option>
+          </select>
+      </div>
+      <div class="form-field">
+          <label>Branch</label>
+          <select id="edit-branch">
+              <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
+              <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option>
+              <option>CSC</option><option>AIDS</option>
+          </select>
+      </div>
+      <div class="form-field"><label>Section (1-9)</label><input type="text" id="edit-section" maxlength="1"></div>
+    </div>
+    
+    <div class="form-field" style="margin-bottom:1.5rem;">
+      <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
+      <input type="password" id="edit-pass" placeholder="Enter new password to change">
+    </div>
+    
+    <button class="btn btn-purple" style="width:100%" onclick="saveEdit()">Save Changes</button>
   </div>
 </div>
 
@@ -273,7 +302,7 @@ function renderStudents(list){
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
       ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
-      <button class="btn-sm btn-e" onclick="openEdit('${s.regNum}','${s.name}','${s.email||''}')">Edit</button>
+      <button class="btn-sm btn-e" onclick="openEdit('${s.regNum}','${s.name}','${s.email||''}','${s.year||''}','${s.branch||''}','${s.class||''}')">Edit</button>
       <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
@@ -326,10 +355,18 @@ function viewPdf(src) {
   }
 }
 
-function openEdit(id,name,email){
+function openEdit(id,name,email,year,branch,cls){
   document.getElementById('edit-regnum').value=id;
+  document.getElementById('edit-regnum-display').textContent=id;
   document.getElementById('edit-name').value=name;
   document.getElementById('edit-email').value=email;
+  document.getElementById('edit-year').value=year || '1st Year';
+  document.getElementById('edit-branch').value=branch || 'CSE';
+  
+  let section = cls && cls.includes('-') ? cls.split('-')[1] : '1';
+  document.getElementById('edit-section').value=section;
+  
+  document.getElementById('edit-pass').value='';
   document.getElementById('edit-modal').classList.add('open');
 }
 function closeEdit(){document.getElementById('edit-modal').classList.remove('open');}
@@ -338,9 +375,23 @@ async function saveEdit(){
   const id=document.getElementById('edit-regnum').value;
   const name=document.getElementById('edit-name').value.trim();
   const email=document.getElementById('edit-email').value.trim();
+  const year=document.getElementById('edit-year').value;
+  const branch=document.getElementById('edit-branch').value;
+  const section=document.getElementById('edit-section').value.trim();
+  const pass=document.getElementById('edit-pass').value;
+
   if(!name) return toast('Name cannot be empty',false);
+  if(!/^[1-9]$/.test(section)) return toast('Section must be a single digit 1-9',false);
+  
+  const updates = { name, email, year, branch, section, class: branch+'-'+section };
+  
+  if (pass) {
+     if (pass.length < 6) return toast('Password too short', false);
+     updates.password = btoa(pass);
+  }
+
   try{
-    await apiFetch(`/users/${id}`,{method:'PATCH',body:JSON.stringify({name,email})});
+    await apiFetch(`/users/${id}`,{method:'PATCH',body:JSON.stringify(updates)});
     toast('Student details updated!');closeEdit();loadAll();
   }catch(e){toast(e.message,false);}
 }
