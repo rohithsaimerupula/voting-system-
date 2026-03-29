@@ -106,8 +106,8 @@
         <input style="flex:1;min-width:200px;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;" placeholder="🔍 Search..." oninput="filterStudents(this.value)">
         <button class="btn btn-green" onclick="grantAll()">✅ Grant All Vote Access</button>
       </div>
-      <div class="card" style="padding:0.5rem">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+      <div class="card" style="padding:0.5rem; overflow-x:auto;">
+        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -127,6 +127,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Portrait Preview Modal -->
+<div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
+  <img id="portrait-preview" src="" style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
+  <button class="btn btn-purple" style="margin-top: 1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
@@ -239,9 +246,28 @@ function updateCharts(students) {
 
 function renderStudents(list){
   const tb=document.getElementById('student-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No students in your class</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
-    <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" class="empty">No students in your class</td></tr>';return;}
+  tb.innerHTML=list.map(s=>{
+    let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+    if (s.portrait) {
+        if (s.portrait.startsWith('data:image')) {
+            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
+        } else if (s.portrait.startsWith('data:application/pdf')) {
+            portraitHtml = `<div onclick="viewPdf('${s.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
+        }
+    }
+    let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+    if (s.webcamReg) {
+        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--purple); cursor:pointer;" title="Click to View Live Capture">`;
+    }
+    return `<tr>
+    <td>${portraitHtml}</td>
+    <td>${faceHtml}</td>
+    <td><strong>${s.regNum}</strong></td>
+    <td>
+        <div style="font-weight: 500;">${s.name}</div>
+        <div style="font-size: 0.8rem; color: var(--purple); margin-top: 2px;">${s.email || 'No email provided'}</div>
+    </td>
     <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
@@ -251,7 +277,8 @@ function renderStudents(list){
       <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 async function acceptStudent(id) {
@@ -281,6 +308,22 @@ async function removeStudent(id){
   if(!confirm(`Remove student ${id}?`)) return;
   try{await apiFetch(`/users/${id}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
   catch(e){toast(e.message,false);}
+}
+
+function showPortrait(src) {
+  document.getElementById('portrait-preview').src = src;
+  document.getElementById('portrait-modal').style.display = 'flex';
+}
+
+function viewPdf(src) {
+  const newWin = window.open('', '_blank');
+  if (newWin) {
+    newWin.document.title = 'ID Proof PDF';
+    newWin.document.body.style.margin = '0';
+    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
+  } else {
+    toast('Popup blocked! Please allow popups to view PDF.', false);
+  }
 }
 
 function openEdit(id,name,email){

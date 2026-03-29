@@ -124,7 +124,7 @@
         <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
       </div>
       <div class="card" style="padding:0.5rem; overflow-x:auto;">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -139,7 +139,7 @@
           🔒 Sub-Admins you create are automatically locked to <strong id="admin-branch-tag">your branch</strong>. Branch cannot be changed.
         </div>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(6 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADM01" maxlength="6"></div>
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(9 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMIN101" maxlength="9"></div>
           <div class="form-field"><label>Full Name <small style="color:var(--muted);text-transform:none">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
           <div class="form-field"><label>Branch <small style="color:var(--muted);text-transform:none">(auto-assigned)</small></label><input type="text" id="sa-branch-display" readonly style="opacity:0.5;cursor:not-allowed;"></div>
@@ -158,6 +158,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Portrait Preview Modal -->
+<div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
+  <img id="portrait-preview" src="" style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
+  <button class="btn btn-d" style="margin-top: 1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+</div>
+
 <script>
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
@@ -241,9 +248,29 @@ async function loadAll(){
 
 function renderStudents(list){
   const tb=document.getElementById('student-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="empty">No students in this branch</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
-    <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.class||'-'}</td>
+  if(!list.length){tb.innerHTML='<tr><td colspan="9" class="empty">No students in this branch</td></tr>';return;}
+  tb.innerHTML=list.map(s=>{
+    let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+    if (s.portrait) {
+        if (s.portrait.startsWith('data:image')) {
+            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
+        } else if (s.portrait.startsWith('data:application/pdf')) {
+            portraitHtml = `<div onclick="viewPdf('${s.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
+        }
+    }
+    let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+    if (s.webcamReg) {
+        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--cyan); cursor:pointer;" title="Click to View Live Capture">`;
+    }
+    return `<tr>
+    <td>${portraitHtml}</td>
+    <td>${faceHtml}</td>
+    <td><strong>${s.regNum}</strong></td>
+    <td>
+        <div style="font-weight: 500;">${s.name}</div>
+        <div style="font-size: 0.8rem; color: var(--cyan); margin-top: 2px;">${s.email || 'No email provided'}</div>
+    </td>
+    <td>${s.class||'-'}</td>
     <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
@@ -253,7 +280,8 @@ function renderStudents(list){
       <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 async function acceptStudent(id) {
@@ -383,7 +411,7 @@ async function createSubAdmin(){
   const cls = document.getElementById('sa-class').value.trim().toUpperCase();
   const pass = document.getElementById('sa-pass').value;
   if(!id||!name||!cls||!pass) return toast('Fill all required fields',false);
-  if (id.length !== 6 || !/^[A-Z0-9]{6}$/.test(id)) return toast('Sub-Admin ID must be exactly 6 uppercase letters/numbers',false);
+  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
   const pwdErr = validatePassword(pass, 6);
   if (pwdErr) return toast('Sub-Admin password: ' + pwdErr, false);
@@ -403,7 +431,7 @@ async function removeSA(id){
 
 // Real-time input enforcement on sub-admin form
 document.getElementById('sa-id').addEventListener('input', function() {
-  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);
 });
 document.getElementById('sa-name').addEventListener('input', function() {
   if(this.value.startsWith(' ')) this.value=this.value.trimStart();
@@ -413,6 +441,22 @@ document.getElementById('sa-pass').addEventListener('input', function() {
   this.value = this.value.replace(/\s/g,'').slice(0,6);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')adminLogin();});
+
+function showPortrait(src) {
+  document.getElementById('portrait-preview').src = src;
+  document.getElementById('portrait-modal').style.display = 'flex';
+}
+
+function viewPdf(src) {
+  const newWin = window.open('', '_blank');
+  if (newWin) {
+    newWin.document.title = 'ID Proof PDF';
+    newWin.document.body.style.margin = '0';
+    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
+  } else {
+    toast('Popup blocked! Please allow popups to view PDF.', false);
+  }
+}
 </script>
 </body>
 </html>
