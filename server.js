@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { createClient } = require('@libsql/client/web');
+const { createClient } = require('@libsql/client');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,12 +17,26 @@ const turso = createClient({
 });
 
 // ─────────────────────────────────────────
+//  DB TIMEOUT WRAPPER (prevents infinite hangs)
+// ─────────────────────────────────────────
+function withTimeout(promise, ms = 12000) {
+    const t = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("DB_TIMEOUT: Turso did not respond in time.")), ms)
+    );
+    return Promise.race([promise, t]);
+}
+const db = {
+    execute: (q) => withTimeout(turso.execute(q)),
+    batch:   (q, m) => withTimeout(turso.batch(q, m), 15000),
+};
+
+// ─────────────────────────────────────────
 //  DATABASE INIT
 // ─────────────────────────────────────────
 async function initDb() {
     try {
         // Main users table with new hierarchy columns
-        await turso.batch([
+        await db.batch([
             `CREATE TABLE IF NOT EXISTS users (
                 regNum TEXT PRIMARY KEY,
                 password TEXT,
@@ -101,28 +115,28 @@ async function initDb() {
             `ALTER TABLE users ADD COLUMN voteFingerprint TEXT`,
         ];
         for (const sql of newColumns) {
-            try { await turso.execute(sql); } catch (e) { /* Column already exists, skip */ }
+            try { await db.execute(sql); } catch (e) { /* Column already exists, skip */ }
         }
 
         console.log("Database tables initialized successfully.");
 
         // Default election config
-        const configSnap = await turso.execute("SELECT * FROM config WHERE key = 'election'");
+        const configSnap = await db.execute("SELECT * FROM config WHERE key = 'election'");
         if (configSnap.rows.length === 0) {
-            await turso.execute({ sql: "INSERT INTO config (key, value) VALUES ('election', ?)", args: [JSON.stringify({ isActive: false, isCompleted: false, startTime: null, endTime: null })] });
+            await db.execute({ sql: "INSERT INTO config (key, value) VALUES ('election', ?)", args: [JSON.stringify({ isActive: false, isCompleted: false, startTime: null, endTime: null })] });
         }
 
         // Developer (GOD) account
-        const devSnap = await turso.execute("SELECT * FROM users WHERE role = 'developer'");
+        const devSnap = await db.execute("SELECT * FROM users WHERE role = 'developer'");
         if (devSnap.rows.length === 0) {
-            await turso.execute({
+            await db.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status) VALUES (?, ?, ?, ?, ?, ?)`,
                 args: ['OVSDEV2026', Buffer.from('OvsDev@2026!').toString('base64'), 'developer', 'OVS Developer', 'admin@ovs.com', 'active']
             });
             console.log("Developer account created: OVSDEV2026 / OvsDev@2026!");
         } else if (devSnap.rows[0].regNum === 'DEV001') {
             // Upgrade existing legacy developer account to new rules
-            await turso.execute({
+            await db.execute({
                 sql: `UPDATE users SET regNum = 'OVSDEV2026', password = ? WHERE role = 'developer'`,
                 args: [Buffer.from('OvsDev@2026!').toString('base64')]
             });
@@ -130,9 +144,9 @@ async function initDb() {
         }
 
         // Default Super Admin (for legacy institution)
-        const saSnap = await turso.execute("SELECT * FROM users WHERE role = 'superadmin'");
+        const saSnap = await db.execute("SELECT * FROM users WHERE role = 'superadmin'");
         if (saSnap.rows.length === 0) {
-            await turso.execute({
+            await db.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status, institution) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 args: ['OVSADM001', Buffer.from('OvsAdm@123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
             });
@@ -140,12 +154,12 @@ async function initDb() {
         }
 
         // Keep old ADMIN001 but mark as superadmin for backwards compat
-        const adminSnap = await turso.execute("SELECT * FROM users WHERE regNum = 'ADMIN001'");
+        const adminSnap = await db.execute("SELECT * FROM users WHERE regNum = 'ADMIN001'");
         if (adminSnap.rows.length > 0 && adminSnap.rows[0].role === 'admin') {
-            await turso.execute({ sql: "UPDATE users SET role = 'superadmin', institution = 'Default Institution' WHERE regNum = 'ADMIN001'", args: [] });
+            await db.execute({ sql: "UPDATE users SET role = 'superadmin', institution = 'Default Institution' WHERE regNum = 'ADMIN001'", args: [] });
             console.log("Upgraded ADMIN001 to superadmin role.");
         } else if (adminSnap.rows.length === 0) {
-            await turso.execute({
+            await db.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status, institution) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 args: ['ADMIN001', Buffer.from('Admin123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
             });
@@ -168,7 +182,7 @@ function boolInt(val) { return val ? 1 : 0; }
 // ─────────────────────────────────────────
 app.get('/api/users', async (req, res) => {
     try {
-        const result = await turso.execute("SELECT * FROM users");
+        const result = await db.execute("SELECT * FROM users");
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -176,7 +190,7 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users/add', async (req, res) => {
     try {
         const u = req.body;
-        await turso.execute({
+        await db.execute({
             sql: `INSERT INTO users (regNum, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, institution, branch, class, managedBy, canVote)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
@@ -196,7 +210,7 @@ app.post('/api/users/add', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
     try {
-        const result = await turso.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [req.params.id] });
+        const result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [req.params.id] });
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         res.json(result.rows[0]);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -210,21 +224,21 @@ app.patch('/api/users/:id', async (req, res) => {
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => { const v = updates[k]; return typeof v === 'boolean' ? boolInt(v) : v; });
         values.push(req.params.id);
-        await turso.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ?`, args: values });
+        await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ?`, args: values });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/users/:id', async (req, res) => {
     try {
-        await turso.execute({ sql: "DELETE FROM users WHERE regNum = ?", args: [req.params.id] });
+        await db.execute({ sql: "DELETE FROM users WHERE regNum = ?", args: [req.params.id] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/users/role/:role', async (req, res) => {
     try {
-        await turso.execute({ sql: "DELETE FROM users WHERE role = ?", args: [req.params.role] });
+        await db.execute({ sql: "DELETE FROM users WHERE role = ?", args: [req.params.role] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -236,7 +250,7 @@ app.delete('/api/users/role/:role', async (req, res) => {
 // Get all staff for an institution (superadmin use)
 app.get('/api/staff/:institution', async (req, res) => {
     try {
-        const result = await turso.execute({
+        const result = await db.execute({
             sql: "SELECT * FROM users WHERE institution = ? AND role IN ('admin','subadmin')",
             args: [decodeURIComponent(req.params.institution)]
         });
@@ -247,7 +261,7 @@ app.get('/api/staff/:institution', async (req, res) => {
 // Get subadmins managed by a specific admin
 app.get('/api/staff/managed-by/:adminId', async (req, res) => {
     try {
-        const result = await turso.execute({
+        const result = await db.execute({
             sql: "SELECT * FROM users WHERE managedBy = ? AND role = 'subadmin'",
             args: [req.params.adminId]
         });
@@ -258,7 +272,7 @@ app.get('/api/staff/managed-by/:adminId', async (req, res) => {
 // Get all Super Admins (developer use)
 app.get('/api/superadmins', async (req, res) => {
     try {
-        const result = await turso.execute("SELECT * FROM users WHERE role = 'superadmin'");
+        const result = await db.execute("SELECT * FROM users WHERE role = 'superadmin'");
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -270,7 +284,7 @@ app.get('/api/superadmins', async (req, res) => {
 // Get voters by class (subadmin/admin use)
 app.get('/api/voters/by-class/:class', async (req, res) => {
     try {
-        const result = await turso.execute({
+        const result = await db.execute({
             sql: "SELECT * FROM users WHERE class = ? AND role IN ('voter','contestant')",
             args: [decodeURIComponent(req.params.class)]
         });
@@ -281,7 +295,7 @@ app.get('/api/voters/by-class/:class', async (req, res) => {
 // Get voters by branch (admin use)
 app.get('/api/voters/by-branch/:branch', async (req, res) => {
     try {
-        const result = await turso.execute({
+        const result = await db.execute({
             sql: "SELECT * FROM users WHERE branch = ? AND role IN ('voter','contestant')",
             args: [decodeURIComponent(req.params.branch)]
         });
@@ -293,7 +307,7 @@ app.get('/api/voters/by-branch/:branch', async (req, res) => {
 app.post('/api/voters/can-vote', async (req, res) => {
     try {
         const { regNum, canVote } = req.body;
-        await turso.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), regNum] });
+        await db.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), regNum] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -303,7 +317,7 @@ app.post('/api/voters/can-vote-bulk', async (req, res) => {
     try {
         const { regNums, canVote } = req.body;
         for (const r of regNums) {
-            await turso.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), r] });
+            await db.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), r] });
         }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -315,14 +329,14 @@ app.post('/api/voters/can-vote-bulk', async (req, res) => {
 app.post('/api/auditLogs', async (req, res) => {
     try {
         const { action, user, details, timestamp } = req.body;
-        await turso.execute({ sql: "INSERT INTO auditLogs (action, user, details, timestamp) VALUES (?, ?, ?, ?)", args: [action, user, details || "", timestamp] });
+        await db.execute({ sql: "INSERT INTO auditLogs (action, user, details, timestamp) VALUES (?, ?, ?, ?)", args: [action, user, details || "", timestamp] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/auditLogs', async (req, res) => {
     try {
-        const result = await turso.execute("SELECT * FROM auditLogs ORDER BY timestamp DESC LIMIT 200");
+        const result = await db.execute("SELECT * FROM auditLogs ORDER BY timestamp DESC LIMIT 200");
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -332,7 +346,7 @@ app.get('/api/auditLogs', async (req, res) => {
 // ─────────────────────────────────────────
 app.get('/api/deviceFingerprints/:id', async (req, res) => {
     try {
-        const result = await turso.execute({ sql: "SELECT * FROM deviceFingerprints WHERE fingerprint = ?", args: [req.params.id] });
+        const result = await db.execute({ sql: "SELECT * FROM deviceFingerprints WHERE fingerprint = ?", args: [req.params.id] });
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         const row = result.rows[0];
         row.counts = JSON.parse(row.counts);
@@ -343,7 +357,7 @@ app.get('/api/deviceFingerprints/:id', async (req, res) => {
 app.post('/api/deviceFingerprints', async (req, res) => {
     try {
         const fp = req.body;
-        await turso.execute({ sql: "INSERT INTO deviceFingerprints (fingerprint, firstSeen, lastActive, counts) VALUES (?, ?, ?, ?) ON CONFLICT(fingerprint) DO UPDATE SET lastActive = excluded.lastActive, counts = excluded.counts", args: [fp.fingerprint, fp.firstSeen, fp.lastActive, JSON.stringify(fp.counts)] });
+        await db.execute({ sql: "INSERT INTO deviceFingerprints (fingerprint, firstSeen, lastActive, counts) VALUES (?, ?, ?, ?) ON CONFLICT(fingerprint) DO UPDATE SET lastActive = excluded.lastActive, counts = excluded.counts", args: [fp.fingerprint, fp.firstSeen, fp.lastActive, JSON.stringify(fp.counts)] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -353,7 +367,7 @@ app.post('/api/deviceFingerprints', async (req, res) => {
 // ─────────────────────────────────────────
 app.get('/api/config/:key', async (req, res) => {
     try {
-        const result = await turso.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [req.params.key] });
+        const result = await db.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [req.params.key] });
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         res.json(JSON.parse(result.rows[0].value));
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -363,13 +377,13 @@ app.post('/api/config/:key', async (req, res) => {
     try {
         const { merge, data } = req.body;
         if (merge) {
-            const result = await turso.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [req.params.key] });
+            const result = await db.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [req.params.key] });
             let existing = result.rows.length > 0 ? JSON.parse(result.rows[0].value) : {};
             let updated = { ...existing, ...data };
-            await turso.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(updated)] });
+            await db.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(updated)] });
             res.json({ success: true, data: updated });
         } else {
-            await turso.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(data)] });
+            await db.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(data)] });
             res.json({ success: true, data });
         }
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -380,15 +394,15 @@ app.post('/api/config/:key', async (req, res) => {
 // ─────────────────────────────────────────
 app.post('/api/election/reset', async (req, res) => {
     try {
-        await turso.execute({ sql: "UPDATE config SET value = ? WHERE key = 'election'", args: [JSON.stringify({ isCompleted: false, isActive: false, startTime: null, endTime: null })] });
-        await turso.execute("UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL WHERE role IN ('voter','contestant')");
+        await db.execute({ sql: "UPDATE config SET value = ? WHERE key = 'election'", args: [JSON.stringify({ isCompleted: false, isActive: false, startTime: null, endTime: null })] });
+        await db.execute("UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL WHERE role IN ('voter','contestant')");
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/candidates', async (req, res) => {
     try {
-        const result = await turso.execute("SELECT * FROM users WHERE role = 'contestant' AND status = 'active'");
+        const result = await db.execute("SELECT * FROM users WHERE role = 'contestant' AND status = 'active'");
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -399,7 +413,7 @@ app.get('/api/candidates', async (req, res) => {
 app.post('/api/vote', async (req, res) => {
     try {
         const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp } = req.body;
-        const voterResult = await turso.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [voterRegNum] });
+        const voterResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [voterRegNum] });
         if (voterResult.rows.length === 0) return res.status(404).json({ error: "Voter does not exist" });
         const v = voterResult.rows[0];
 
@@ -407,11 +421,11 @@ app.post('/api/vote', async (req, res) => {
         if (v.hasVoted === 1) return res.status(400).json({ error: "You have already voted!" });
         if (v.isBanned === 1) return res.status(403).json({ error: "Voting rights suspended." });
 
-        await turso.execute({
+        await db.execute({
             sql: `UPDATE users SET hasVoted = 1, votedFor = ?, votedAt = ?, votePhoto = ?, status = 'pending_vote_verification', voteStatus = 'pending', voteReceiptHash = ?, voteFingerprint = ? WHERE regNum = ?`,
             args: [candidateRegNum, timestamp, votePhoto, secureHash, fp, voterRegNum]
         });
-        await turso.execute({ sql: "INSERT INTO publicLedger (receiptHash, timestamp, status) VALUES (?, ?, 'pending_verification')", args: [secureHash, timestamp] });
+        await db.execute({ sql: "INSERT INTO publicLedger (receiptHash, timestamp, status) VALUES (?, ?, 'pending_verification')", args: [secureHash, timestamp] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -421,7 +435,7 @@ app.post('/api/vote', async (req, res) => {
 // ─────────────────────────────────────────
 app.get('/api/questions/:candidateId', async (req, res) => {
     try {
-        const result = await turso.execute({ sql: "SELECT * FROM questions WHERE candidateId = ? ORDER BY timestamp DESC", args: [req.params.candidateId] });
+        const result = await db.execute({ sql: "SELECT * FROM questions WHERE candidateId = ? ORDER BY timestamp DESC", args: [req.params.candidateId] });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -429,14 +443,14 @@ app.get('/api/questions/:candidateId', async (req, res) => {
 app.post('/api/questions', async (req, res) => {
     try {
         const { candidateId, voterName, question, timestamp } = req.body;
-        const result = await turso.execute({ sql: "INSERT INTO questions (candidateId, voterName, question, timestamp) VALUES (?, ?, ?, ?)", args: [candidateId, voterName, question, timestamp] });
+        const result = await db.execute({ sql: "INSERT INTO questions (candidateId, voterName, question, timestamp) VALUES (?, ?, ?, ?)", args: [candidateId, voterName, question, timestamp] });
         res.json({ success: true, id: result.lastInsertRowid.toString() });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch('/api/questions/:id', async (req, res) => {
     try {
-        await turso.execute({ sql: "UPDATE questions SET answer = ? WHERE id = ?", args: [req.body.answer, req.params.id] });
+        await db.execute({ sql: "UPDATE questions SET answer = ? WHERE id = ?", args: [req.body.answer, req.params.id] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -446,7 +460,7 @@ app.patch('/api/questions/:id', async (req, res) => {
 // ─────────────────────────────────────────
 app.get('/api/globalChat', async (req, res) => {
     try {
-        const result = await turso.execute("SELECT * FROM globalChat ORDER BY timestamp DESC LIMIT 50");
+        const result = await db.execute("SELECT * FROM globalChat ORDER BY timestamp DESC LIMIT 50");
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -454,7 +468,7 @@ app.get('/api/globalChat', async (req, res) => {
 app.post('/api/globalChat', async (req, res) => {
     try {
         const { voterName, text, timestamp } = req.body;
-        const result = await turso.execute({ sql: "INSERT INTO globalChat (voterName, text, timestamp) VALUES (?, ?, ?)", args: [voterName, text, timestamp] });
+        const result = await db.execute({ sql: "INSERT INTO globalChat (voterName, text, timestamp) VALUES (?, ?, ?)", args: [voterName, text, timestamp] });
         res.json({ success: true, id: result.lastInsertRowid.toString() });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
