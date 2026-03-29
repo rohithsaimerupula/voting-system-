@@ -2,20 +2,29 @@
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '') ? 'http://localhost:3001/api' : '/api';
 
 // Shared utilities
-async function fetchApi(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(options.headers || {})
+async function fetchApi(path, options = {}, retries = 2) {
+    try {
+        const res = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            }
+        });
+        if (!res.ok) {
+            let err;
+            try { err = await res.json(); } catch(e) { err = { error: res.statusText }; }
+            throw new Error(err.error || "API Request Failed");
         }
-    });
-    if (!res.ok) {
-        let err;
-        try { err = await res.json(); } catch(e) { err = { error: res.statusText }; }
-        throw new Error(err.error || "API Request Failed");
+        return await res.json();
+    } catch (e) {
+        if (retries > 0 && e.message !== "Not found" && !e.message.includes("exists")) {
+            console.warn(`[OVS Network] Fetch failed: ${e.message}. Retrying... (${retries} retries left)`);
+            await new Promise(r => setTimeout(r, 600)); // wait 600ms before retry
+            return fetchApi(path, options, retries - 1);
+        }
+        throw e;
     }
-    return res.json();
 }
 
 const StorageManager = {

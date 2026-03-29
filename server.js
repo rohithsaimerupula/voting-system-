@@ -11,15 +11,10 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
 
-let turso;
-try {
-    turso = createClient({
-        url: process.env.TURSO_DATABASE_URL || "libsql://dummy",
-        authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
-    });
-} catch (e) {
-    console.error("Turso DB init failed (probably missing env variables):", e.message);
-}
+const turso = createClient({
+    url: process.env.TURSO_DATABASE_URL || "libsql://dummy",
+    authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
+});
 
 // ─────────────────────────────────────────
 //  DATABASE INIT
@@ -27,8 +22,8 @@ try {
 async function initDb() {
     try {
         // Main users table with new hierarchy columns
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS users (
+        await turso.batch([
+            `CREATE TABLE IF NOT EXISTS users (
                 regNum TEXT PRIMARY KEY,
                 password TEXT,
                 role TEXT,       -- developer | superadmin | admin | subadmin | voter | contestant
@@ -53,56 +48,44 @@ async function initDb() {
                 deviceFingerprint TEXT,
                 inviteCode TEXT,
                 campaignPoints INTEGER DEFAULT 0
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS auditLogs (
+            )`,
+            `CREATE TABLE IF NOT EXISTS auditLogs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 action TEXT,
                 user TEXT,
                 details TEXT,
                 timestamp TEXT
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS deviceFingerprints (
+            )`,
+            `CREATE TABLE IF NOT EXISTS deviceFingerprints (
                 fingerprint TEXT PRIMARY KEY,
                 firstSeen TEXT,
                 lastActive TEXT,
                 counts JSON
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS config (
+            )`,
+            `CREATE TABLE IF NOT EXISTS config (
                 key TEXT PRIMARY KEY,
                 value JSON
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS publicLedger (
+            )`,
+            `CREATE TABLE IF NOT EXISTS publicLedger (
                 receiptHash TEXT PRIMARY KEY,
                 timestamp TEXT,
                 status TEXT
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS questions (
+            )`,
+            `CREATE TABLE IF NOT EXISTS questions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 candidateId TEXT,
                 voterName TEXT,
                 question TEXT,
                 answer TEXT,
                 timestamp TEXT
-            )
-        `);
-        await turso.execute(`
-            CREATE TABLE IF NOT EXISTS globalChat (
+            )`,
+            `CREATE TABLE IF NOT EXISTS globalChat (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 voterName TEXT,
                 text TEXT,
                 timestamp TEXT
-            )
-        `);
+            )`
+        ], "write");
 
         // --- Migrate existing users table: add new columns if missing ---
         const newColumns = [
