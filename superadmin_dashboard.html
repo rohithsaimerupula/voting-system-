@@ -67,20 +67,65 @@
 </head>
 <body>
 
-<!-- AUTH OVERLAY -->
-<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(245,158,11,0.08) 0%,var(--bg) 70%)">
-  <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:2rem;font-weight:900;color:var(--gold);margin-bottom:0.25rem;">👑 Super Admin</div>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Institution Administration Portal</p>
-    <div style="text-align:left;margin-bottom:1rem;"><label>Super Admin ID <small style="color:var(--muted)">(9 chars)</small></label><input type="text" id="auth-id" placeholder="OVSADM001" maxlength="9" autocomplete="off"></div>
-    <div style="text-align:left;margin-bottom:0.5rem;"><label>Password <small style="color:var(--muted)">(10 chars · 3 letters · 2 numbers · 1 special)</small></label><input type="password" id="auth-pass" placeholder="Enter password" maxlength="10"></div>
-    <!-- OTP section (hidden by default) -->
-    <div id="otp-section" style="display:none;text-align:left;margin-bottom:1rem;margin-top:1rem">
-      <label>OTP <small style="color:var(--muted)">(Sent to registered email)</small></label>
-      <input type="text" id="auth-otp" placeholder="Enter 6-digit OTP" maxlength="6">
+<style>
+  @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  .auth-input { transition: all 0.3s ease; }
+  .auth-input:focus { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(245,158,11,0.3); }
+</style>
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow:hidden;">
+  <!-- Backdrop Blur and Glows -->
+  <div style="position:absolute; width:60vw; height:60vw; background:radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 60%); top:-20%; left:-10%; filter:blur(80px); pointer-events:none;"></div>
+  <div style="position:absolute; width:50vw; height:50vw; background:radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 60%); bottom:-20%; right:-10%; filter:blur(80px); pointer-events:none;"></div>
+  
+  <!-- Content Container -->
+  <div style="background:rgba(20, 25, 35, 0.6); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); border-top:1px solid rgba(245,158,11,0.3); border-radius:24px; padding:3.5rem; width:100%; max-width:460px; text-align:center; box-shadow: 0 30px 60px -15px rgba(0,0,0,0.8); animation:slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
+    
+    <!-- Logo -->
+    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size: 2.2rem; margin: 0 auto 1.5rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👑</div>
+    
+    <h2 style="font-size:2.2rem; font-weight:900; color:#fff; margin-bottom:0.2rem; letter-spacing:-0.5px;">Super Admin</h2>
+    <p style="color:var(--muted); font-size:0.9rem; margin-bottom:2.5rem; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Secure Access Portal</p>
+    
+    <!-- Credential Fields -->
+    <div style="text-align:left; margin-bottom:1.5rem;">
+        <label style="display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">
+            <span>Admin ID</span> 
+            <small style="color:rgba(255,255,255,0.25); font-weight:400; text-transform:none;">(9 chars)</small>
+        </label>
+        <div style="position:relative;">
+           <span style="position:absolute; left:1.2rem; top:50%; transform:translateY(-50%); opacity:0.4;">👤</span>
+           <input type="text" id="auth-id" placeholder="SADMIN001" maxlength="9" autocomplete="off" class="auth-input" style="padding-left:3rem; padding-right:1rem; height:50px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); font-size:1.05rem; letter-spacing:1px; border-radius:12px;">
+        </div>
     </div>
-    <button class="btn btn-gold" id="auth-btn" style="width:100%" onclick="saLoginStep()">Login to Super Admin Panel</button>
-    <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
+    
+    <div style="text-align:left; margin-bottom:2rem;">
+        <label style="display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">
+            <span>Master Password</span>
+        </label>
+        <div style="position:relative;">
+           <span style="position:absolute; left:1.2rem; top:50%; transform:translateY(-50%); opacity:0.4;">🔒</span>
+           <input type="password" id="auth-pass" placeholder="Enter secure password" maxlength="10" class="auth-input" style="padding-left:3rem; padding-right:1rem; height:50px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); font-size:1.05rem; border-radius:12px;">
+        </div>
+    </div>
+    
+    <!-- OTP Section -->
+    <div id="otp-section" style="display:none; text-align:left; margin-bottom:2rem; animation:slideUp 0.4s ease;">
+      <label style="display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">
+          <span>Verification Code</span>
+          <small style="color:var(--muted); font-weight:400; text-transform:none;">Sent to inbox</small>
+      </label>
+      <div style="position:relative;">
+         <span style="position:absolute; left:1.2rem; top:50%; transform:translateY(-50%); opacity:0.8; font-size:1.2rem;">🛡️</span>
+         <input type="text" id="auth-otp" placeholder="000 000" maxlength="6" class="auth-input" style="padding-left:3.2rem; padding-right:1rem; height:56px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.3); color:var(--gold); font-size:1.4rem; letter-spacing:6px; font-weight:800; border-radius:12px;">
+      </div>
+    </div>
+    
+    <!-- Action Button -->
+    <button class="btn btn-gold" id="auth-btn" style="width:100%; height:54px; font-size:1.1rem; border-radius:12px; font-weight:700; letter-spacing:0.5px; display:flex; justify-content:center; align-items:center; gap:0.6rem; box-shadow:0 12px 24px -10px rgba(245,158,11,0.4); border:1px solid rgba(245,158,11,0.5);" onclick="saLoginStep()">
+      Authorize Access <span style="font-size:1.2rem; line-height:1;">→</span>
+    </button>
+    
+    <div id="auth-err" style="color:var(--red); margin-top:1.5rem; font-size:0.9rem; min-height:1.2rem; font-weight:600;"></div>
   </div>
 </div>
 
@@ -154,7 +199,7 @@
       <div class="card">
         <h3>➕ Create Sub-Admin</h3>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted)">(9 chars · A-Z & 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMCSE01" maxlength="9"></div>
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted)">(6 chars · A-Z & 0-9)</small></label><input type="text" id="sa-id" placeholder="SADM01" maxlength="6"></div>
           <div class="form-field"><label>Full Name <small style="color:var(--muted)">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
           <div class="form-field"><label>Branch</label>
@@ -538,7 +583,7 @@ async function createSubAdminSA() {
   const cls=document.getElementById('sa-class').value.trim().toUpperCase();
   const pass=document.getElementById('sa-pass').value;
   if(!id||!name||!branch||!cls||!pass) return toast('Fill all required fields',false);
-  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers', false);
+  if (id.length !== 6 || !/^[A-Z0-9]{6}$/.test(id)) return toast('Sub-Admin ID must be exactly 6 uppercase letters/numbers', false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name) || (name.match(/\./g)||[]).length > 1) return toast('Name: max 30 chars, letters + one dot only', false);
   const pwdErr = validateStrictPassword(pass, 6, 6, 3, 1, 1);
   if (pwdErr) return toast('Sub-Admin password ' + pwdErr, false);
@@ -634,7 +679,7 @@ document.getElementById('a-pass').addEventListener('input', function() {
 
 // Real-time enforcement on Sub-Admin creation
 document.getElementById('sa-id').addEventListener('input', function() {
-  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 9);
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 });
 document.getElementById('sa-name').addEventListener('input', function() {
   if (this.value.startsWith(' ')) this.value = this.value.trimStart();

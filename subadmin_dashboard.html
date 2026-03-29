@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sub-Admin Dashboard — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{--bg:#050a14;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.1);--purple:#a855f7;--cyan:#06b6d4;--green:#22c55e;--red:#ef4444;--gold:#f59e0b;--text:#e2e8f0;--muted:#64748b;}
@@ -64,7 +63,7 @@
   <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;">👥 Sub-Admin</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
-    <div style="text-align:left;margin-bottom:1rem;"><label>Sub-Admin ID</label><input type="text" id="auth-id" placeholder="SADM-CSE5"></div>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Sub-Admin ID</label><input type="text" id="auth-id" placeholder="SADM01" maxlength="6"></div>
     <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
     <button class="btn btn-purple" style="width:100%" onclick="saLogin()">Login</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
@@ -93,20 +92,9 @@
         <div class="stat"><div class="num" id="s-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
         <div class="stat"><div class="num" id="s-not-granted" style="color:var(--red)">-</div><div class="lbl">Not Yet Granted</div></div>
       </div>
-      
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem; margin-top:1rem;">
-         <div class="card" style="text-align:center;">
-             <h3 style="color:var(--muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.05em;">Registration Status</h3>
-             <div style="position:relative; height:220px; width:100%; display:flex; justify-content:center;">
-                 <canvas id="regChart"></canvas>
-             </div>
-         </div>
-         <div class="card" style="text-align:center;">
-             <h3 style="color:var(--muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.05em;">Voting Eligibility</h3>
-             <div style="position:relative; height:220px; width:100%; display:flex; justify-content:center;">
-                 <canvas id="voteEligChart"></canvas>
-             </div>
-         </div>
+      <div class="charts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem;">
+        <div class="card" style="margin-bottom:0;display:flex;justify-content:center;align-items:center;padding:2rem;"><canvas id="regChart" style="max-height:300px;"></canvas></div>
+        <div class="card" style="margin-bottom:0;display:flex;justify-content:center;align-items:center;padding:2rem;"><canvas id="voteChart" style="max-height:300px;"></canvas></div>
       </div>
     </div>
 
@@ -139,6 +127,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
@@ -196,58 +185,6 @@ function showPage(id){
   if(id==='students') renderStudents(classStudents);
 }
 
-let regChartInstance = null;
-let voteEligChartInstance = null;
-
-function renderCharts(students) {
-    const accepted = students.filter(s => s.status === 'active').length;
-    const pending = students.length - accepted;
-    const allowed = students.filter(s => s.canVote == 1).length;
-    const notAllowed = students.length - allowed;
-
-    // Reg Chart
-    const ctxReg = document.getElementById('regChart').getContext('2d');
-    if (regChartInstance) regChartInstance.destroy();
-    regChartInstance = new Chart(ctxReg, {
-        type: 'pie', 
-        data: {
-            labels: ['Accepted', 'Pending/Rejected'],
-            datasets: [{
-                data: [accepted, pending],
-                backgroundColor: ['#22c55e', '#f59e0b'],
-                borderWidth: 2,
-                borderColor: '#050a14',
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#e2e8f0', font: { family: "'Outfit', sans-serif" } }, position: 'bottom' } }
-        }
-    });
-
-    // Vote Elig Chart
-    const ctxVote = document.getElementById('voteEligChart').getContext('2d');
-    if (voteEligChartInstance) voteEligChartInstance.destroy();
-    voteEligChartInstance = new Chart(ctxVote, {
-        type: 'doughnut',
-        data: {
-            labels: ['Allowed to Vote', 'Not Allowed'],
-            datasets: [{
-                data: [allowed, notAllowed],
-                backgroundColor: ['#06b6d4', '#ef4444'],
-                borderWidth: 2,
-                borderColor: '#050a14',
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#e2e8f0', font: { family: "'Outfit', sans-serif" } }, position: 'bottom' } }
-        }
-    });
-}
-
 async function loadAll(){
   try{
     const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}`);
@@ -257,8 +194,47 @@ async function loadAll(){
     document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
     document.getElementById('s-not-granted').textContent=students.filter(s=>s.canVote!=1).length;
     renderStudents(students);
-    renderCharts(students);
+    updateCharts(students);
   }catch(e){toast(e.message,false);}
+}
+
+let regChartInstance = null;
+let voteChartInstance = null;
+
+function updateCharts(students) {
+  const totalReg = students.length;
+  const accepted = students.filter(s => s.status === 'active').length;
+  const pending = totalReg - accepted;
+
+  const allowed = students.filter(s => s.canVote == 1).length;
+  const notAllowed = totalReg - allowed;
+
+  const chartOpts = {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0', font: { family: 'Outfit' } } } }
+  };
+
+  const regCtx = document.getElementById('regChart').getContext('2d');
+  if(regChartInstance) regChartInstance.destroy();
+  regChartInstance = new Chart(regCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Accepted Details', 'Pending/Rejected'],
+      datasets: [{ data: [accepted, pending], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0 }]
+    },
+    options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Total Registrations Data', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
+  });
+
+  const voteCtx = document.getElementById('voteChart').getContext('2d');
+  if(voteChartInstance) voteChartInstance.destroy();
+  voteChartInstance = new Chart(voteCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Allowed to Vote', 'Not Allowed (Present)'],
+      datasets: [{ data: [allowed, notAllowed], backgroundColor: ['#a855f7', '#f59e0b'], borderWidth: 0 }]
+    },
+    options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Voting Allowed vs Present', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
+  });
 }
 
 function renderStudents(list){

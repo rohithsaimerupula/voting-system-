@@ -46,35 +46,73 @@
 
 <body>
     <!-- SUPER ADMIN HIDDEN MODAL (Staff mode only) -->
-    <div id="sa-login-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;">
-      <div style="background:#0f172a;border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:2.5rem;width:100%;max-width:400px;text-align:center;position:relative;">
-        <button onclick="closeSAModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;">✕</button>
-        <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;margin-bottom:0.5rem;">👑 Super Admin</div>
-        <p style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem;">Institution Administration</p>
+    <style>
+      @keyframes popIn { 0% { opacity:0; transform:scale(0.9) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+      .sa-modal-input { transition: all 0.3s ease; }
+      .sa-modal-input:focus { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(245,158,11,0.3); border-color: rgba(245,158,11,0.5) !important; }
+    </style>
+    <div id="sa-login-modal" style="display:none;position:fixed;inset:0;background:rgba(5,10,20,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;">
+      <!-- Glowing orbs -->
+      <div style="position:absolute; width:50vw; height:50vw; background:radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 60%); top:10%; right:10%; filter:blur(60px); pointer-events:none;"></div>
+
+      <div style="background:rgba(15, 20, 30, 0.85);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-top:1px solid rgba(245,158,11,0.3);border-radius:24px;padding:3rem;width:100%;max-width:440px;text-align:center;position:relative;box-shadow: 0 30px 60px -15px rgba(0,0,0,0.8);animation:popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);">
+        
+        <button onclick="closeSAModal()" style="position:absolute;top:1.5rem;right:1.5rem;background:rgba(255,255,255,0.1);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.3s;" onmouseover="this.style.background='rgba(239,68,68,0.5)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
+        
+        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 18px; display:flex; align-items:center; justify-content:center; font-size: 2rem; margin: 0 auto 1.2rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👑</div>
+        
+        <h2 style="font-size:2rem;font-weight:900;color:#fff;margin-bottom:0.2rem;letter-spacing:-0.5px;">Super Admin</h2>
+        <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:2rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Secure Portal Access</p>
+        
         <!-- Step 1: Credentials -->
         <div id="sa-step-1">
-          <div style="text-align:left;margin-bottom:0.5rem;">
-            <label style="color:#64748b;font-size:0.8rem;">Super Admin ID <span style="color:#f59e0b">(9 chars, no space)</span></label>
-            <input type="text" id="sa-modal-id" placeholder="OVSADM001" maxlength="9" autocomplete="off"
-              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;">
+          <div style="text-align:left;margin-bottom:1.2rem;">
+            <label style="display:flex;justify-content:space-between;color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">
+              <span>Super Admin ID</span> 
+              <small style="color:rgba(255,255,255,0.3);font-weight:400;text-transform:none;">(9 chars)</small>
+            </label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);opacity:0.4;">👤</span>
+              <input type="text" id="sa-modal-id" placeholder="SADMIN001" maxlength="9" autocomplete="off" class="sa-modal-input"
+                style="width:100%;height:48px;padding-left:2.8rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);color:white;font-family:'Outfit',sans-serif;font-size:1rem;letter-spacing:1px;outline:none;">
+            </div>
           </div>
-          <div style="text-align:left;margin-bottom:1rem;">
-            <label style="color:#64748b;font-size:0.8rem;">Password <span style="color:#f59e0b">(10 chars · 3 letters · 2 numbers · 1 special)</span></label>
-            <input type="password" id="sa-modal-pass" placeholder="Enter password" maxlength="10"
-              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.5rem;font-family:'Outfit',sans-serif;outline:none;">
+          <div style="text-align:left;margin-bottom:1.5rem;">
+            <label style="display:flex;justify-content:space-between;color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">
+              <span>Master Password</span>
+            </label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);opacity:0.4;">🔒</span>
+              <input type="password" id="sa-modal-pass" placeholder="Enter secure password" maxlength="10" class="sa-modal-input"
+                style="width:100%;height:48px;padding-left:2.8rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);color:white;font-family:'Outfit',sans-serif;font-size:1rem;outline:none;">
+            </div>
           </div>
-          <button id="sa-modal-btn" onclick="saModalLogin()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Send OTP & Continue</button>
+          <button id="sa-modal-btn" onclick="saModalLogin()" 
+            style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:0.5rem;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;">
+            Send OTP & Continue <span>→</span>
+          </button>
         </div>
+        
         <!-- Step 2: OTP -->
-        <div id="sa-step-2" style="display:none;">
-          <div style="text-align:left;margin-bottom:1rem;">
-            <label style="color:#64748b;font-size:0.8rem;">OTP <span style="color:#f59e0b">(Sent to your registered Gmail)</span></label>
-            <input type="text" id="sa-modal-otp" placeholder="Enter 6-digit OTP" maxlength="6"
-              style="width:100%;padding:0.8rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;margin-bottom:0.8rem;font-family:'Outfit',sans-serif;outline:none;letter-spacing:0.3rem;text-align:center;font-size:1.2rem;">
+        <div id="sa-step-2" style="display:none; animation:popIn 0.4s ease;">
+          <div style="text-align:left;margin-bottom:1.5rem;">
+            <label style="display:flex;justify-content:space-between;color:#f59e0b;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">
+              <span>Verification Code</span>
+              <small style="color:#94a3b8;font-weight:400;text-transform:none;">Sent to inbox</small>
+            </label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:1.2rem;top:50%;transform:translateY(-50%);opacity:0.8;font-size:1.2rem;">🛡️</span>
+              <input type="text" id="sa-modal-otp" placeholder="000 000" maxlength="6" class="sa-modal-input"
+                style="width:100%;height:54px;padding-left:3.2rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);color:#f59e0b;font-size:1.4rem;letter-spacing:4px;font-weight:800;text-align:center;font-family:'Outfit',sans-serif;outline:none;">
+            </div>
           </div>
-          <button onclick="saModalVerifyOtp()" style="width:100%;padding:0.8rem;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1rem;cursor:pointer;font-family:'Outfit',sans-serif;">Verify OTP & Login</button>
+          <button onclick="saModalVerifyOtp()" 
+            style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;">
+            Verify OTP & Login
+          </button>
         </div>
-        <div id="sa-modal-err" style="color:#ef4444;margin-top:0.75rem;font-size:0.85rem;min-height:1rem;"></div>
+        
+        <div id="sa-modal-err" style="color:#ef4444;margin-top:1.2rem;font-size:0.9rem;min-height:1.2rem;font-weight:600;"></div>
       </div>
     </div>
 
@@ -240,9 +278,9 @@
                     document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
                     loginTitle.innerText = 'Sub-Admin Login';
-                    regLabel.innerText = 'Sub-Admin ID (9 chars · A-Z & 0-9)';
-                    regInput.placeholder = 'e.g. SADMCSE01';
-                    regInput.maxLength = 9;
+                    regLabel.innerText = 'Sub-Admin ID (6 chars · A-Z & 0-9)';
+                    regInput.placeholder = 'e.g. SADM01';
+                    regInput.maxLength = 6;
                     passInput.placeholder = 'e.g. Sa@ab1';
                     passInput.maxLength = 6;
                     resetInputs();
@@ -329,8 +367,8 @@
                 if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Admin password must contain at least 1 number.');
                 if (!/[^a-zA-Z0-9]/.test(password)) return showError('Admin password must contain at least 1 special character.');
             } else if (isSubAdmin) {
-                // Sub-Admin: ID = 9 chars A-Z0-9, Password = 6 chars, 3 letters, 1 number, 1 special
-                if (regNum.length !== 9) return showError('Sub-Admin ID must be exactly 9 characters (A-Z & 0-9).');
+                // Sub-Admin: ID = 6 chars A-Z0-9, Password = 6 chars, 3 letters, 1 number, 1 special
+                if (regNum.length !== 6) return showError('Sub-Admin ID must be exactly 6 characters (A-Z & 0-9).');
                 if (password.length !== 6) return showError('Sub-Admin password must be exactly 6 characters.');
                 if ((password.match(/[a-zA-Z]/g)||[]).length < 3) return showError('Sub-Admin password must contain at least 3 letters.');
                 if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Sub-Admin password must contain at least 1 number.');

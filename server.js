@@ -137,16 +137,6 @@ async function initDb() {
                 args: ['OVSADM001', Buffer.from('OvsAdm@123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
             });
             console.log("Super Admin account created: OVSADM001 / OvsAdm@12");
-        } else {
-            // Upgrade SADMIN001 if still present
-            const oldSA = saSnap.rows.find(r => r.regNum === 'SADMIN001');
-            if (oldSA) {
-                await turso.execute({
-                    sql: `UPDATE users SET regNum = 'OVSADM001', password = ? WHERE regNum = 'SADMIN001'`,
-                    args: [Buffer.from('OvsAdm@123').toString('base64')]
-                });
-                console.log("Super Admin upgraded to: OVSADM001 / OvsAdm@12");
-            }
         }
 
         // Keep old ADMIN001 but mark as superadmin for backwards compat

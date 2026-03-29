@@ -139,7 +139,7 @@
           🔒 Sub-Admins you create are automatically locked to <strong id="admin-branch-tag">your branch</strong>. Branch cannot be changed.
         </div>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(9 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMCSE01" maxlength="9"></div>
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(6 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADM01" maxlength="6"></div>
           <div class="form-field"><label>Full Name <small style="color:var(--muted);text-transform:none">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
           <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
           <div class="form-field"><label>Branch <small style="color:var(--muted);text-transform:none">(auto-assigned)</small></label><input type="text" id="sa-branch-display" readonly style="opacity:0.5;cursor:not-allowed;"></div>
@@ -348,7 +348,7 @@ function renderCharts(total, accepted, pending, canVote) {
         backgroundColor: ['rgba(34,197,94,0.75)','rgba(245,158,11,0.75)'],
         borderColor: ['#22c55e','#f59e0b'], borderWidth: 2 }]
     },
-    options: { plugins: { legend: { display: false } }, animation: { duration: 600 } }
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
   });
   document.getElementById('chart-reg-legend').innerHTML =
     `<span style="color:#22c55e;">● Accepted: ${accepted}</span>
@@ -366,7 +366,7 @@ function renderCharts(total, accepted, pending, canVote) {
         backgroundColor: ['rgba(6,182,212,0.75)','rgba(100,116,139,0.5)'],
         borderColor: ['#06b6d4','#64748b'], borderWidth: 2 }]
     },
-    options: { plugins: { legend: { display: false } }, animation: { duration: 600 } }
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
   });
   document.getElementById('chart-vote-legend').innerHTML =
     `<span style="color:#06b6d4;">● Allowed: ${canVote}</span>
@@ -383,7 +383,7 @@ async function createSubAdmin(){
   const cls = document.getElementById('sa-class').value.trim().toUpperCase();
   const pass = document.getElementById('sa-pass').value;
   if(!id||!name||!cls||!pass) return toast('Fill all required fields',false);
-  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
+  if (id.length !== 6 || !/^[A-Z0-9]{6}$/.test(id)) return toast('Sub-Admin ID must be exactly 6 uppercase letters/numbers',false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
   const pwdErr = validatePassword(pass, 6);
   if (pwdErr) return toast('Sub-Admin password: ' + pwdErr, false);
@@ -403,7 +403,7 @@ async function removeSA(id){
 
 // Real-time input enforcement on sub-admin form
 document.getElementById('sa-id').addEventListener('input', function() {
-  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
 });
 document.getElementById('sa-name').addEventListener('input', function() {
   if(this.value.startsWith(' ')) this.value=this.value.trimStart();

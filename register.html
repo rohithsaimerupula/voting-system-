@@ -523,6 +523,7 @@
                 year: document.getElementById('year').value,
                 branch: document.getElementById('branch').value,
                 section: section,
+                class: document.getElementById('branch').value + '-' + section,
                 password: role === 'voter' ? password : null,
                 symbol: role === 'contestant' ? symbol : null,
                 manifesto: manifestoVal,
