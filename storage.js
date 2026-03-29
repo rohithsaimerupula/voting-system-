@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '') ? 'http://localhost:3001/api' : '/api';
 
 // Shared utilities
 async function fetchApi(path, options = {}) {
@@ -215,7 +215,7 @@ const StorageManager = {
                 userData = await fetchApi(`/users/${regNum}`);
             } catch (e) {
                 if (e.message === "Not found") return null;
-                throw new Error("Backend connection failed. Administrator has not set the Database Environment Variables correctly.");
+                throw new Error(`Backend connection failed: ${e.message}. If on Vercel, ensure TURSO DB variables are set.`);
             }
 
             if (!userData) return null;
@@ -237,6 +237,10 @@ const StorageManager = {
             // Convert booleans for client consistency
             if (userData.hasVoted === 1) userData.hasVoted = true;
             if (userData.hasVoted === 0) userData.hasVoted = false;
+            if (userData.canVote === 1) userData.canVote = true;
+            if (userData.canVote === 0) userData.canVote = false;
+            if (userData.isBanned === 1) userData.isBanned = true;
+            if (userData.isBanned === 0) userData.isBanned = false;
             
             this.saveSession(userData);
             this.logAudit(`${userData.role.toUpperCase()} Login Success`, regNum);
@@ -431,6 +435,10 @@ const StorageManager = {
             // Check for sqlite boolean representations
             if (user.hasVoted === 1) user.hasVoted = true;
             if (user.hasVoted === 0) user.hasVoted = false;
+            if (user.canVote === 1) user.canVote = true;
+            if (user.canVote === 0) user.canVote = false;
+            if (user.isBanned === 1) user.isBanned = true;
+            if (user.isBanned === 0) user.isBanned = false;
 
             if (user.role === 'voter') {
                 stats.totalVoters++;
