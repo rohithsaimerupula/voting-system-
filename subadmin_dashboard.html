@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sub-Admin Dashboard — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{--bg:#050a14;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.1);--purple:#a855f7;--cyan:#06b6d4;--green:#22c55e;--red:#ef4444;--gold:#f59e0b;--text:#e2e8f0;--muted:#64748b;}
@@ -91,6 +92,21 @@
         <div class="stat"><div class="num" id="s-canvote" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
         <div class="stat"><div class="num" id="s-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
         <div class="stat"><div class="num" id="s-not-granted" style="color:var(--red)">-</div><div class="lbl">Not Yet Granted</div></div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem; margin-top:1rem;">
+         <div class="card" style="text-align:center;">
+             <h3 style="color:var(--muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.05em;">Registration Status</h3>
+             <div style="position:relative; height:220px; width:100%; display:flex; justify-content:center;">
+                 <canvas id="regChart"></canvas>
+             </div>
+         </div>
+         <div class="card" style="text-align:center;">
+             <h3 style="color:var(--muted); font-size:0.85rem; text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.05em;">Voting Eligibility</h3>
+             <div style="position:relative; height:220px; width:100%; display:flex; justify-content:center;">
+                 <canvas id="voteEligChart"></canvas>
+             </div>
+         </div>
       </div>
     </div>
 
@@ -180,6 +196,58 @@ function showPage(id){
   if(id==='students') renderStudents(classStudents);
 }
 
+let regChartInstance = null;
+let voteEligChartInstance = null;
+
+function renderCharts(students) {
+    const accepted = students.filter(s => s.status === 'active').length;
+    const pending = students.length - accepted;
+    const allowed = students.filter(s => s.canVote == 1).length;
+    const notAllowed = students.length - allowed;
+
+    // Reg Chart
+    const ctxReg = document.getElementById('regChart').getContext('2d');
+    if (regChartInstance) regChartInstance.destroy();
+    regChartInstance = new Chart(ctxReg, {
+        type: 'pie', 
+        data: {
+            labels: ['Accepted', 'Pending/Rejected'],
+            datasets: [{
+                data: [accepted, pending],
+                backgroundColor: ['#22c55e', '#f59e0b'],
+                borderWidth: 2,
+                borderColor: '#050a14',
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#e2e8f0', font: { family: "'Outfit', sans-serif" } }, position: 'bottom' } }
+        }
+    });
+
+    // Vote Elig Chart
+    const ctxVote = document.getElementById('voteEligChart').getContext('2d');
+    if (voteEligChartInstance) voteEligChartInstance.destroy();
+    voteEligChartInstance = new Chart(ctxVote, {
+        type: 'doughnut',
+        data: {
+            labels: ['Allowed to Vote', 'Not Allowed'],
+            datasets: [{
+                data: [allowed, notAllowed],
+                backgroundColor: ['#06b6d4', '#ef4444'],
+                borderWidth: 2,
+                borderColor: '#050a14',
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#e2e8f0', font: { family: "'Outfit', sans-serif" } }, position: 'bottom' } }
+        }
+    });
+}
+
 async function loadAll(){
   try{
     const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}`);
@@ -189,6 +257,7 @@ async function loadAll(){
     document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
     document.getElementById('s-not-granted').textContent=students.filter(s=>s.canVote!=1).length;
     renderStudents(students);
+    renderCharts(students);
   }catch(e){toast(e.message,false);}
 }
 
