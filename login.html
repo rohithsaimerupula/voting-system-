@@ -194,7 +194,9 @@
         let isSubAdmin = false;
 
         function buildUI() {
+            const fpContainer = document.getElementById('forgot-password-container');
             if (!isStaffMode) {
+                if (fpContainer) fpContainer.style.display = 'block';
                 // Pure Voter Mode: show Manage Profile, Register, and Back button
                 navRight.innerHTML = `
                     <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
@@ -208,6 +210,7 @@
                 passInput.placeholder = 'Enter Password (6-10 chars)';
                 // NO logo click trick in voter mode
             } else {
+                if (fpContainer) fpContainer.style.display = 'none';
                 // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
                 navRight.innerHTML = `<a href="index.html" class="btn-outline">← Home</a>`;
                 tabsContainer.style.display = 'flex';
