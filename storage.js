@@ -501,7 +501,12 @@ const StorageManager = {
         let lastDataStr = "";
         const poll = async () => {
             try {
-                const users = await fetchApi('/users');
+                const allUsers = await fetchApi('/users');
+                // Filter strictly to active institution only
+                const activeInst = localStorage.getItem('ovs_inst_name');
+                const users = activeInst
+                    ? allUsers.filter(u => u.institution === activeInst || u.role === 'superadmin' && u.institution === activeInst)
+                    : allUsers;
                 const stats = this._processStatsSnapshot(users);
                 const newDataStr = JSON.stringify(stats);
                 if (newDataStr !== lastDataStr) {
