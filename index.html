@@ -19,6 +19,18 @@
 </head>
 
 <body>
+    <!-- Gateway Overlay -->
+    <div id="gateway-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--background, #050a14);transition:opacity 0.6s ease;">
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:3rem; width:100%; max-width:420px; text-align:center; backdrop-filter:blur(20px);">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;text-shadow:0 0 20px rgba(6,182,212,0.5);">🏛️</div>
+            <h2 style="margin-bottom:0.5rem;font-family:'Outfit';color:white;font-weight:800;">Institution Gateway</h2>
+            <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:2rem;">Enter your unique college access code to proceed.</p>
+            <input type="text" id="inst-code" placeholder="ENTER CODE" style="width:100%;padding:1rem;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:1.2rem;text-align:center;letter-spacing:4px;margin-bottom:1rem;text-transform:uppercase;outline:none;" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/\\s/g,'')">
+            <button id="inst-btn" onclick="verifyGateway()" style="width:100%;padding:1rem;background:linear-gradient(135deg, #a855f7, #06b6d4);border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:1rem;transition:all 0.3s;">Verify Access</button>
+            <div id="gateway-err" style="color:#ef4444;margin-top:1rem;font-size:0.9rem;min-height:1.2rem;font-weight:600;"></div>
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav>
         <div class="brand">YYRD Official</div>
@@ -56,8 +68,57 @@
 
     <!-- No specific script needed for intro anymore as it is CSS driven -->
     <script>
-        // Optional: Add simple console log or analytics init here
-        console.log("Aurora Theme Loaded");
+        const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+
+        document.getElementById('inst-code').addEventListener('keydown', e => {
+            if (e.key === 'Enter') verifyGateway();
+        });
+
+        // Check if already authorized
+        if (localStorage.getItem('ovs_inst_code') && localStorage.getItem('ovs_inst_name')) {
+            unlockGateway(localStorage.getItem('ovs_inst_name'));
+        }
+
+        async function verifyGateway() {
+            const code = document.getElementById('inst-code').value.trim();
+            const err = document.getElementById('gateway-err');
+            const btn = document.getElementById('inst-btn');
+            
+            if (!code) { err.textContent = 'Please enter a code.'; return; }
+            err.textContent = '';
+            btn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch(API + '/institutions/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error || 'Verification failed');
+                
+                // Store in local storage
+                localStorage.setItem('ovs_inst_code', code);
+                localStorage.setItem('ovs_inst_name', data.institution);
+                
+                unlockGateway(data.institution);
+            } catch (e) {
+                err.textContent = e.message;
+                btn.textContent = 'Verify Access';
+            }
+        }
+
+        function unlockGateway(instName) {
+            const overlay = document.getElementById('gateway-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 600);
+            
+            // Update Branding
+            document.querySelector('.brand').innerHTML = `<span style="opacity:0.6;font-weight:300;margin-right:0.5rem;font-size:0.9rem;">Welcome to</span> <br>${instName}`;
+        }
     </script>
 </body>
 

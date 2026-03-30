@@ -312,7 +312,7 @@ function renderStudents(list){
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
       ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
       <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudent('${s.regNum}','${s.name}','${s.email||''}','${s.class||''}')">Edit</button>
-      <button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>
+      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
       <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
     </td>
   </tr>`;
@@ -330,11 +330,13 @@ async function acceptStudent(id) {
 function filterStudents(q){renderStudents(branchStudents.filter(s=>[s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q.toLowerCase())));}
 
 async function grantAllVote(){
-  if(!confirm('Grant vote access to ALL students in this branch?')) return;
+  if(!confirm('Grant vote access to ALL ACTIVE students in this branch?')) return;
+  const eligible = branchStudents.filter(s => s.status === 'active');
+  if(eligible.length === 0) return toast('No active students to grant access to.', false);
   try{
-    const ids=branchStudents.map(s=>s.regNum);
+    const ids=eligible.map(s=>s.regNum);
     await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:ids,canVote:true})});
-    toast('Vote granted to all!'); loadAll();
+    toast(`Vote granted to ${eligible.length} active students!`); loadAll();
   }catch(e){toast(e.message,false);}
 }
 

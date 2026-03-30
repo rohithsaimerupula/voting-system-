@@ -167,7 +167,14 @@ const StorageManager = {
             user.password = await this.hashPassword(user.password);
         }
         
-        user.status = 'pending';
+        if (user.aiVerified === true) {
+            user.status = 'active';
+            this.logAudit("AI Auto-Approved Registration", user.regNum);
+        } else {
+            user.status = 'pending';
+        }
+        delete user.aiVerified; // Clean up before POST
+
         user.hasVoted = false;
         user.isBanned = false;
 
@@ -231,6 +238,15 @@ const StorageManager = {
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
             if (userData.status === 'pending') throw new Error("Your registration is pending Admin Approval.");
+
+            // Enforce Institution Isolation for all roles except Developer
+            const activeInst = localStorage.getItem('ovs_inst_name');
+            if (userData.role !== 'developer' && activeInst && userData.institution !== activeInst) {
+                // Ignore empty institutions to preserve backwards compatibility during migration
+                if (userData.institution && userData.institution !== 'Unknown') {
+                    throw new Error("User does not belong to this Institution.");
+                }
+            }
 
             const hashedPwd = await this.hashPassword(password);
             const isMatch = (userData.password === password || userData.password === hashedPwd);
@@ -358,42 +374,51 @@ const StorageManager = {
     // --- VOTING ---
     async getElectionStatus() {
         try {
-            return await fetchApi('/config/election');
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            return await fetchApi(`/config/election_${inst}`);
         } catch (e) {
             return { isActive: false, isCompleted: false, startTime: null, endTime: null };
         }
     },
 
     async setElectionTimes(startTime, endTime) {
-        await fetchApi('/config/election', {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/config/election_${inst}`, {
             method: 'POST',
             body: JSON.stringify({ merge: true, data: { startTime, endTime } })
         });
     },
 
     async pauseElection(diff) {
-        await fetchApi('/config/election', {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/config/election_${inst}`, {
             method: 'POST',
             body: JSON.stringify({ merge: true, data: { isActive: false, frozenRemaining: diff } })
         });
     },
 
     async resumeElection() {
-        await fetchApi('/config/election', {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/config/election_${inst}`, {
             method: 'POST',
             body: JSON.stringify({ merge: true, data: { isActive: true, frozenRemaining: null } })
         });
     },
 
     async setElectionCompletion(isCompleted) {
-        await fetchApi('/config/election', {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/config/election_${inst}`, {
             method: 'POST',
             body: JSON.stringify({ merge: true, data: { isCompleted: isCompleted, isActive: false } })
         });
     },
 
     async resetElection() {
-        await fetchApi('/election/reset', { method: 'POST' });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi('/election/reset', { 
+            method: 'POST',
+            body: JSON.stringify({ institution: inst })
+        });
     },
 
     async getCandidates() {

@@ -329,7 +329,7 @@
         async function loadCandidates() {
             candidatesGrid.innerHTML = '<p class="text-center text-muted">Loading candidates...</p>';
             const fetchedCandidates = await StorageManager.getCandidates();
-            candidates = fetchedCandidates; // Update global candidates array
+            candidates = fetchedCandidates.filter(c => c.institution === currentUser.institution); // Strictly confine candidates to voter's institution
 
             if (candidates.length === 0) {
                 candidatesGrid.innerHTML = '<p class="text-center text-muted">No candidates registered yet.</p>';

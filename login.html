@@ -130,7 +130,8 @@
                 <!-- Tabs populated by JS -->
             </div>
 
-            <h2 id="login-title" class="text-center" style="margin-bottom: 2rem;">Welcome Back</h2>
+            <h2 id="login-title" class="text-center" style="margin-bottom: 0.5rem;">Welcome Back</h2>
+            <p id="inst-display" class="text-center" style="color:var(--cyan);font-weight:600;margin-bottom:2rem;letter-spacing:1px;"></p>
 
             <form id="login-form" autocomplete="off">
                 <div id="credentials-section">
@@ -247,6 +248,15 @@
                 regInput.placeholder = 'Enter Reg Number';
                 passInput.placeholder = 'Enter Password (6-10 chars)';
                 // NO logo click trick in voter mode
+
+                // --- INSTITUTION GATEWAY CHECK ---
+                const userInst = localStorage.getItem('ovs_inst_name');
+                if (!userInst) {
+                    alert('Access Denied. Please enter your College Access Code first.');
+                    window.location.href = 'index.html';
+                } else {
+                    document.getElementById('inst-display').innerText = "🏛️ " + userInst;
+                }
             } else {
                 if (fpContainer) fpContainer.style.display = 'none';
                 // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
@@ -278,9 +288,9 @@
                     document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
                     loginTitle.innerText = 'Sub-Admin Login';
-                    regLabel.innerText = 'Sub-Admin ID (6 chars · A-Z & 0-9)';
-                    regInput.placeholder = 'e.g. SADM01';
-                    regInput.maxLength = 6;
+                    regLabel.innerText = 'Sub-Admin ID (9 chars · A-Z & 0-9)';
+                    regInput.placeholder = 'e.g. SADMIN101';
+                    regInput.maxLength = 9;
                     passInput.placeholder = 'e.g. Sa@ab1';
                     passInput.maxLength = 6;
                     resetInputs();
@@ -367,8 +377,8 @@
                 if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Admin password must contain at least 1 number.');
                 if (!/[^a-zA-Z0-9]/.test(password)) return showError('Admin password must contain at least 1 special character.');
             } else if (isSubAdmin) {
-                // Sub-Admin: ID = 6 chars A-Z0-9, Password = 6 chars, 3 letters, 1 number, 1 special
-                if (regNum.length !== 6) return showError('Sub-Admin ID must be exactly 6 characters (A-Z & 0-9).');
+                // Sub-Admin: ID = 9 chars A-Z0-9, Password = 6 chars, 3 letters, 1 number, 1 special
+                if (regNum.length !== 9) return showError('Sub-Admin ID must be exactly 9 characters (A-Z & 0-9).');
                 if (password.length !== 6) return showError('Sub-Admin password must be exactly 6 characters.');
                 if ((password.match(/[a-zA-Z]/g)||[]).length < 3) return showError('Sub-Admin password must contain at least 3 letters.');
                 if ((password.match(/[0-9]/g)||[]).length < 1) return showError('Sub-Admin password must contain at least 1 number.');

@@ -164,6 +164,15 @@
         <div class="stat"><div class="num" id="s-voted" style="color:var(--green)">-</div><div class="lbl">Voted</div></div>
         <div class="stat"><div class="num" id="s-canvote" style="color:var(--gold)">-</div><div class="lbl">Can Vote</div></div>
       </div>
+      <div class="card" style="background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(168,85,247,0.1)); border: 1px solid var(--glass-border);">
+        <h3 style="color:white; display:flex; align-items:center; gap:0.5rem;">🏛️ Institution Access Code</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1rem;">This is the public gateway code you give to voters/staff so they can access your specific portal.</p>
+        <div style="display:flex; gap:1rem; align-items:center;">
+          <input type="text" id="inst-access-code" placeholder="Loading..." style="flex:1; max-width:250px; font-size:1.4rem; font-family:monospace; font-weight:bold; letter-spacing:2px; text-transform:uppercase; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:0.8rem; border-radius:8px;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+          <button class="btn btn-gold" onclick="updateInstitutionCode()" style="padding:0.8rem 2rem; font-size:1.1rem; height:auto;">Set Code</button>
+        </div>
+      </div>
+
       <div class="card"><h3>🗳️ Election Status</h3><div id="election-status-info">Loading...</div></div>
     </div>
 
@@ -430,7 +439,7 @@ async function loadAll() {
   try {
     const [allUsers, election] = await Promise.all([
       apiFetch('/users'),
-      apiFetch('/config/election').catch(()=>({}))
+      apiFetch(`/config/election_${saSession.institution}`).catch(()=>({}))
     ]);
 
     // Filter by institution — also catch NULL institution for legacy admins by regNum
@@ -449,6 +458,8 @@ async function loadAll() {
     document.getElementById('s-voted').textContent = students.filter(u=>u.hasVoted==1).length;
     document.getElementById('s-canvote').textContent = students.filter(u=>u.canVote==1).length;
 
+    loadInstitutionCode();
+
     const eInfo = document.getElementById('election-status-info');
     if (election && election.isActive) {
       eInfo.innerHTML = `<span style="color:var(--green);font-weight:700;">🟢 Election is ACTIVE</span><br><small style="color:var(--muted)">End: ${election.endTime || 'No end time set'}</small>`;
@@ -462,6 +473,43 @@ async function loadAll() {
     allSubAdmins = subadmins;
     renderSubAdminTable(subadmins);
   } catch(e) { toast(e.message, false); }
+}
+
+async function loadInstitutionCode() {
+  try {
+    const res = await apiFetch('/config/institution_codes');
+    const myCodeKey = Object.keys(res).find(k => res[k] === saSession.institution);
+    if (myCodeKey) {
+      document.getElementById('inst-access-code').value = myCodeKey;
+    } else {
+      document.getElementById('inst-access-code').value = '';
+      document.getElementById('inst-access-code').placeholder = 'NOT SET';
+    }
+  } catch(e) {
+    if (e.message !== "Not found") toast("Error loading code: " + e.message, false);
+    else document.getElementById('inst-access-code').placeholder = 'NOT SET';
+  }
+}
+
+async function updateInstitutionCode() {
+  const newCode = document.getElementById('inst-access-code').value.trim();
+  if (!newCode) return toast("Code cannot be empty", false);
+  try {
+    const res = await apiFetch('/config/institution_codes').catch(()=>({}));
+    const oldCode = Object.keys(res).find(k => res[k] === saSession.institution);
+    
+    if (oldCode) delete res[oldCode]; // Remove old code mapped to this institution
+    res[newCode] = saSession.institution;
+    
+    await apiFetch('/config/institution_codes', {
+      method: 'POST',
+      body: JSON.stringify({ merge: false, data: res })
+    });
+    toast("Gateway Code successfully updated!");
+    loadInstitutionCode();
+  } catch(e) {
+    toast("Failed to update: " + e.message, false);
+  }
 }
 
 function renderAdminTable(admins) {
@@ -688,7 +736,7 @@ async function setElectionTimes() {
   const end = document.getElementById('v-end').value;
   if (!start||!end) return toast('Set both start and end times', false);
   try {
-    await apiFetch('/config/election', { method:'POST', body:JSON.stringify({ merge:true, data:{ isActive:true, isCompleted:false, startTime:start, endTime:end } }) });
+    await apiFetch(`/config/election_${saSession.institution}`, { method:'POST', body:JSON.stringify({ merge:true, data:{ isActive:true, isCompleted:false, startTime:start, endTime:end } }) });
     toast('Election times set & activated!');
   } catch(e) { toast(e.message, false); }
 }
@@ -696,7 +744,7 @@ async function setElectionTimes() {
 async function resetElection() {
   if (!confirm('Reset entire election? All votes will be cleared.')) return;
   try {
-    await apiFetch('/election/reset', { method:'POST' });
+    await apiFetch('/election/reset', { method:'POST', body: JSON.stringify({ institution: saSession.institution }) });
     toast('Election reset');
     loadAll();
   } catch(e) { toast(e.message, false); }

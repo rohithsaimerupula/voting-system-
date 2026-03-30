@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 
 <body>
@@ -24,7 +25,8 @@
 
     <div class="container animate-fade-in" style="max-width: 600px;">
         <div class="glass-panel" style="padding: 2.5rem;">
-            <h2 class="text-center" style="margin-bottom: 2rem;">Create Account</h2>
+            <h2 class="text-center" style="margin-bottom: 0.5rem;">Create Account</h2>
+            <p id="inst-display" class="text-center" style="color:var(--cyan);font-weight:600;margin-bottom:2rem;letter-spacing:1px;"></p>
 
             <form id="register-form">
                 <div class="form-group">
@@ -105,9 +107,9 @@
 
                 <!-- Portrait Upload (File) -->
                 <div class="form-group">
-                    <label>Upload ID Proof / Portrait (Image/PDF)</label>
-                    <input type="file" id="portrait" accept=".png, .pdf">
-                    <small style="color: var(--text-muted);">Used for ID verification.</small>
+                    <label>Upload ID Proof / Portrait (Image Only)</label>
+                    <input type="file" id="portrait" accept=".png, .jpg, .jpeg">
+                    <small style="color: var(--text-muted);">Used for AI ID verification. Images Only (.png, .jpg).</small>
                 </div>
 
                 <!-- Webcam Capture (Registration) -->
@@ -203,6 +205,30 @@
         let generatedOtp = null;
         let webcamPhoto = null;
         let webcamStream = null;
+        
+        let faceModelsLoaded = false;
+        let aiVerified = false;
+
+        // --- INSTITUTION GATEWAY CHECK ---
+        const userInst = localStorage.getItem('ovs_inst_name');
+        if (!userInst) {
+            alert('Access Denied. Please enter your College Access Code first.');
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('inst-display').innerText = "🏛️ " + userInst;
+        }
+
+        // Initialize Face API Models
+        Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights')
+        ]).then(() => {
+            console.log("[OVS AI] Face Recognition Models Loaded successfully.");
+            faceModelsLoaded = true;
+        }).catch(err => {
+            console.error("[OVS AI] Error loading models:", err);
+        });
 
 
 
@@ -475,23 +501,9 @@
 
                 // PDF HANDLING
                 if (file.type === 'application/pdf') {
-                    if (file.size > 2 * 1024 * 1024) {
-                        btn.disabled = false;
-                        btn.innerText = "Complete Registration";
-                        return showError("PDF too large. Max 2MB allowed for PDFs.");
-                    }
-                    try {
-                        btn.innerText = "Reading PDF...";
-                        portraitBase64 = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.readAsDataURL(file);
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = error => reject(error);
-                        });
-                    } catch (err) {
-                        btn.disabled = false; btn.innerText = "Complete Registration";
-                        return showError("PDF Read Failed");
-                    }
+                    btn.disabled = false;
+                    btn.innerText = "Complete Registration";
+                    return showError("PDF format is no longer supported for ID Proof. Please upload an Image (.png, .jpg) for AI Verification.");
                 }
                 // IMAGE HANDLING
                 else {
@@ -512,6 +524,35 @@
                 }
             }
 
+            btn.innerText = "Analyzing Faces (AI)...";
+
+            if (faceModelsLoaded && portraitBase64 && webcamPhoto) {
+                try {
+                    // Small delay to allow UI to update
+                    await new Promise(r => setTimeout(r, 100));
+                    
+                    const img1 = await faceapi.fetchImage(portraitBase64);
+                    const img2 = await faceapi.fetchImage(webcamPhoto);
+                    
+                    const desc1 = await faceapi.detectSingleFace(img1).withFaceLandmarks().withFaceDescriptor();
+                    const desc2 = await faceapi.detectSingleFace(img2).withFaceLandmarks().withFaceDescriptor();
+                    
+                    if (desc1 && desc2) {
+                        const distance = faceapi.euclideanDistance(desc1.descriptor, desc2.descriptor);
+                        console.log(`[OVS AI] Face Match Distance: ${distance.toFixed(4)}`);
+                        if (distance < 0.6) {
+                            aiVerified = true;
+                        } else {
+                            console.warn("[OVS AI] Faces DO NOT match.");
+                        }
+                    } else {
+                        console.warn("[OVS AI] Face not detected in one or both images.");
+                    }
+                } catch(e) {
+                    console.error("[OVS AI] Verification Error:", e);
+                }
+            }
+
             btn.innerText = "Uploading...";
 
             const inviteCodeVal = role === 'voter' ? document.getElementById('invite-code').value.trim() : null;
@@ -520,6 +561,7 @@
                 role: role,
                 name: name,
                 regNum: regNum,
+                institution: localStorage.getItem('ovs_inst_name') || 'Unknown',
                 year: document.getElementById('year').value,
                 branch: document.getElementById('branch').value,
                 section: section,
@@ -532,6 +574,7 @@
                 hasVoted: false,
                 email: email,
                 webcamReg: webcamPhoto, // Save the captured face
+                aiVerified: aiVerified, // Pass AI result to backend
                 createdAt: new Date().toISOString()
             };
 
@@ -582,8 +625,8 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        // Compress to JPEG 0.7 quality
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        // Compress to JPEG 0.8 quality for better AI detection
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                         if (dataUrl.length > 2000000) { // Safety check ~1.5MB base64 (allows >1MB images)
                             reject(new Error("Image too complex, please use a simpler or smaller image."));
                         } else {

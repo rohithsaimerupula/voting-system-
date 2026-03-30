@@ -360,7 +360,10 @@
         <div class="form-row">
           <div><label>Email</label><input type="email" id="sa-email" placeholder="admin@institution.edu"></div>
           <div><label>Institution Name</label><input type="text" id="sa-institution" placeholder="KL University"></div>
-          <div><label>Password</label><input type="password" id="sa-pass" placeholder="Min 8 chars"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Gateway Access Code</label><input type="text" id="sa-code" placeholder="e.g. KLU2026" maxlength="10" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
+          <div><label>Password</label><input type="password" id="sa-pass" placeholder="Min 10 chars"></div>
         </div>
         <button class="btn btn-cyan" style="max-width:220px;" onclick="createSuperAdmin()">Create Super Admin</button>
       </div>
@@ -389,6 +392,15 @@
     </div>
   </div>
   <div class="toast" id="toast"></div>
+
+  <!-- DB LOADING OVERLAY -->
+  <div id="db-loading" style="display:none; position:fixed; inset:0; background:rgba(5,10,20,0.92); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:1.5rem;">
+    <div style="width:56px;height:56px;border:4px solid rgba(239,68,68,0.2);border-top-color:#ef4444;border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <p id="db-loading-msg" style="color:white;font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:600;">Connecting to database...</p>
+    <p style="color:#64748b;font-size:0.85rem;">Turso is waking up — this may take up to 30 seconds</p>
+    <button id="db-retry-btn" onclick="loadConsole()" style="display:none;padding:0.7rem 2rem;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:10px;color:white;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">🔄 Retry</button>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
   <script>
     const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
@@ -452,14 +464,25 @@
     }
 
     async function loadConsole() {
+      const overlay = document.getElementById('db-loading');
+      const msg = document.getElementById('db-loading-msg');
+      const retryBtn = document.getElementById('db-retry-btn');
+      overlay.style.display = 'flex';
+      msg.textContent = 'Connecting to database...';
+      retryBtn.style.display = 'none';
       try {
         const [allUsers, superAdmins] = await Promise.all([api('/users'), api('/superadmins')]);
+        overlay.style.display = 'none';
         document.getElementById('stat-sa').textContent = superAdmins.length;
         const institutions = [...new Set(superAdmins.map(s => s.institution).filter(Boolean))];
         document.getElementById('stat-inst').textContent = institutions.length;
         document.getElementById('stat-users').textContent = allUsers.length;
         renderSaTable(superAdmins);
-      } catch (e) { showToast(e.message, false); }
+      } catch (e) {
+        msg.textContent = '❌ ' + e.message;
+        retryBtn.style.display = 'block';
+        showToast(e.message, false);
+      }
     }
 
     function renderSaTable(list) {
@@ -486,9 +509,10 @@
       const id = document.getElementById('sa-id').value.trim();
       const email = document.getElementById('sa-email').value.trim();
       const institution = document.getElementById('sa-institution').value.trim();
+      const code = document.getElementById('sa-code').value.trim();
       const pass = document.getElementById('sa-pass').value;
       
-      if (!id || !name || !institution || !pass) return showToast('Please fill all fields', false);
+      if (!id || !name || !institution || !pass || !code) return showToast('Please fill all fields', false);
       
       if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) {
           return showToast('Super-Admin ID must be exactly 9 characters (Uppercase & Numbers only, no spaces)', false);
@@ -503,8 +527,14 @@
       if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
       try {
         await api('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) });
-        showToast(`Super Admin ${id} created!`);
-        ['sa-id', 'sa-name', 'sa-email', 'sa-institution', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
+        
+        // Map the institution code
+        const resCodes = await api('/config/institution_codes').catch(()=>({}));
+        resCodes[code] = institution; // Link code to institution
+        await api('/config/institution_codes', { method: 'POST', body: JSON.stringify({ merge: false, data: resCodes }) });
+
+        showToast(`Super Admin ${id} created with Code: ${code}!`);
+        ['sa-id', 'sa-name', 'sa-email', 'sa-institution', 'sa-code', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
         loadConsole();
       } catch (e) { showToast(e.message, false); }
     }
@@ -546,10 +576,19 @@
     }
 
     async function deleteSuperAdmin(id) {
-      if (!confirm(`Remove Super Admin ${id}? This cannot be undone.`)) return;
+      // Find SA's institution name for the warning
+      const saRow = document.querySelector(`#sa-table-body tr td strong`);
+      const instCell = [...document.querySelectorAll('#sa-table-body tr')].find(r => r.querySelector('strong')?.textContent === id)?.querySelectorAll('td')[2]?.textContent || 'their institution';
+      
+      const confirmed = confirm(`⚠️ PERMANENT DELETE — CANNOT BE UNDONE\n\nRemoving Super Admin: ${id}\nInstitution: ${instCell}\n\nThis will AUTOMATICALLY delete:\n• All Admins of this institution\n• All Sub-Admins of this institution\n• All Students/Voters of this institution\n• All Candidates of this institution\n• The institution's election history & config\n• The institution's Gateway Access Code\n\nAre you absolutely sure?`);
+      if (!confirmed) return;
       try {
-        await api(`/users/${id}`, { method: 'DELETE' });
-        showToast(`${id} removed.`);
+        const result = await api(`/users/${id}`, { method: 'DELETE' });
+        if (result.cascadeDeleted) {
+          showToast(`✅ Institution "${result.institution}" fully wiped — Super Admin & all data removed.`);
+        } else {
+          showToast(`${id} removed.`);
+        }
         loadConsole();
       } catch (e) { showToast(e.message, false); }
     }

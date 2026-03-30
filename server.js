@@ -17,17 +17,33 @@ const turso = createClient({
 });
 
 // ─────────────────────────────────────────
-//  DB TIMEOUT WRAPPER (prevents infinite hangs)
+//  DB RETRY WRAPPER (handles Turso cold-start sleeps)
 // ─────────────────────────────────────────
-function withTimeout(promise, ms = 12000) {
-    const t = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("DB_TIMEOUT: Turso did not respond in time.")), ms)
-    );
-    return Promise.race([promise, t]);
+async function retryWithBackoff(fn, retries = 3, delayMs = 3000) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const result = await Promise.race([
+                fn(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('DB_TIMEOUT')), 20000)
+                )
+            ]);
+            return result;
+        } catch (e) {
+            const isTimeout = e.message.includes('DB_TIMEOUT') || e.message.includes('ECONNREFUSED') || e.message.includes('fetch failed');
+            if (isTimeout && attempt < retries) {
+                console.warn(`[DB] Attempt ${attempt} failed (cold start?). Retrying in ${delayMs * attempt}ms...`);
+                await new Promise(r => setTimeout(r, delayMs * attempt));
+            } else {
+                throw new Error(`DB_TIMEOUT: Turso did not respond after ${retries} attempts. Please try again in a moment.`);
+            }
+        }
+    }
 }
+
 const db = {
-    execute: (q) => withTimeout(turso.execute(q)),
-    batch:   (q, m) => withTimeout(turso.batch(q, m), 15000),
+    execute: (q) => retryWithBackoff(() => turso.execute(q)),
+    batch:   (q, m) => retryWithBackoff(() => turso.batch(q, m)),
 };
 
 // ─────────────────────────────────────────
@@ -231,7 +247,35 @@ app.patch('/api/users/:id', async (req, res) => {
 
 app.delete('/api/users/:id', async (req, res) => {
     try {
-        await db.execute({ sql: "DELETE FROM users WHERE regNum = ?", args: [req.params.id] });
+        const id = req.params.id;
+
+        // Check if this user is a Super Admin — if so, cascade-delete entire institution
+        const userResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [id] });
+        if (userResult.rows.length > 0 && userResult.rows[0].role === 'superadmin') {
+            const institution = userResult.rows[0].institution;
+
+            if (institution) {
+                // 1. Delete ALL users belonging to this institution (admins, sub-admins, voters, contestants)
+                await db.execute({ sql: "DELETE FROM users WHERE institution = ? AND role != 'developer'", args: [institution] });
+
+                // 2. Delete the institution's election config key
+                await db.execute({ sql: "DELETE FROM config WHERE key = ?", args: ['election_' + institution] });
+
+                // 3. Remove this institution's gateway code from institution_codes
+                const codesResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+                if (codesResult.rows.length > 0) {
+                    const codes = JSON.parse(codesResult.rows[0].value);
+                    // Remove all codes that map to this institution
+                    Object.keys(codes).forEach(k => { if (codes[k] === institution) delete codes[k]; });
+                    await db.execute({ sql: "UPDATE config SET value = ? WHERE key = 'institution_codes'", args: [JSON.stringify(codes)] });
+                }
+
+                return res.json({ success: true, cascadeDeleted: true, institution });
+            }
+        }
+
+        // Regular (non-super-admin) delete — just remove the single user
+        await db.execute({ sql: "DELETE FROM users WHERE regNum = ?", args: [id] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -390,12 +434,42 @@ app.post('/api/config/:key', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+//  SUPER ADMINS
+// ─────────────────────────────────────────
+app.get('/api/superadmins', async (req, res) => {
+    try {
+        const result = await db.execute("SELECT * FROM users WHERE role = 'superadmin'");
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────
+//  INSTITUTION CODES
+// ─────────────────────────────────────────
+app.post('/api/institutions/verify', async (req, res) => {
+    try {
+        const { code } = req.body;
+        const result = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+        if (result.rows.length === 0) return res.status(404).json({ error: "No codes found" });
+        const codes = JSON.parse(result.rows[0].value);
+        if (codes[code]) {
+            res.json({ success: true, institution: codes[code] });
+        } else {
+            res.status(401).json({ error: "Invalid Institution Access Code" });
+        }
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────
 //  ELECTION
 // ─────────────────────────────────────────
 app.post('/api/election/reset', async (req, res) => {
     try {
-        await db.execute({ sql: "UPDATE config SET value = ? WHERE key = 'election'", args: [JSON.stringify({ isCompleted: false, isActive: false, startTime: null, endTime: null })] });
-        await db.execute("UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL WHERE role IN ('voter','contestant')");
+        const { institution } = req.body;
+        if (!institution) return res.status(400).json({ error: "Institution parameter is strictly required" });
+        
+        await db.execute({ sql: "UPDATE config SET value = ? WHERE key = ?", args: [JSON.stringify({ isCompleted: false, isActive: false, startTime: null, endTime: null }), 'election_' + institution] });
+        await db.execute({ sql: "UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL WHERE role IN ('voter','contestant') AND institution = ?", args: [institution] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
