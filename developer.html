@@ -308,6 +308,20 @@
       transform: translateY(0);
       opacity: 1;
     }
+
+    /* Edit Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:#0f172a; border:1px solid rgba(245,158,11,0.3); border-radius:18px; padding:2rem; width:100%; max-width:480px; position:relative; }
+    .modal-box h3 { font-size:1.2rem; font-weight:800; color:var(--gold); margin-bottom:0.3rem; }
+    .modal-box .sub { color:var(--muted); font-size:0.82rem; margin-bottom:1.5rem; }
+    .modal-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.08); border:none; color:white; width:32px; height:32px; border-radius:50%; font-size:1.1rem; cursor:pointer; }
+    .modal-field { margin-bottom:1rem; }
+    .modal-field label { display:block; color:var(--muted); font-size:0.77rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem; }
+    .modal-field input { margin-bottom:0; }
+    .modal-field input:disabled { opacity:0.5; cursor:not-allowed; }
+    .modal-save { width:100%; padding:0.85rem; border-radius:10px; border:none; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:700; font-size:1rem; cursor:pointer; margin-top:0.5rem; font-family:'Outfit',sans-serif; transition:all 0.3s; }
+    .modal-save:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(245,158,11,0.4); }
   </style>
 </head>
 
@@ -392,6 +406,33 @@
     </div>
   </div>
   <div class="toast" id="toast"></div>
+
+  <!-- EDIT SUPER ADMIN MODAL -->
+  <div class="modal-overlay" id="edit-sa-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+      <h3>✏️ Edit Super Admin</h3>
+      <p class="sub">ID: <strong id="edit-sa-id-display" style="color:#f59e0b;"></strong> &nbsp;(ID cannot be changed)</p>
+      <input type="hidden" id="edit-sa-id">
+      <div class="modal-field">
+        <label>Full Name <small style="text-transform:none">(max 30, letters &amp; one dot only)</small></label>
+        <input type="text" id="edit-sa-name" placeholder="Dr. John Smith" maxlength="30">
+      </div>
+      <div class="modal-field">
+        <label>Email</label>
+        <input type="email" id="edit-sa-email" placeholder="admin@institution.edu">
+      </div>
+      <div class="modal-field">
+        <label>Institution Name</label>
+        <input type="text" id="edit-sa-institution" placeholder="KL University">
+      </div>
+      <div class="modal-field">
+        <label>New Password <small style="text-transform:none">(leave blank to keep current · exactly 10 chars)</small></label>
+        <input type="password" id="edit-sa-pass" placeholder="Leave blank to keep current" maxlength="10">
+      </div>
+      <button class="modal-save" onclick="saveEditSA()">💾 Save Changes</button>
+    </div>
+  </div>
 
   <!-- DB LOADING OVERLAY -->
   <div id="db-loading" style="display:none; position:fixed; inset:0; background:rgba(5,10,20,0.92); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:1.5rem;">
@@ -540,26 +581,45 @@
     }
 
     function editSA(id, name, email, institution) {
-      const newName = prompt('Full Name:', name);
-      if (newName === null) return;
-      const newEmail = prompt('Email:', email);
-      if (newEmail === null) return;
-      const newInst = prompt('Institution:', institution);
-      if (newInst === null) return;
-      const newPass = prompt('New Password (leave blank to keep current):');
-      updateSA(id, newName.trim(), newEmail.trim(), newInst.trim(), newPass);
+      document.getElementById('edit-sa-id').value = id;
+      document.getElementById('edit-sa-id-display').textContent = id;
+      document.getElementById('edit-sa-name').value = name;
+      document.getElementById('edit-sa-email').value = email || '';
+      document.getElementById('edit-sa-institution').value = institution || '';
+      document.getElementById('edit-sa-pass').value = '';
+      document.getElementById('edit-sa-modal').classList.add('open');
+      document.getElementById('edit-sa-name').focus();
     }
 
-    async function updateSA(id, name, email, institution, newPass) {
+    function closeEditModal() {
+      document.getElementById('edit-sa-modal').classList.remove('open');
+    }
+
+    async function saveEditSA() {
+      const id = document.getElementById('edit-sa-id').value;
+      const nameInput = document.getElementById('edit-sa-name').value;
+      if (nameInput.startsWith(' ')) return showToast('Name cannot start with a space.', false);
+      const name = nameInput.trim();
+      const email = document.getElementById('edit-sa-email').value.trim();
+      const institution = document.getElementById('edit-sa-institution').value.trim();
+      const newPass = document.getElementById('edit-sa-pass').value;
+
+      if (!name) return showToast('Full name is required.', false);
+      if (name.length > 30) return showToast('Name must not exceed 30 characters.', false);
+      if (!/^[a-zA-Z\s.]+$/.test(name)) return showToast('Name: letters, spaces, and one dot only.', false);
+      if ((name.match(/\./g) || []).length > 1) return showToast('Name can only have at most one dot.', false);
+      if (!institution) return showToast('Institution name is required.', false);
+
       const updates = { name, email, institution };
       if (newPass && newPass.trim() !== '') {
-        const pwdErr = validatePassword(newPass, 10, 10);
-        if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
+        const pwdErr = validatePassword(newPass, 10, 10, 3, 2, 1);
+        if (pwdErr) return showToast('Super Admin password ' + pwdErr, false);
         updates.password = btoa(newPass);
       }
       try {
         await api(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
-        showToast(`${id} updated!`);
+        showToast(`${id} updated successfully!`);
+        closeEditModal();
         loadConsole();
       } catch (e) { showToast(e.message, false); }
     }
@@ -633,6 +693,24 @@
 
     document.getElementById('sa-pass').addEventListener('input', function() {
         this.value = this.value.replace(/\s/g, '').slice(0, 10);
+    });
+
+    document.getElementById('edit-sa-name').addEventListener('input', function() {
+        if (this.value.startsWith(' ')) this.value = this.value.trimStart();
+        let val = this.value.replace(/[^a-zA-Z\s.]/g, '');
+        let parts = val.split('.');
+        if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('').replace(/\./g, '');
+        this.value = val.slice(0, 30);
+    });
+    document.getElementById('edit-sa-pass').addEventListener('input', function() {
+        this.value = this.value.replace(/\s/g, '').slice(0, 10);
+    });
+    // Close modal on backdrop click
+    document.getElementById('edit-sa-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+    document.getElementById('edit-sa-pass').addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveEditSA();
     });
   </script>
 </body>

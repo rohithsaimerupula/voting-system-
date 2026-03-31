@@ -74,10 +74,14 @@
             if (e.key === 'Enter') verifyGateway();
         });
 
-        // Check if already authorized
-        if (localStorage.getItem('ovs_inst_code') && localStorage.getItem('ovs_inst_name')) {
-            unlockGateway(localStorage.getItem('ovs_inst_name'));
+        // Always show gateway — pre-fill last used code for convenience
+        const lastCode = localStorage.getItem('ovs_inst_code');
+        if (lastCode) {
+            document.getElementById('inst-code').value = lastCode;
         }
+        // Clear stale session so login page re-asks institution
+        localStorage.removeItem('ovs_inst_code');
+        localStorage.removeItem('ovs_inst_name');
 
         async function verifyGateway() {
             const code = document.getElementById('inst-code').value.trim();
