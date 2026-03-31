@@ -4,126 +4,464 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Premium Design Update -->
-    <title>OVS - Secure Election Portal</title>
-    <!-- Firebase SDKs -->
-
-    <script src="storage.js"></script>
+    <title>OVS — Secure Election Portal</title>
+    <meta name="description" content="Online Voting System — Secure, transparent and intelligent election management for your institution.">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@300;400;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="storage.js"></script>
 
+    <style>
+        /* ─── STARFIELD ─── */
+        #stars  { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2px" height="2px"><rect width="2" height="2" fill="rgba(255,255,255,0.85)"/></svg>') repeat top center; animation: star-move 120s linear infinite; }
+        #stars2 { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="3px" height="3px"><rect width="3" height="3" fill="rgba(255,255,255,0.6)"/></svg>') repeat top center; background-size: 50% 50%; animation: star-move 200s linear infinite; }
+        #stars3 { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="4px" height="4px"><rect width="4" height="4" fill="rgba(255,255,255,0.4)"/></svg>') repeat top center; background-size: 25% 25%; animation: star-move 300s linear infinite; }
+        @keyframes star-move { from { background-position: 0 0; } to { background-position: 0 2000px; } }
+
+        /* ─── HERO ─── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 6rem 1.5rem 3rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            background: rgba(6, 182, 212, 0.07);
+            color: var(--neon-cyan);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 1.8rem;
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        .hero-eyebrow::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-cyan);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(0.7); }
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 7vw, 6rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1.0;
+            animation: fadeInUp 0.7s ease 0.1s both;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero p.subtitle {
+            color: var(--text-muted);
+            max-width: 540px;
+            font-size: clamp(1rem, 2vw, 1.15rem);
+            line-height: 1.65;
+            margin: 0 auto 3.5rem;
+            animation: fadeInUp 0.7s ease 0.2s both;
+        }
+
+        /* ─── GATEWAY OVERLAY ─── */
+        #gateway-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 0, 15, 0.97);
+            backdrop-filter: blur(20px);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .gateway-card {
+            background: rgba(10, 15, 35, 0.8);
+            border: 1px solid rgba(6, 182, 212, 0.15);
+            border-radius: 28px;
+            padding: 3.5rem 3rem;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset;
+        }
+
+        /* Top glow band */
+        .gateway-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-purple), transparent);
+        }
+
+        /* Radial orb inside card */
+        .gateway-card::after {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .gateway-icon {
+            width: 72px; height: 72px;
+            margin: 0 auto 1.5rem;
+            border-radius: 20px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(139,92,246,0.08));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 0 30px rgba(6,182,212,0.15);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .gateway-card h2 {
+            font-size: 1.9rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 0.4rem;
+            position: relative; z-index: 1;
+        }
+
+        .gateway-card .subtitle-sm {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 2.2rem;
+            position: relative; z-index: 1;
+        }
+
+        #inst-code {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            color: white;
+            font-size: 1.35rem;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            outline: none;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            position: relative; z-index: 1;
+        }
+
+        #inst-code:focus {
+            border-color: rgba(6, 182, 212, 0.5);
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: 0 0 0 3px rgba(6,182,212,0.1), 0 0 30px rgba(6,182,212,0.06);
+        }
+
+        #inst-code::placeholder { color: rgba(255,255,255,0.2); letter-spacing: 0.3em; }
+
+        #inst-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--neon-cyan), #7c3aed);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        #inst-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            transition: left 0.5s ease;
+        }
+
+        #inst-btn:hover::before { left: 100%; }
+
+        #inst-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 40px rgba(6,182,212,0.35);
+        }
+
+        #inst-btn:active { transform: translateY(-1px); }
+
+        #gateway-err {
+            color: var(--danger);
+            margin-top: 1rem;
+            font-size: 0.87rem;
+            min-height: 1.2rem;
+            font-weight: 600;
+            position: relative; z-index: 1;
+        }
+
+        /* Decorative orbs behind gateway */
+        .gateway-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ─── NAV ─── */
+        nav { z-index: 110; }
+
+        /* ─── FEATURES STRIP ─── */
+        .features-strip {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            margin-top: 4rem;
+            animation: fadeInUp 0.7s ease 0.35s both;
+        }
+
+        .feature-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+        }
+
+        .feature-pill .dot {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .dot-green { background: rgba(16,185,129,0.15); color: var(--success); }
+        .dot-cyan  { background: rgba(6,182,212,0.15);  color: var(--neon-cyan); }
+        .dot-purple{ background: rgba(139,92,246,0.15); color: var(--neon-purple); }
+
+        /* ─── PATH CARDS ─── */
+        .path-cards { animation: fadeInUp 0.7s ease 0.25s both; }
+
+        /* ─── FOOTER STRIP ─── */
+        .footer-strip {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            padding: 0.75rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            border-top: 1px solid rgba(255,255,255,0.04);
+            background: rgba(2, 0, 15, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 50;
+        }
+
+        @media (max-width: 640px) {
+            .hero { padding-top: 5rem; }
+            .gateway-card { padding: 2.5rem 1.5rem; }
+            .features-strip { gap: 1.2rem; }
+        }
+    </style>
 </head>
 
-<body>
-    <!-- Gateway Overlay -->
-    <div id="gateway-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--background, #050a14);transition:opacity 0.6s ease;">
-        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:3rem; width:100%; max-width:420px; text-align:center; backdrop-filter:blur(20px);">
-            <div style="font-size:2.5rem;margin-bottom:0.5rem;text-shadow:0 0 20px rgba(6,182,212,0.5);">🏛️</div>
-            <h2 style="margin-bottom:0.5rem;font-family:'Outfit';color:white;font-weight:800;">Institution Gateway</h2>
-            <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:2rem;">Enter your unique college access code to proceed.</p>
-            <input type="text" id="inst-code" placeholder="ENTER CODE" style="width:100%;padding:1rem;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:1.2rem;text-align:center;letter-spacing:4px;margin-bottom:1rem;text-transform:uppercase;outline:none;" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/\\s/g,'')">
-            <button id="inst-btn" onclick="verifyGateway()" style="width:100%;padding:1rem;background:linear-gradient(135deg, #a855f7, #06b6d4);border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:1rem;transition:all 0.3s;">Verify Access</button>
-            <div id="gateway-err" style="color:#ef4444;margin-top:1rem;font-size:0.9rem;min-height:1.2rem;font-weight:600;"></div>
+<body class="theme-home">
+    <!-- Starfield layers -->
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>
+
+    <!-- ── GATEWAY OVERLAY ── -->
+    <div id="gateway-overlay">
+        <!-- Background orbs -->
+        <div class="gateway-orb" style="width:500px;height:500px;background:radial-gradient(circle,rgba(6,182,212,0.12),transparent 70%);top:-100px;left:-100px;"></div>
+        <div class="gateway-orb" style="width:400px;height:400px;background:radial-gradient(circle,rgba(139,92,246,0.12),transparent 70%);bottom:-80px;right:-80px;"></div>
+
+        <div class="gateway-card">
+            <div class="gateway-icon">🏛️</div>
+            <h2>Institution Gateway</h2>
+            <p class="subtitle-sm">Enter your unique college access code to proceed.</p>
+
+            <input type="text" id="inst-code"
+                placeholder="● ● ● ● ●"
+                autocomplete="off"
+                oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')">
+
+            <button id="inst-btn" onclick="verifyGateway()">
+                Verify Access &nbsp;→
+            </button>
+            <div id="gateway-err"></div>
         </div>
     </div>
 
-    <!-- Navigation -->
-    <nav>
-        <div class="brand">YYRD Official</div>
+    <!-- ── NAV ── -->
+    <nav id="main-nav">
+        <div class="brand" id="brand-name">OVS</div>
         <div class="nav-links">
-            <a href="login.html?admin=true" class="btn-outline" style="text-decoration:none; padding:0.5rem 1rem;">👔 Staff Login</a>
+            <a href="login.html?admin=true" class="btn-outline" style="text-decoration:none;" id="staff-login-btn">
+                👔 Staff Login
+            </a>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <div class="container animate-fade-in" style="text-align: center; margin-top: 15vh;">
-        <h1 style="margin-bottom: 1rem;">
-            Future of <span class="highlight">Democracy</span>
+    <!-- ── HERO ── -->
+    <section class="hero">
+        <div class="hero-eyebrow">🛡️ Secure &nbsp;·&nbsp; Transparent &nbsp;·&nbsp; Decentralized</div>
+
+        <h1>
+            Future of<br>
+            <span class="highlight">Democracy</span>
         </h1>
-        <p
-            style="color: var(--text-muted); max-width: 600px; margin: 0 auto 4rem auto; font-size: 1.1rem; line-height: 1.6;">
-            Secure. Transparent. Decentralized.<br>
-            Empowering your voice with next-generation voting technology.
+
+        <p class="subtitle">
+            Next-generation voting technology, purpose-built for your institution.
+            Every vote is protected, every voice is counted.
         </p>
 
-        <!-- Selection Path -->
+        <!-- Role Cards -->
         <div class="path-cards">
             <a href="register.html" class="role-card">
-                <div class="role-icon">📝</div>
+                <span class="role-icon">📝</span>
                 <h3>Register</h3>
-                <p>New Voter or Candidate? Start your journey here.</p>
+                <p>New voter or candidate? Start your journey here and get verified.</p>
             </a>
 
             <a href="login.html" class="role-card">
-                <div class="role-icon">👤</div>
-                <h3>Voter Login</h3>
-                <p>Access your dashboard and cast your vote securely.</p>
+                <span class="role-icon">🗳️</span>
+                <h3>Vote Now</h3>
+                <p>Access your secure dashboard and cast your vote with confidence.</p>
             </a>
         </div>
+
+        <!-- Features strip -->
+        <div class="features-strip">
+            <div class="feature-pill">
+                <span class="dot dot-green">✓</span> End-to-End Encrypted
+            </div>
+            <div class="feature-pill">
+                <span class="dot dot-cyan">⚡</span> Real-Time Results
+            </div>
+            <div class="feature-pill">
+                <span class="dot dot-purple">🔍</span> Tamper-Proof Audit
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FOOTER STRIP ── -->
+    <div class="footer-strip">
+        <span>© <span id="year"></span> Online Voting System</span>
+        <span id="inst-label" style="color:var(--text-muted);font-weight:500;"></span>
     </div>
 
-    <!-- No specific script needed for intro anymore as it is CSS driven -->
     <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
         const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 
         document.getElementById('inst-code').addEventListener('keydown', e => {
             if (e.key === 'Enter') verifyGateway();
         });
 
-        // Always show gateway — pre-fill last used code for convenience
-        const lastCode = localStorage.getItem('ovs_inst_code');
-        if (lastCode) {
-            document.getElementById('inst-code').value = lastCode;
-        }
-        // Clear stale session so login page re-asks institution
+        // Pre-fill last code for convenience
+        const lastCode = localStorage.getItem('_ovs_last_gate_code');
+        if (lastCode) document.getElementById('inst-code').value = lastCode;
+
+        // Clear stale session
         localStorage.removeItem('ovs_inst_code');
         localStorage.removeItem('ovs_inst_name');
 
         async function verifyGateway() {
             const code = document.getElementById('inst-code').value.trim();
-            const err = document.getElementById('gateway-err');
-            const btn = document.getElementById('inst-btn');
-            
-            if (!code) { err.textContent = 'Please enter a code.'; return; }
+            const err  = document.getElementById('gateway-err');
+            const btn  = document.getElementById('inst-btn');
+
+            if (!code) { err.textContent = '⚠ Please enter your access code.'; return; }
+
             err.textContent = '';
-            btn.textContent = 'Verifying...';
+            btn.textContent = 'Verifying…';
+            btn.disabled = true;
 
             try {
-                const res = await fetch(API + '/institutions/verify', {
+                const res  = await fetch(API + '/institutions/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code })
                 });
                 const data = await res.json();
-                
                 if (!res.ok) throw new Error(data.error || 'Verification failed');
-                
-                // Store in local storage
+
                 localStorage.setItem('ovs_inst_code', code);
                 localStorage.setItem('ovs_inst_name', data.institution);
-                
+                localStorage.setItem('_ovs_last_gate_code', code);
+
                 unlockGateway(data.institution);
             } catch (e) {
-                err.textContent = e.message;
-                btn.textContent = 'Verify Access';
+                err.textContent = '✗ ' + e.message;
+                btn.textContent = 'Verify Access →';
+                btn.disabled = false;
+
+                // Shake animation
+                const card = document.querySelector('.gateway-card');
+                card.style.animation = 'none';
+                card.style.transform = 'translateX(-10px)';
+                setTimeout(() => { card.style.transform = 'translateX(10px)'; }, 80);
+                setTimeout(() => { card.style.transform = 'translateX(-6px)'; }, 160);
+                setTimeout(() => { card.style.transform = 'translateX(0)'; card.style.transition = 'transform 0.3s ease'; }, 240);
             }
         }
 
         function unlockGateway(instName) {
             const overlay = document.getElementById('gateway-overlay');
             overlay.style.opacity = '0';
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 600);
-            
-            // Update Branding
-            document.querySelector('.brand').innerHTML = `<span style="opacity:0.6;font-weight:300;margin-right:0.5rem;font-size:0.9rem;">Welcome to</span> <br>${instName}`;
+            overlay.style.pointerEvents = 'none';
+            setTimeout(() => { overlay.style.display = 'none'; }, 700);
+
+            // Update branding
+            document.getElementById('brand-name').innerHTML =
+                `<span style="font-size:0.65rem;font-weight:400;letter-spacing:0.08em;color:var(--text-dim);display:block;margin-bottom:1px;-webkit-text-fill-color:var(--text-dim);">INSTITUTION</span>${instName}`;
+
+            document.getElementById('inst-label').textContent = '🏛️ ' + instName;
         }
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            document.getElementById('main-nav').classList.toggle('scrolled', window.scrollY > 40);
+        });
     </script>
 </body>
-
 </html>

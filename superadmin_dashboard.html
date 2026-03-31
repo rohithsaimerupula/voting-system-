@@ -271,10 +271,57 @@
 
     <!-- VOTING CONTROL -->
     <div class="page" id="page-voting">
-      <div class="page-title">🗳️ Ultimate Voting Control</div>
-      <div class="page-sub">Comprehensive voting controls, analysis, and verification</div>
-      <div style="background:var(--bg); border-radius:12px; overflow:hidden; border:1px solid var(--border);">
-        <iframe src="admin_dashboard.html" style="width:100%; height:75vh; border:none; display:block;"></iframe>
+      <div class="page-title">🗳️ Voting Control</div>
+      <div class="page-sub" id="voting-inst-sub">Election management for your institution</div>
+
+      <!-- Status Banner -->
+      <div id="election-banner" style="padding:1rem 1.5rem; border-radius:12px; margin-bottom:1.5rem; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:0.75rem; border:1px solid var(--border); background:var(--surface);">
+        ⚪ Loading election status...
+      </div>
+
+      <!-- Controls Grid -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem; margin-bottom:1.5rem;">
+
+        <!-- Election Scheduler -->
+        <div class="card">
+          <h3>⏱️ Election Schedule</h3>
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            <div class="form-field">
+              <label>Start Date & Time</label>
+              <input type="datetime-local" id="v-start">
+            </div>
+            <div class="form-field">
+              <label>End Date & Time</label>
+              <input type="datetime-local" id="v-end">
+            </div>
+            <button class="btn btn-green" onclick="setElectionTimes()">▶ Start Election</button>
+          </div>
+        </div>
+
+        <!-- Live Stats -->
+        <div class="card">
+          <h3>📊 Live Participation</h3>
+          <div class="stats-grid" style="margin-bottom:1rem;">
+            <div class="stat"><div class="num" id="v-total" style="color:var(--cyan)">-</div><div class="lbl">Total Voters</div></div>
+            <div class="stat"><div class="num" id="v-canvote" style="color:var(--gold)">-</div><div class="lbl">Can Vote</div></div>
+            <div class="stat"><div class="num" id="v-voted" style="color:var(--green)">-</div><div class="lbl">Voted</div></div>
+            <div class="stat"><div class="num" id="v-pct" style="color:var(--purple)">-</div><div class="lbl">Turnout %</div></div>
+          </div>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button class="btn btn-red" style="flex:1" onclick="stopElection()">⏹ End Election</button>
+            <button class="btn" style="flex:1; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.4);" onclick="resetElection()">🔄 Full Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Chart -->
+      <div class="card">
+        <h3>🏆 Live Vote Results</h3>
+        <button class="btn btn-gold" onclick="loadVoting()" style="margin-bottom:1.5rem; padding:0.5rem 1.4rem; font-size:0.9rem;">🔄 Refresh Results</button>
+        <div style="position:relative; height:280px;">
+          <canvas id="results-chart"></canvas>
+        </div>
+        <div id="candidate-tally" style="margin-top:1.5rem;"></div>
       </div>
     </div>
 
@@ -750,16 +797,138 @@ async function resetElection() {
   } catch(e) { toast(e.message, false); }
 }
 
+async function stopElection() {
+  if (!confirm('End the election now? Voters will no longer be able to cast votes.')) return;
+  try {
+    await apiFetch(`/config/election_${saSession.institution}`, {
+      method: 'POST',
+      body: JSON.stringify({ merge: true, data: { isActive: false, isCompleted: true } })
+    });
+    toast('Election ended & marked as completed!');
+    loadVoting();
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
 async function loadVoting() {
   try {
-    const users = await apiFetch('/users');
-    const candidates = users.filter(u => u.role==='contestant' && u.institution===saSession.institution);
-    const voters = users.filter(u => u.role==='voter' && u.institution===saSession.institution);
-    const labels = candidates.map(c=>c.name);
-    const votes = candidates.map(c => voters.filter(v=>v.votedFor===c.regNum).length);
+    const [users, election] = await Promise.all([
+      apiFetch('/users'),
+      apiFetch(`/config/election_${saSession.institution}`).catch(() => ({}))
+    ]);
+
+    const inst = saSession.institution;
+    document.getElementById('voting-inst-sub').textContent = `Election management — ${inst}`;
+
+    // ── Banner ──────────────────────────────────
+    const banner = document.getElementById('election-banner');
+    if (election && election.isActive) {
+      banner.style.background = 'rgba(34,197,94,0.1)';
+      banner.style.borderColor = 'rgba(34,197,94,0.4)';
+      banner.style.color = 'var(--green)';
+      banner.innerHTML = `🟢 <span>Election is <strong>ACTIVE</strong></span>
+        <span style="margin-left:auto;font-size:0.85rem;font-weight:400;color:var(--muted);">
+          Ends: ${election.endTime ? new Date(election.endTime).toLocaleString() : 'No end time set'}
+        </span>`;
+      // Pre-fill times
+      if (election.startTime) document.getElementById('v-start').value = election.startTime.slice(0,16);
+      if (election.endTime)   document.getElementById('v-end').value   = election.endTime.slice(0,16);
+    } else if (election && election.isCompleted) {
+      banner.style.background = 'rgba(239,68,68,0.08)';
+      banner.style.borderColor = 'rgba(239,68,68,0.3)';
+      banner.style.color = 'var(--red)';
+      banner.innerHTML = '🔴 <span>Election is <strong>COMPLETED</strong> — Use Reset to start a new election</span>';
+    } else {
+      banner.style.background = 'var(--surface)';
+      banner.style.borderColor = 'var(--border)';
+      banner.style.color = 'var(--muted)';
+      banner.innerHTML = '⚪ <span>Election <strong>not started</strong> — Set schedule and click Start Election</span>';
+    }
+
+    // ── Live Stats ───────────────────────────────
+    const voters     = users.filter(u => u.role === 'voter'      && u.institution === inst);
+    const candidates = users.filter(u => u.role === 'contestant' && u.institution === inst);
+    const totalVoters = voters.length;
+    const canVote     = voters.filter(v => v.canVote == 1).length;
+    const voted       = voters.filter(v => v.hasVoted == 1).length;
+    const pct         = canVote > 0 ? Math.round((voted / canVote) * 100) : 0;
+
+    document.getElementById('v-total').textContent   = totalVoters;
+    document.getElementById('v-canvote').textContent  = canVote;
+    document.getElementById('v-voted').textContent    = voted;
+    document.getElementById('v-pct').textContent      = pct + '%';
+
+    // ── Bar Chart ────────────────────────────────
+    const labels = candidates.map(c => c.name);
+    const votes  = candidates.map(c => voters.filter(v => v.votedFor === c.regNum).length);
+    const totalVotes = votes.reduce((a, b) => a + b, 0);
+
     if (chartInstance) chartInstance.destroy();
     const ctx = document.getElementById('results-chart').getContext('2d');
-    chartInstance = new Chart(ctx, { type:'bar', data: { labels, datasets:[{ label:'Votes', data:votes, backgroundColor:'rgba(6,182,212,0.5)', borderColor:'rgba(6,182,212,1)', borderWidth:2 }] }, options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{color:'#64748b'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#64748b'}, grid:{display:false}}} } });
+
+    if (candidates.length === 0) {
+      ctx.canvas.parentElement.innerHTML = '<p style="text-align:center;color:var(--muted);padding:2rem;">No candidates registered yet.</p>';
+    } else {
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Votes Received',
+            data: votes,
+            backgroundColor: labels.map((_, i) => `hsla(${i * 60 + 180}, 70%, 60%, 0.6)`),
+            borderColor:     labels.map((_, i) => `hsla(${i * 60 + 180}, 70%, 60%, 1)`),
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { ticks: { color: '#e2e8f0' }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ── Candidate Tally Table ────────────────────
+    const tallyEl = document.getElementById('candidate-tally');
+    if (candidates.length === 0) {
+      tallyEl.innerHTML = '';
+    } else {
+      // Sort by votes desc
+      const ranked = candidates.map((c, i) => ({ ...c, votes: votes[i] })).sort((a, b) => b.votes - a.votes);
+      tallyEl.innerHTML = `
+        <table>
+          <thead><tr>
+            <th>#</th><th>Candidate</th><th>Reg No</th><th>Branch</th>
+            <th>Votes</th><th>Share %</th>
+          </tr></thead>
+          <tbody>
+            ${ranked.map((c, i) => `<tr>
+              <td><strong style="color:${i===0?'var(--gold)':'var(--muted)'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</strong></td>
+              <td>
+                <div style="font-weight:600;">${c.symbol || ''} ${c.name}</div>
+                <div style="font-size:0.78rem;color:var(--muted);">${c.email||''}</div>
+              </td>
+              <td><strong>${c.regNum}</strong></td>
+              <td>${c.branch||'-'}</td>
+              <td><strong style="color:var(--cyan);font-size:1.1rem;">${c.votes}</strong></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;">
+                    <div style="width:${totalVotes>0?Math.round((c.votes/totalVotes)*100):0}%;height:100%;background:var(--cyan);border-radius:3px;"></div>
+                  </div>
+                  <span style="font-size:0.8rem;color:var(--muted);">${totalVotes>0?Math.round((c.votes/totalVotes)*100):0}%</span>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <p style="text-align:right;color:var(--muted);font-size:0.8rem;margin-top:0.75rem;">Total votes cast: <strong style="color:white;">${totalVotes}</strong> / ${canVote} eligible</p>`;
+    }
   } catch(e) { toast(e.message, false); }
 }
 

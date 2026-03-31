@@ -4,47 +4,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - OVS</title>
-
+    <title>Secure Login — OVS</title>
+    <meta name="description" content="Securely login to the Online Voting System voter or staff portal.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        /* Local overrides if needed, but keeping clean for global style.css */
+        /* ─── STARFIELD ─── */
+        #stars  { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2px" height="2px"><rect width="2" height="2" fill="rgba(255,255,255,0.8)"/></svg>') repeat top center; animation: star-move 120s linear infinite; }
+        #stars2 { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="3px" height="3px"><rect width="3" height="3" fill="rgba(255,255,255,0.5)"/></svg>') repeat top center; background-size:50% 50%; animation: star-move 200s linear infinite; }
+        @keyframes star-move { from { background-position: 0 0; } to { background-position: 0 2000px; } }
+
+        /* ─── LOGIN PAGE LAYOUT ─── */
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 1.5rem 3rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 460px;
+            padding: 2.8rem 2.2rem;
+        }
+
+        /* ─── TABS ─── */
+        .login-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 0.35rem;
+        }
+
         .tab-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: none;
-            color: var(--text-muted);
             flex: 1;
-            padding: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 0.87rem;
             cursor: pointer;
-            transition: all 0.3s;
-            border-bottom: 2px solid transparent;
+            transition: all 0.25s ease;
         }
 
         .tab-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.06);
             color: white;
         }
 
         .tab-btn.active {
-            background: rgba(6, 182, 212, 0.1);
+            background: rgba(6, 182, 212, 0.14);
+            border: 1px solid rgba(6, 182, 212, 0.28);
             color: var(--neon-cyan);
-            border-bottom-color: var(--neon-cyan);
-            font-weight: 600;
+            box-shadow: 0 0 20px rgba(6,182,212,0.12);
         }
 
-        .login-tabs {
-            display: flex;
-            margin-bottom: 2rem;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--glass-border);
+        /* ─── INPUT GLOW ─── */
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: rgba(6, 182, 212, 0.55);
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: 0 0 0 3px rgba(6,182,212,0.1), 0 0 24px rgba(6,182,212,0.08);
         }
+
+        /* ─── LOGIN HEADER ─── */
+        .login-header-icon {
+            width: 60px; height: 60px;
+            margin: 0 auto 1.2rem;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(139,92,246,0.1));
+            border: 1px solid rgba(6,182,212,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 0 24px rgba(6,182,212,0.12);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        /* ─── INST DISPLAY ─── */
+        #inst-display {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(6,182,212,0.08);
+            border: 1px solid rgba(6,182,212,0.2);
+            color: var(--neon-cyan);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 1.8rem;
+        }
+
+        /* ─── PASSWORD EYE ─── */
+        .pass-eye-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.25rem;
+            transition: color 0.2s;
+        }
+        .pass-eye-btn:hover { color: var(--neon-cyan); }
     </style>
 </head>
 
-<body>
+<body class="theme-login">
+    <!-- Starfield -->
+    <div id="stars"></div>
+    <div id="stars2"></div>
     <!-- SUPER ADMIN HIDDEN MODAL (Staff mode only) -->
     <style>
       @keyframes popIn { 0% { opacity:0; transform:scale(0.9) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
@@ -123,15 +208,22 @@
         </div>
     </nav>
 
-    <div class="container animate-fade-in" style="max-width: 480px;">
-        <div class="glass-panel" style="padding: 3rem 2rem;">
+    <div class="login-wrapper">
+        <div class="glass-panel login-card animate-fade-in">
 
-            <div class="login-tabs" id="login-tabs" style="display: flex; gap:10px; margin-bottom: 2rem;">
+            <!-- Icon header -->
+            <div class="login-header-icon" id="login-header-icon">🗳️</div>
+
+            <div class="login-tabs" id="login-tabs">
                 <!-- Tabs populated by JS -->
             </div>
 
-            <h2 id="login-title" class="text-center" style="margin-bottom: 0.5rem;">Welcome Back</h2>
-            <p id="inst-display" class="text-center" style="color:var(--cyan);font-weight:600;margin-bottom:2rem;letter-spacing:1px;"></p>
+            <h2 id="login-title" class="text-center" style="margin-bottom: 0.6rem; font-size:1.8rem;">Welcome Back</h2>
+            <div style="text-align:center;">
+                <span id="inst-display"></span>
+            </div>
+
+            <div class="divider"></div>
 
             <form id="login-form" autocomplete="off">
                 <div id="credentials-section">
@@ -143,34 +235,34 @@
                     <div class="form-group">
                         <label>Password</label>
                         <div style="position: relative;">
-                            <input type="password" id="password" required placeholder="Enter Password" autocomplete="new-password" style="width: 100%; padding-right: 40px;">
-                            <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">👁️</button>
+                            <input type="password" id="password" required placeholder="Enter Password" autocomplete="new-password" style="width: 100%; padding-right: 44px;">
+                            <button type="button" onclick="togglePassword()" class="pass-eye-btn">👁️</button>
                         </div>
                     </div>
 
-
-
-                    <div style="text-align:right; margin-top:0.5rem;" id="forgot-password-container">
+                    <div style="text-align:right; margin-top:0.4rem;" id="forgot-password-container">
                         <button type="button" onclick="showRecoveryModal()" id="forgot-password-link"
-                            style="background:none; border:none; color:var(--neon-cyan); font-size:0.9rem; cursor:pointer; padding:0;">Forgot Password?</button>
+                            style="background:none; border:none; color:var(--neon-cyan); font-size:0.85rem; cursor:pointer; padding:0; font-weight:600; opacity:0.85; transition:opacity 0.2s;"
+                            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">Forgot Password?</button>
                     </div>
 
-                    <button type="submit" class="submit-btn" id="login-btn" style="margin-top: 1rem;">Secure Login</button>
+                    <button type="submit" class="submit-btn" id="login-btn" style="margin-top: 1.25rem;">🔐 Secure Login</button>
                 </div>
 
                 <!-- 2FA SECTION (INLINE) -->
                 <div id="inline-twofa-section" class="hidden" style="text-align: center;">
-                    <h3 style="color:var(--gold-primary); margin-bottom:1rem;">Two-Factor Authentication</h3>
-                    <p class="text-muted" style="margin-bottom:1rem;">An OTP has been sent to your registered email.</p>
-                    <input type="text" id="twofa-otp" placeholder="Enter 6-digit Code" maxlength="6"
-                        style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:white; margin-bottom:1rem; text-align: center; font-size: 1.2rem; letter-spacing: 0.5rem;">
-                    <button type="button" onclick="verify2FA()" class="submit-btn" id="twofa-btn">Verify Login</button>
-                    <p id="twofa-error" class="hidden text-danger" style="margin-top: 1rem;"></p>
+                    <div style="font-size:2.5rem;margin-bottom:0.8rem;">🛡️</div>
+                    <h3 style="color:var(--warning); margin-bottom:0.5rem; font-size:1.2rem;">Two-Factor Auth</h3>
+                    <p class="text-muted" style="margin-bottom:1.5rem; font-size:0.9rem;">An OTP has been sent to your registered email.</p>
+                    <input type="text" id="twofa-otp" placeholder="0 0 0 0 0 0" maxlength="6"
+                        style="width:100%; padding:1rem; border-radius:12px; border:1px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); color:var(--warning); margin-bottom:1rem; text-align:center; font-size:1.6rem; letter-spacing:0.4rem; font-weight:800; outline:none; font-family:var(--font-heading);">
+                    <button type="button" onclick="verify2FA()" class="submit-btn" id="twofa-btn" style="background:linear-gradient(135deg,var(--warning),#d97706);">Verify & Enter</button>
+                    <p id="twofa-error" class="hidden text-danger" style="margin-top: 1rem; font-size:0.85rem;"></p>
                 </div>
             </form>
 
             <div id="error-msg" class="hidden"
-                style="margin-top: 1.5rem; padding: 1rem; border-radius: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); text-align: center;">
+                style="margin-top: 1.5rem; padding: 1rem; border-radius: 12px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); text-align: center; font-size:0.9rem; font-weight:500;">
             </div>
         </div>
     </div>

@@ -223,7 +223,7 @@ function showPage(id){
 
 async function loadAll(){
   try{
-    const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}`);
+    const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}`);
     classStudents=students;
     document.getElementById('s-students').textContent=students.length;
     document.getElementById('s-canvote').textContent=students.filter(s=>s.canVote==1).length;

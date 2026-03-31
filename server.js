@@ -325,24 +325,32 @@ app.get('/api/superadmins', async (req, res) => {
 //  VOTERS ENDPOINTS
 // ─────────────────────────────────────────
 
-// Get voters by class (subadmin/admin use)
+// Get voters by class (subadmin/admin use) — scoped to institution
 app.get('/api/voters/by-class/:class', async (req, res) => {
     try {
-        const result = await db.execute({
-            sql: "SELECT * FROM users WHERE class = ? AND role IN ('voter','contestant')",
-            args: [decodeURIComponent(req.params.class)]
-        });
+        const institution = req.query.institution;
+        let sql = "SELECT * FROM users WHERE class = ? AND role IN ('voter','contestant')";
+        const args = [decodeURIComponent(req.params.class)];
+        if (institution) {
+            sql += " AND institution = ?";
+            args.push(decodeURIComponent(institution));
+        }
+        const result = await db.execute({ sql, args });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Get voters by branch (admin use)
+// Get voters by branch (admin use) — scoped to institution
 app.get('/api/voters/by-branch/:branch', async (req, res) => {
     try {
-        const result = await db.execute({
-            sql: "SELECT * FROM users WHERE branch = ? AND role IN ('voter','contestant')",
-            args: [decodeURIComponent(req.params.branch)]
-        });
+        const institution = req.query.institution;
+        let sql = "SELECT * FROM users WHERE branch = ? AND role IN ('voter','contestant')";
+        const args = [decodeURIComponent(req.params.branch)];
+        if (institution) {
+            sql += " AND institution = ?";
+            args.push(decodeURIComponent(institution));
+        }
+        const result = await db.execute({ sql, args });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
