@@ -41,47 +41,7 @@
     --transition-bounce: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* ============================================================
-   LIGHT MODE
-   ============================================================ */
-body.light-mode {
-    --bg-deep: #f0f4ff;
-    --bg-surface: #ffffff;
-    --glass-bg: rgba(255, 255, 255, 0.75);
-    --glass-border: rgba(0, 0, 0, 0.08);
-    --glass-highlight: rgba(0, 0, 0, 0.03);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --neon-cyan: #0891b2;
-    --neon-blue: #2563eb;
-    --neon-purple: #7c3aed;
-    --primary: var(--neon-cyan);
-    --secondary: var(--neon-purple);
-    --danger: #dc2626;
-    --success: #16a34a;
-    --warning: #d97706;
-}
-
-body.light-mode .glass-panel {
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(0,0,0,0.1);
-    color: var(--text-main);
-}
-body.light-mode h1, body.light-mode h2, body.light-mode h3, body.light-mode h4, body.light-mode .brand { color: var(--text-main); }
-body.light-mode .submit-btn, body.light-mode .action-btn { color: white; }
-body.light-mode .btn-outline { color: var(--text-main); border-color: rgba(0,0,0,0.2); }
-body.light-mode th { color: var(--text-main); font-weight: bold; background: rgba(0,0,0,0.05); }
-body.light-mode td { border-color: rgba(0,0,0,0.1); color: var(--text-main); }
-body.light-mode input, body.light-mode select, body.light-mode textarea {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(0,0,0,0.2);
-    color: black;
-}
-body.light-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: none; }
-body.light-mode::before { opacity: 0.4; }
-body.light-mode::after { opacity: 0.08; }
-body.light-mode #stars, body.light-mode #stars2, body.light-mode #stars3 { opacity: 0.15; }
+/* LIGHT MODE REMOVED - Enforcing Dark Cosmic Theme ONLY */
 
 /* ============================================================
    DATETIME CALENDAR ICON

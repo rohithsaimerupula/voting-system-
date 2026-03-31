@@ -52,7 +52,7 @@
     <nav>
         <div class="brand">Voter Portal</div>
         <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
-            <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle Light/Dark Mode">☀️</button>
+            <button class="theme-toggle-btn" style="display:none;" id="theme-btn"></button>
             <span id="voter-name" style="color: var(--text-muted);">Welcome, Voter</span>
             <button class="btn-outline" onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
         </div>
