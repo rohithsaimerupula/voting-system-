@@ -7,15 +7,27 @@
     <title>Register - OVS</title>
 
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('ovs_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('ovs_theme', next);
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-</head>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
 
 <body>
     <nav>
-        <div class="brand" onclick="window.location.href='index.html'">OVS</div>
-        <div class="nav-links">
+        <div class="brand" onclick="window.location.href='index.html'">KONOHA</div>
+        <div class="nav-links" style="display:flex; align-items:center;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="margin-right: 0.5rem;">🌗</button>
             <button onclick="window.location.href='index.html'" class="btn-outline"
                 style="padding: 0.5rem 1rem; margin-right: 0.5rem;">Back</button>
             <button onclick="window.location.href='login.html'" class="submit-btn"
@@ -215,7 +227,7 @@
             alert('Access Denied. Please enter your College Access Code first.');
             window.location.href = 'index.html';
         } else {
-            document.getElementById('inst-display').innerText = "🏛️ " + userInst;
+            document.getElementById('inst-display').innerText = "⛩️ " + userInst;
         }
 
         // Initialize Face API Models

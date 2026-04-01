@@ -9,7 +9,19 @@
     <link rel="stylesheet" href="style.css">
     <script src="storage.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('ovs_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('ovs_theme', next);
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -52,7 +64,7 @@
     <nav>
         <div class="brand">Voter Portal</div>
         <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
-            <button class="theme-toggle-btn" style="display:none;" id="theme-btn"></button>
+            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌗</button>
             <span id="voter-name" style="color: var(--text-muted);">Welcome, Voter</span>
             <button class="btn-outline" onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
         </div>

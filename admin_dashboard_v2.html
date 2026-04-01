@@ -4,11 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard — OVS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Shojumaru&display=swap" rel="stylesheet">
+  <script>
+      (function() {
+          var theme = localStorage.getItem('ovs_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+      })();
+      function toggleTheme() {
+          var current = document.documentElement.getAttribute('data-theme') || 'dark';
+          var next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('ovs_theme', next);
+      }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --bg:#050a14; --surface:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.1); --gold:#f59e0b; --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --purple:#a855f7; --text:#e2e8f0; --muted:#64748b; }
+    :root { 
+      --bg:#0f172a; --surface:#1e293b; --border:rgba(249,115,22,0.4); 
+      --gold:#f59e0b; --cyan:#ea580c; --green:#22c55e; --red:#ef4444; --purple:#dc2626; 
+      --text:#f8fafc; --muted:#cbd5e1; 
+    }
+    [data-theme="light"] {
+      --bg:#fdf6e3; --surface:#f4ebd8; --border:rgba(28,25,23,0.3);
+      --gold:#d97706; --cyan:#c2410c; --green:#16a34a; --red:#b91c1c; --purple:#991b1b;
+      --text:#1c1917; --muted:#57534e;
+    }
     body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; }
     input, select { width:100%; padding:0.8rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-size:0.95rem; font-family:'Outfit',sans-serif; outline:none; transition:border 0.3s; }
     input:focus, select:focus { border-color:var(--cyan); }
@@ -24,14 +45,14 @@
     .btn-g { background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.3); }
     .layout { display:flex; min-height:100vh; }
     .sidebar { width:230px; background:rgba(6,182,212,0.05); border-right:1px solid rgba(6,182,212,0.15); padding:1.5rem 1rem; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; }
-    .brand { font-size:1.4rem; font-weight:900; color:var(--cyan); margin-bottom:0.2rem; }
+    .brand { font-size:1.4rem; font-weight:900; color:var(--cyan); margin-bottom:0.2rem; font-family:'Shojumaru', sans-serif;}
     .role-tag { font-size:0.75rem; color:var(--muted); margin-bottom:2rem; }
     .nav-item { padding:0.7rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s; margin-bottom:0.25rem; font-size:0.9rem; display:flex; align-items:center; gap:0.6rem; color:var(--muted); }
     .nav-item:hover, .nav-item.active { background:rgba(6,182,212,0.1); color:var(--cyan); font-weight:600; }
     .main { margin-left:230px; flex:1; padding:2rem; }
     .page { display:none; }
     .page.active { display:block; }
-    .page-title { font-size:1.6rem; font-weight:800; margin-bottom:0.4rem; }
+    .page-title { font-size:1.6rem; font-weight:800; margin-bottom:0.4rem; font-family:'Shojumaru', sans-serif;}
     .page-sub { color:var(--muted); font-size:0.9rem; margin-bottom:2rem; }
     .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:2rem; }
     .stat { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.2rem; text-align:center; }
@@ -82,6 +103,7 @@
     <div class="nav-item" onclick="showPage('students')">🎓 My Branch Students</div>
     <div class="nav-item" onclick="showPage('subadmins')">👥 Manage Sub-Admins</div>
     <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
+      <div class="nav-item" onclick="toggleTheme()" style="color:var(--gold)">🌗 Toggle Theme</div>
       <div class="nav-item" onclick="adminLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>

@@ -7,16 +7,29 @@
     <title>Profile Portal - OVS</title>
 
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('ovs_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('ovs_theme', next);
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="storage.js?v=3"></script>
 </head>
 
 <body class="theme-register">
     <nav>
-        <div class="brand" onclick="window.location.href='index.html'">OVS</div>
-        <div class="nav-links">
-            <button onclick="window.location.href='index.html'" class="btn-outline">Home</button>
+        <div class="brand" onclick="window.location.href='index.html'">KONOHA</div>
+        <div class="nav-links" style="display:flex; align-items:center;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="margin-right: 0.5rem;">🌗</button>
+            <button onclick="window.location.href='index.html'" class="btn-outline" style="margin-right:0.5rem; padding:0.5rem 1rem;">Home</button>
             <button onclick="window.location.href='login.html'" class="submit-btn" style="width: auto;">Voter Login</button>
         </div>
     </nav>

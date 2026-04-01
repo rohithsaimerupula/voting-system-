@@ -5,7 +5,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OVS Developer Console</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Shojumaru&display=swap" rel="stylesheet">
+  <script>
+      (function() {
+          var theme = localStorage.getItem('ovs_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+      })();
+      function toggleTheme() {
+          var current = document.documentElement.getAttribute('data-theme') || 'dark';
+          var next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('ovs_theme', next);
+      }
+  </script>
   <style>
     *,
     *::before,
@@ -15,16 +27,15 @@
       padding: 0;
     }
 
-    :root {
-      --bg: #050a14;
-      --surface: rgba(255, 255, 255, 0.04);
-      --border: rgba(255, 255, 255, 0.1);
-      --red: #ef4444;
-      --gold: #f59e0b;
-      --cyan: #06b6d4;
-      --green: #22c55e;
-      --text: #e2e8f0;
-      --muted: #64748b;
+    :root { 
+      --bg:#0f172a; --surface:#1e293b; --border:rgba(249,115,22,0.4); 
+      --gold:#f59e0b; --cyan:#ea580c; --green:#22c55e; --red:#ef4444; --purple:#dc2626; 
+      --text:#f8fafc; --muted:#cbd5e1; 
+    }
+    [data-theme="light"] {
+      --bg:#fdf6e3; --surface:#f4ebd8; --border:rgba(28,25,23,0.3);
+      --gold:#d97706; --cyan:#c2410c; --green:#16a34a; --red:#b91c1c; --purple:#991b1b;
+      --text:#1c1917; --muted:#57534e;
     }
 
     body {
@@ -58,6 +69,7 @@
       font-weight: 900;
       color: var(--red);
       margin-bottom: 0.5rem;
+      font-family:'Shojumaru', sans-serif;
     }
 
     .auth-box p {
@@ -151,6 +163,7 @@
       font-size: 1.4rem;
       font-weight: 900;
       color: var(--red);
+      font-family:'Shojumaru', sans-serif;
     }
 
     header span {
@@ -343,6 +356,7 @@
     <header>
       <h1>⚡ OVS Developer Console</h1>
       <div style="display:flex;align-items:center;gap:1rem;">
+        <button class="btn btn-red-outline" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="border:none; font-size:1.2rem; cursor:pointer; padding:0;">🌗</button>
         <span id="dev-name-label">Developer</span>
         <button class="btn btn-red-outline" onclick="devLogout()">Logout</button>
       </div>

@@ -8,13 +8,21 @@
     <meta name="description" content="Securely login to the Online Voting System voter or staff portal.">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Shojumaru&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem('ovs_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('ovs_theme', next);
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        /* ─── STARFIELD ─── */
-        #stars  { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2px" height="2px"><rect width="2" height="2" fill="rgba(255,255,255,0.8)"/></svg>') repeat top center; animation: star-move 120s linear infinite; }
-        #stars2 { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="3px" height="3px"><rect width="3" height="3" fill="rgba(255,255,255,0.5)"/></svg>') repeat top center; background-size:50% 50%; animation: star-move 200s linear infinite; }
-        @keyframes star-move { from { background-position: 0 0; } to { background-position: 0 2000px; } }
 
         /* ─── LOGIN PAGE LAYOUT ─── */
         .login-wrapper {
@@ -144,7 +152,7 @@
         
         <button onclick="closeSAModal()" style="position:absolute;top:1.5rem;right:1.5rem;background:rgba(255,255,255,0.1);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.3s;" onmouseover="this.style.background='rgba(239,68,68,0.5)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
         
-        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 18px; display:flex; align-items:center; justify-content:center; font-size: 2rem; margin: 0 auto 1.2rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👑</div>
+        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 18px; display:flex; align-items:center; justify-content:center; font-size: 2rem; margin: 0 auto 1.2rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👺</div>
         
         <h2 style="font-size:2rem;font-weight:900;color:#fff;margin-bottom:0.2rem;letter-spacing:-0.5px;">Super Admin</h2>
         <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:2rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Secure Portal Access</p>
@@ -202,9 +210,12 @@
     </div>
 
     <nav>
-        <div class="brand" id="ovs-logo" style="cursor:pointer;">OVS</div>
-        <div class="nav-links" id="nav-right">
-            <!-- Populated by JS based on mode -->
+        <div class="brand" id="ovs-logo" style="cursor:pointer;">KONOHA</div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌗</button>
+            <div class="nav-links" id="nav-right">
+                <!-- Populated by JS based on mode -->
+            </div>
         </div>
     </nav>
 
@@ -212,7 +223,7 @@
         <div class="glass-panel login-card animate-fade-in">
 
             <!-- Icon header -->
-            <div class="login-header-icon" id="login-header-icon">🗳️</div>
+            <div class="login-header-icon" id="login-header-icon">📜</div>
 
             <div class="login-tabs" id="login-tabs">
                 <!-- Tabs populated by JS -->
@@ -347,7 +358,7 @@
                     alert('Access Denied. Please enter your College Access Code first.');
                     window.location.href = 'index.html';
                 } else {
-                    document.getElementById('inst-display').innerText = "🏛️ " + userInst;
+                    document.getElementById('inst-display').innerText = "⛩️ " + userInst;
                 }
             } else {
                 if (fpContainer) fpContainer.style.display = 'none';
