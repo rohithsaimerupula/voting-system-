@@ -24,6 +24,7 @@
         }
     </script>
     <script src="storage.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <style>
         /* Starfield removed in favor of Kunai drift in style.css */
         /* ─── HERO ─── */
@@ -308,10 +309,8 @@
 </head>
 
 <body class="theme-home">
-    <!-- Starfield layers -->
-    <div id="stars"></div>
-    <div id="stars2"></div>
-    <div id="stars3"></div>
+    <!-- tsParticles Background -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
 
     <!-- ── GATEWAY OVERLAY ── -->
     <div id="gateway-overlay">
@@ -348,10 +347,10 @@
     </nav>
 
     <!-- ── HERO ── -->
-    <section class="hero">
+    <section class="hero hero-content">
         <div class="hero-eyebrow">🛡️ Secure &nbsp;·&nbsp; Transparent &nbsp;·&nbsp; Decentralized</div>
 
-        <h1>
+        <h1 class="epic-glow">
             Future of<br>
             <span class="highlight">Democracy</span>
         </h1>
@@ -469,6 +468,37 @@
         // Navbar scroll effect
         window.addEventListener('scroll', () => {
             document.getElementById('main-nav').classList.toggle('scrolled', window.scrollY > 40);
+        });
+
+        // Initialize tsParticles Fire/Ember Effect
+        tsParticles.load("tsparticles", {
+            fpsLimit: 60,
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: ["#f97316", "#dc2626", "#fde047"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.8, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 3, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                move: {
+                    enable: true, speed: 2, direction: "top", random: true,
+                    straight: false, outModes: { default: "out" },
+                    attract: { enable: false, rotateX: 600, rotateY: 1200 }
+                }
+            },
+            interactivity: {
+                detectsOn: "canvas",
+                events: {
+                    onHover: { enable: true, mode: "bubble" },
+                    onClick: { enable: true, mode: "push" },
+                    resize: true
+                },
+                modes: {
+                    bubble: { distance: 200, size: 6, duration: 2, opacity: 1, speed: 3 },
+                    push: { particles_nb: 4 }
+                }
+            },
+            retina_detect: true,
+            background: { color: "transparent" }
         });
     </script>
 </body>
