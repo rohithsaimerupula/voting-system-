@@ -292,9 +292,26 @@
       <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem; margin-bottom:1.5rem;">
 
         <!-- Election Scheduler -->
-        <div class="card">
-          <h3>⏱️ Election Schedule</h3>
-          <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="card" id="election-schedule-card">
+          <h3 id="schedule-card-title">⏱️ Election Schedule</h3>
+          
+          <!-- Countdown View (Hidden by default) -->
+          <div id="v-countdown-container" style="display:none; text-align:center; padding:1rem 0; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:1rem;">
+            <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">⏳ Time Remaining</div>
+            <div style="display:flex; justify-content:center; gap:1.2rem;">
+              <div><div id="cd-days" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Days</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="cd-hours" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Hours</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="cd-mins" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Mins</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="cd-secs" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Secs</div></div>
+            </div>
+            <button class="btn-sm" style="margin-top:1.2rem; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);" onclick="toggleScheduleMode(true)">⚙️ Modify Schedule</button>
+          </div>
+
+          <!-- Scheduler Inputs -->
+          <div id="v-scheduler-inner" style="display:flex; flex-direction:column; gap:1rem;">
             <div class="form-field">
               <label>Start Date & Time</label>
               <input type="datetime-local" id="v-start">
@@ -303,7 +320,10 @@
               <label>End Date & Time</label>
               <input type="datetime-local" id="v-end">
             </div>
-            <button class="btn btn-green" onclick="setElectionTimes()">▶ Start Election</button>
+            <div style="display:flex; gap:0.5rem;">
+               <button class="btn btn-green" style="flex:2" id="v-start-btn" onclick="setElectionTimes()">▶ Start Election</button>
+               <button class="btn-sm" id="v-cancel-edit" style="flex:1; display:none; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--border);" onclick="toggleScheduleMode(false)">Cancel</button>
+            </div>
           </div>
         </div>
 
@@ -389,7 +409,61 @@
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let allStudents = [];
-let chartInstance = null;
+let countdownInterval = null;
+
+function toggleScheduleMode(isEditing) {
+    const scheduler = document.getElementById('v-scheduler-inner');
+    const countdown = document.getElementById('v-countdown-container');
+    const cancelBtn = document.getElementById('v-cancel-edit');
+    const startBtn = document.getElementById('v-start-btn');
+    const title = document.getElementById('schedule-card-title');
+
+    if (isEditing) {
+        scheduler.style.display = 'flex';
+        countdown.style.display = 'none';
+        cancelBtn.style.display = 'block';
+        startBtn.textContent = '💾 Update Schedule';
+        title.textContent = '⚙️ Modify Election Schedule';
+    } else {
+        scheduler.style.display = 'none';
+        countdown.style.display = 'block';
+        title.textContent = '⏳ Election Live Countdown';
+    }
+}
+
+function startCountdown(endTimeStr) {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const endTime = new Date(endTimeStr).getTime();
+    
+    function update() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+        
+        if (distance < 0) {
+            clearInterval(countdownInterval);
+            document.getElementById('cd-days').textContent = '00';
+            document.getElementById('cd-hours').textContent = '00';
+            document.getElementById('cd-mins').textContent = '00';
+            document.getElementById('cd-secs').textContent = '00';
+            // Refresh UI once to show "Completed" state properly
+            loadVoting();
+            return;
+        }
+        
+        const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((distance % (1000 * 60)) / 1000);
+        
+        document.getElementById('cd-days').textContent = String(d).padStart(2, '0');
+        document.getElementById('cd-hours').textContent = String(h).padStart(2, '0');
+        document.getElementById('cd-mins').textContent = String(m).padStart(2, '0');
+        document.getElementById('cd-secs').textContent = String(s).padStart(2, '0');
+    }
+    
+    update();
+    countdownInterval = setInterval(update, 1000);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   if (saSession && saSession.role === 'superadmin') {
@@ -829,8 +903,13 @@ async function loadVoting() {
     const inst = saSession.institution;
     document.getElementById('voting-inst-sub').textContent = `Election management — ${inst}`;
 
-    // ── Banner ──────────────────────────────────
+    // ── Banner & Countdown Logic ────────────────
     const banner = document.getElementById('election-banner');
+    const schInner = document.getElementById('v-scheduler-inner');
+    const countContainer = document.getElementById('v-countdown-container');
+    const title = document.getElementById('schedule-card-title');
+    const startBtn = document.getElementById('v-start-btn');
+
     if (election && election.isActive) {
       banner.style.background = 'rgba(34,197,94,0.1)';
       banner.style.borderColor = 'rgba(34,197,94,0.4)';
@@ -839,6 +918,11 @@ async function loadVoting() {
         <span style="margin-left:auto;font-size:0.85rem;font-weight:400;color:var(--muted);">
           Ends: ${election.endTime ? new Date(election.endTime).toLocaleString() : 'No end time set'}
         </span>`;
+      
+      // Auto-switch to countdown mode if active
+      toggleScheduleMode(false);
+      if (election.endTime) startCountdown(election.endTime);
+
       // Pre-fill times
       if (election.startTime) document.getElementById('v-start').value = election.startTime.slice(0,16);
       if (election.endTime)   document.getElementById('v-end').value   = election.endTime.slice(0,16);
@@ -847,11 +931,23 @@ async function loadVoting() {
       banner.style.borderColor = 'rgba(239,68,68,0.3)';
       banner.style.color = 'var(--red)';
       banner.innerHTML = '🔴 <span>Election is <strong>COMPLETED</strong> — Use Reset to start a new election</span>';
+      
+      schInner.style.display = 'flex';
+      countContainer.style.display = 'none';
+      title.textContent = '⏱️ Election Schedule';
+      startBtn.textContent = '▶ Start Election';
+      if (countdownInterval) clearInterval(countdownInterval);
     } else {
       banner.style.background = 'var(--surface)';
       banner.style.borderColor = 'var(--border)';
       banner.style.color = 'var(--muted)';
       banner.innerHTML = '⚪ <span>Election <strong>not started</strong> — Set schedule and click Start Election</span>';
+      
+      schInner.style.display = 'flex';
+      countContainer.style.display = 'none';
+      title.textContent = '⏱️ Election Schedule';
+      startBtn.textContent = '▶ Start Election';
+      if (countdownInterval) clearInterval(countdownInterval);
     }
 
     // ── Live Stats ───────────────────────────────
