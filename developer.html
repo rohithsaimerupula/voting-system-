@@ -356,17 +356,17 @@
     <div class="container">
       <!-- Stats -->
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showSaDetails()">
           <div class="number" id="stat-sa" style="color:var(--gold)">-</div>
-          <div class="label">Super Admins</div>
+          <div class="label">Super Admins ℹ️</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showInstDetails()">
           <div class="number" id="stat-inst" style="color:var(--cyan)">-</div>
-          <div class="label">Institutions</div>
+          <div class="label">Institutions ℹ️</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showTotalUsersDetails()">
           <div class="number" id="stat-users" style="color:var(--green)">-</div>
-          <div class="label">Total Users</div>
+          <div class="label">Total Users ℹ️</div>
         </div>
       </div>
 
@@ -385,7 +385,7 @@
           <div><label>Gateway Access Code</label><input type="text" id="sa-code" placeholder="e.g. KLU2026" maxlength="10" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
           <div><label>Password</label><input type="password" id="sa-pass" placeholder="Min 10 chars"></div>
         </div>
-        <button class="btn btn-cyan" style="max-width:220px;" onclick="createSuperAdmin()">Create Super Admin</button>
+        <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
       </div>
 
       <!-- Super Admins Table -->
@@ -519,9 +519,13 @@
       retryBtn.style.display = 'none';
       try {
         const [allUsers, superAdmins] = await Promise.all([api('/users'), api('/superadmins')]);
+        window.allUsersCache = allUsers;
+        window.saCache = superAdmins;
+        
         overlay.style.display = 'none';
         document.getElementById('stat-sa').textContent = superAdmins.length;
         const institutions = [...new Set(superAdmins.map(s => s.institution).filter(Boolean))];
+        window.instCache = institutions;
         document.getElementById('stat-inst').textContent = institutions.length;
         document.getElementById('stat-users').textContent = allUsers.length;
         renderSaTable(superAdmins);
@@ -599,6 +603,32 @@
 
     function closeEditModal() {
       document.getElementById('edit-sa-modal').classList.remove('open');
+    }
+
+    function showSaDetails() {
+      if(!window.saCache) return;
+      const details = window.saCache.map(u => `- ${u.name} (${u.regNum})`).join('\n');
+      alert(`Stored Super Admins (${window.saCache.length}):\n\n${details || 'None'}`);
+    }
+
+    function showInstDetails() {
+      if(!window.instCache) return;
+      alert(`Stored Institutions (${window.instCache.length}):\n\n${window.instCache.join('\n') || 'None'}`);
+    }
+
+    function showTotalUsersDetails() {
+      if(!window.allUsersCache) return;
+      const roles = window.allUsersCache.reduce((acc, u) => { 
+          acc[u.role] = (acc[u.role] || 0) + 1; 
+          return acc; 
+      }, {});
+      let breakdown = `Total Verified Records: ${window.allUsersCache.length}\n\nBreakdown by Role:\n`;
+      for(let r in roles) breakdown += `- ${r}: ${roles[r]}\n`;
+      
+      const adminCount = window.allUsersCache.filter(u => u.role === 'admin').length;
+      if (adminCount > 0) breakdown += `\nThere are ${adminCount} Admins. Developers typically do not manage Admins directly here.`;
+
+      alert(breakdown + '\n\n(Tip: Users stored here include voters, admins, sub-admins, and super-admins across the database.)');
     }
 
     async function saveEditSA() {
