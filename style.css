@@ -756,32 +756,6 @@ tr:hover td { background: rgba(6, 182, 212, 0.03); }
 .toast-warning { border-left: 3px solid var(--warning);  }
 
 /* ============================================================
-   THEME TOGGLE
-   ============================================================ */
-.theme-toggle-btn {
-    background: transparent;
-    border: 1px solid var(--glass-border);
-    color: var(--text-main);
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-    transition: all var(--transition-fast);
-    font-size: 1rem;
-}
-
-.theme-toggle-btn:hover {
-    background: rgba(255,255,255,0.08);
-    border-color: rgba(6,182,212,0.4);
-    transform: rotate(20deg);
-    box-shadow: 0 0 12px rgba(6,182,212,0.2);
-}
-
-/* ============================================================
    BADGE / TAG
    ============================================================ */
 .badge {
@@ -832,9 +806,4 @@ tr:hover td { background: rgba(6, 182, 212, 0.03); }
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
     margin: 1.5rem 0;
-}
-
-/* Enforce Dark Mode: Hide all theme toggles */
-.theme-toggle-btn {
-    display: none !important;
 }
