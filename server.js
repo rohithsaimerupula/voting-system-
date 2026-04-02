@@ -403,6 +403,13 @@ app.get('/api/auditLogs', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/auditLogs', async (req, res) => {
+    try {
+        await db.execute("DELETE FROM auditLogs");
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─────────────────────────────────────────
 //  DEVICE FINGERPRINTS
 // ─────────────────────────────────────────

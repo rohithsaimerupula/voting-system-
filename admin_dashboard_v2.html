@@ -229,6 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('admin-branch-tag').textContent = session.branch;
         document.getElementById('sa-branch-display').value = session.branch;
         loadAll();
+    } else {
+        window.location.href = 'login.html?admin=true';
     }
 });
 

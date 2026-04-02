@@ -190,6 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('class-sub').textContent=`Managing ${session.class} — ${session.branch} — ${session.institution}`;
     document.getElementById('class-students-sub').textContent=`Students in ${session.class}`;
     loadAll();
+  } else {
+    window.location.href = 'login.html?admin=true';
   }
 });
 

@@ -369,7 +369,10 @@
     <!-- AUDIT LOG -->
     <div class="page" id="page-audit">
       <div class="page-title">📜 Audit Log</div>
-      <div class="page-sub">All activity log across the institution</div>
+      <div class="page-sub" style="display:flex; justify-content:space-between; align-items:center; gap:1.5rem;">
+          <span>All activity log across the institution</span>
+          <button class="btn btn-red-outline" style="padding:0.4rem 1rem; font-size:0.85rem;" onclick="clearAuditLogs()">🗑️ Clear Audit Log</button>
+      </div>
       <div class="card" style="padding:0.5rem">
         <table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
         <tbody id="audit-table"></tbody></table>
@@ -420,8 +423,20 @@
 <script>
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+if (!saSession || saSession.role !== 'superadmin') {
+    window.location.href = 'login.html?admin=true';
+}
 let allStudents = [];
 let countdownInterval = null;
+
+async function clearAuditLogs() {
+    if (!confirm('Are you sure you want to permanently clear ALL audit logs? This action cannot be undone.')) return;
+    try {
+        await apiFetch('/auditLogs', { method: 'DELETE' });
+        toast('Audit logs cleared');
+        loadAudit();
+    } catch (e) { toast(e.message, false); }
+}
 
 function toggleScheduleMode(isEditing) {
     const scheduler = document.getElementById('v-scheduler-inner');
@@ -571,7 +586,8 @@ async function saLoginStep() {
 function saLogout() { 
   saSession = null; 
   localStorage.removeItem('ovs_currentUser');
-  window.location.href = 'login.html'; 
+  // Redirect to Staff Login mode
+  window.location.href = 'login.html?admin=true'; 
 }
 
 function showPage(id) {

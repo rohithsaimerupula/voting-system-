@@ -26,7 +26,7 @@
         <div class="brand" style="font-family:'Playfair Display', serif; letter-spacing:-1px;">VANGUARD Admin</div>
         <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
             <span id="admin-name" style="color: var(--text-muted);">Welcome, Admin</span>
-            <button onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
+            <button onclick="StorageManager.logout(); window.location.href='login.html?admin=true'">Logout</button>
         </div>
     </nav>
 
@@ -1013,7 +1013,7 @@
                 await StorageManager.updateAdminId(currentUser.regNum, newId);
                 alert("Admin ID Changed! Please login again.");
                 StorageManager.logout();
-                window.location.href = 'login.html';
+                window.location.href = 'login.html?admin=true';
             } catch (err) {
                 alert("Error: " + err.message);
             }
@@ -1204,7 +1204,7 @@
             function logout() {
                 alert("You have been logged out due to inactivity.");
                 StorageManager.logout();
-                window.location.href = 'login.html';
+                window.location.href = 'login.html?admin=true';
             }
 
             function resetTimer() {
