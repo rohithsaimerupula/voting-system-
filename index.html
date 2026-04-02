@@ -397,13 +397,20 @@
             if (e.key === 'Enter') verifyGateway();
         });
 
-        // Pre-fill last code for convenience
-        const lastCode = localStorage.getItem('_ovs_last_gate_code');
-        if (lastCode) document.getElementById('inst-code').value = lastCode;
-
-        // Clear stale session
-        localStorage.removeItem('ovs_inst_code');
-        localStorage.removeItem('ovs_inst_name');
+        // --- Session Persistence & Auto-Unlock ---
+        const savedCode = localStorage.getItem('ovs_inst_code');
+        const savedName = localStorage.getItem('ovs_inst_name');
+        
+        if (savedName && savedCode) {
+            // Skip overlay, go straight to main page
+            const overlay = document.getElementById('gateway-overlay');
+            overlay.style.display = 'none';
+            unlockGateway(savedName);
+        } else {
+            // Standard Gateway: Pre-fill last code
+            const lastCode = localStorage.getItem('_ovs_last_gate_code');
+            if (lastCode) document.getElementById('inst-code').value = lastCode;
+        }
 
         async function verifyGateway() {
             const code = document.getElementById('inst-code').value.trim();
