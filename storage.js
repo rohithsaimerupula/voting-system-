@@ -130,8 +130,9 @@ const StorageManager = {
 
     // --- OFFLINE/FIRESTORE IMAGE COMPRESSION ---
     async compressImage(base64Str, maxWidth = 500, maxHeight = 500, quality = 0.5) {
-        if (!base64Str || !base64Str.startsWith('data:image')) return base64Str; 
-        return new Promise((resolve) => {
+        if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image')) return base64Str; 
+        try {
+            return await new Promise((resolve, reject) => {
             const img = new Image();
             img.src = base64Str;
             img.onload = () => {
@@ -162,7 +163,11 @@ const StorageManager = {
             img.onerror = () => {
                 resolve(base64Str);
             };
-        });
+            });
+        } catch (e) {
+            console.warn("StorageManager.compressImage failed:", e);
+            return base64Str;
+        }
     },
 
     // --- REGISTRATION ---

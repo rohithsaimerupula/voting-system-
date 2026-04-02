@@ -34,7 +34,7 @@
 
     <div class="container animate-fade-in" style="max-width: 600px;">
         <div class="glass-panel" style="padding: 2.5rem;">
-            <h2 class="text-center" style="margin-bottom: 0.5rem;">Create Account</h2>
+            <h2 class="text-center" style="margin-bottom: 0.5rem;">Registration Portal</h2>
             <p id="inst-display" class="text-center" style="color:var(--cyan);font-weight:600;margin-bottom:2rem;letter-spacing:1px;"></p>
 
             <form id="register-form">
@@ -452,7 +452,8 @@
         // --- SUBMIT LOGIC ---
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const role = document.getElementById('role').value;
+            try {
+                const role = document.getElementById('role').value;
             const errorContainer = document.getElementById('error-container');
             const msgContainer = document.getElementById('msg-container');
             const btn = document.getElementById('final-submit-btn');
@@ -571,37 +572,29 @@
             const inviteCodeVal = role === 'voter' ? document.getElementById('invite-code').value.trim() : null;
 
             const user = {
-                role: role,
-                name: name,
-                regNum: regNum,
-                institution: localStorage.getItem('ovs_inst_name') || 'Unknown',
+                role, name, regNum, institution: localStorage.getItem('ovs_inst_name') || 'Unknown',
                 year: document.getElementById('year').value,
                 branch: document.getElementById('branch').value,
-                section: section,
-                class: document.getElementById('branch').value + '-' + section,
+                section, class: document.getElementById('branch').value + '-' + section,
                 password: role === 'voter' ? password : null,
                 symbol: role === 'contestant' ? symbol : null,
-                manifesto: manifestoVal,
-                inviteCode: inviteCodeVal,
-                portrait: portraitBase64,
-                hasVoted: false,
-                email: email,
-                webcamReg: webcamPhoto, // Save the captured face
-                aiVerified: aiVerified, // Pass AI result to backend
+                manifesto: manifestoVal, inviteCode: inviteCodeVal,
+                portrait: portraitBase64, hasVoted: false, email,
+                webcamReg: webcamPhoto, aiVerified,
                 createdAt: new Date().toISOString()
             };
 
-            try {
-                await StorageManager.addUser(user);
-                // Success
-                document.getElementById('register-form').classList.add('hidden');
-                msgContainer.classList.remove('hidden');
-            } catch (err) {
-                showError(err.message);
-                btn.disabled = false;
-                btn.innerText = "Complete Registration";
-            }
-        });
+            await StorageManager.addUser(user);
+            document.getElementById('register-form').classList.add('hidden');
+            msgContainer.classList.remove('hidden');
+
+        } catch (err) {
+            console.error("[Registration Error]", err);
+            showError(err.message || "An unexpected error occurred. Please try again.");
+            document.getElementById('final-submit-btn').disabled = false;
+            document.getElementById('final-submit-btn').innerText = "Complete Registration";
+        }
+    });
 
         function showError(msg) {
             document.getElementById('error-text').innerText = msg;
