@@ -313,6 +313,10 @@
           <!-- Scheduler Inputs -->
           <div id="v-scheduler-inner" style="display:flex; flex-direction:column; gap:1rem;">
             <div class="form-field">
+              <label>Election Name <small style="color:var(--muted)">(e.g., Student Council 2026)</small></label>
+              <input type="text" id="v-name" placeholder="Enter Election Name">
+            </div>
+            <div class="form-field">
               <label>Start Date & Time</label>
               <input type="datetime-local" id="v-start">
             </div>
@@ -862,12 +866,27 @@ async function removeUser(id) {
 }
 
 async function setElectionTimes() {
+  const name = document.getElementById('v-name').value.trim();
   const start = document.getElementById('v-start').value;
   const end = document.getElementById('v-end').value;
+  if (!name) return toast('Please enter an Election Name', false);
   if (!start||!end) return toast('Set both start and end times', false);
   try {
-    await apiFetch(`/config/election_${saSession.institution}`, { method:'POST', body:JSON.stringify({ merge:true, data:{ isActive:true, isCompleted:false, startTime:start, endTime:end } }) });
+    await apiFetch(`/config/election_${saSession.institution}`, { 
+        method:'POST', 
+        body:JSON.stringify({ 
+            merge:true, 
+            data:{ 
+                isActive:true, 
+                isCompleted:false, 
+                startTime:start, 
+                endTime:end,
+                electionName: name
+            } 
+        }) 
+    });
     toast('Election times set & activated!');
+    loadVoting(); // Refresh to update title
   } catch(e) { toast(e.message, false); }
 }
 
@@ -909,12 +928,13 @@ async function loadVoting() {
     const countContainer = document.getElementById('v-countdown-container');
     const title = document.getElementById('schedule-card-title');
     const startBtn = document.getElementById('v-start-btn');
+    const nameInput = document.getElementById('v-name');
 
     if (election && election.isActive) {
       banner.style.background = 'rgba(34,197,94,0.1)';
       banner.style.borderColor = 'rgba(34,197,94,0.4)';
       banner.style.color = 'var(--green)';
-      banner.innerHTML = `🟢 <span>Election is <strong>ACTIVE</strong></span>
+      banner.innerHTML = `🟢 <span><strong>${election.electionName || 'Election'}</strong> is <strong>ACTIVE</strong></span>
         <span style="margin-left:auto;font-size:0.85rem;font-weight:400;color:var(--muted);">
           Ends: ${election.endTime ? new Date(election.endTime).toLocaleString() : 'No end time set'}
         </span>`;
@@ -922,10 +942,12 @@ async function loadVoting() {
       // Auto-switch to countdown mode if active
       toggleScheduleMode(false);
       if (election.endTime) startCountdown(election.endTime);
+      if (election.electionName) title.textContent = '⏳ ' + election.electionName;
 
       // Pre-fill times
       if (election.startTime) document.getElementById('v-start').value = election.startTime.slice(0,16);
       if (election.endTime)   document.getElementById('v-end').value   = election.endTime.slice(0,16);
+      if (election.electionName) nameInput.value = election.electionName;
     } else if (election && election.isCompleted) {
       banner.style.background = 'rgba(239,68,68,0.08)';
       banner.style.borderColor = 'rgba(239,68,68,0.3)';

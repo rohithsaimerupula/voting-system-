@@ -111,21 +111,25 @@
             margin-bottom: 1.8rem;
         }
 
-        /* ─── PASSWORD EYE ─── */
-        .pass-eye-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            font-size: 1.1rem;
-            padding: 0.25rem;
-            transition: color 0.2s;
-        }
         .pass-eye-btn:hover { color: var(--neon-cyan); }
+
+        /* ─── VOTER COUNTDOWN ─── */
+        #voter-countdown-card {
+            background: rgba(255, 42, 77, 0.05);
+            border: 1px solid rgba(255, 42, 77, 0.15);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .cd-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.7rem; font-weight: 700; }
+        .cd-values { display: flex; justify-content: center; gap: 0.8rem; }
+        .cd-item { display: flex; flex-direction: column; align-items: center; }
+        .cd-num { font-size: 1.5rem; font-weight: 800; color: #ff2a4d; line-height: 1; }
+        .cd-txt { font-size: 0.6rem; color: var(--text-dim); margin-top: 0.3rem; font-weight: 600; }
+        .cd-sep { font-size: 1.2rem; color: rgba(255, 255, 255, 0.1); margin-top: -0.2rem; }
     </style>
 </head>
 
@@ -219,6 +223,20 @@
 
             <div class="login-tabs" id="login-tabs">
                 <!-- Tabs populated by JS -->
+            </div>
+
+            <!-- Election Countdown (for Voters) -->
+            <div id="voter-countdown-card">
+                <div class="cd-label">⏳ Election Ending In</div>
+                <div class="cd-values">
+                    <div class="cd-item"><div class="cd-num" id="vd-days">00</div><div class="cd-txt">Days</div></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-item"><div class="cd-num" id="vd-hours">00</div><div class="cd-txt">Hours</div></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-item"><div class="cd-num" id="vd-mins">00</div><div class="cd-txt">Mins</div></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-item"><div class="cd-num" id="vd-secs">00</div><div class="cd-txt">Secs</div></div>
+                </div>
             </div>
 
             <h2 id="login-title" class="text-center" style="margin-bottom: 0.6rem; font-size:1.8rem;">Welcome Back</h2>
@@ -351,6 +369,7 @@
                     window.location.href = 'index.html';
                 } else {
                     document.getElementById('inst-display').innerText = "⛩️ " + userInst;
+                    checkElectionCountdown(); // Load countdown if active
                 }
             } else {
                 if (fpContainer) fpContainer.style.display = 'none';
@@ -726,10 +745,63 @@
             }
         }
 
-        // Toggle Password Visibility
         function togglePassword() {
             const passInput = document.getElementById('password');
             passInput.type = passInput.type === 'password' ? 'text' : 'password';
+        }
+
+        // --- VOTER COUNTDOWN LOGIC ---
+        let voterCountdownInterval = null;
+
+        async function checkElectionCountdown() {
+            if (isStaffMode) return; // Only for voters
+            try {
+                const status = await StorageManager.getElectionStatus();
+                if (status && status.isActive && status.endTime) {
+                    document.getElementById('voter-countdown-card').style.display = 'block';
+                    if (status.electionName) {
+                        document.getElementById('login-title').innerText = status.electionName;
+                        document.getElementById('login-header-icon').textContent = '🗳️';
+                    }
+                    startVoterCountdown(status.endTime);
+                } else {
+                    document.getElementById('voter-countdown-card').style.display = 'none';
+                }
+            } catch (e) { console.error("Countdown fetch failed", e); }
+        }
+
+        function startVoterCountdown(endTimeStr) {
+            if (voterCountdownInterval) clearInterval(voterCountdownInterval);
+            const endTime = new Date(endTimeStr).getTime();
+            
+            function update() {
+                const now = new Date().getTime();
+                const distance = endTime - now;
+                
+                const card = document.getElementById('voter-countdown-card');
+                if (distance < 0) {
+                    clearInterval(voterCountdownInterval);
+                    if(card) card.style.display = 'none';
+                    return;
+                }
+                
+                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                const dEl = document.getElementById('vd-days');
+                const hEl = document.getElementById('vd-hours');
+                const mEl = document.getElementById('vd-mins');
+                const sEl = document.getElementById('vd-secs');
+                
+                if(dEl) dEl.textContent = String(d).padStart(2, '0');
+                if(hEl) hEl.textContent = String(h).padStart(2, '0');
+                if(mEl) mEl.textContent = String(m).padStart(2, '0');
+                if(sEl) sEl.textContent = String(s).padStart(2, '0');
+            }
+            update();
+            voterCountdownInterval = setInterval(update, 1000);
         }
 
         // 5-Click Logo: Super Admin Hidden Portal
