@@ -283,6 +283,14 @@
       <div class="page-title">🗳️ Voting Control</div>
       <div class="page-sub" id="voting-inst-sub">Election management for your institution</div>
 
+      <!-- Grand Winner Announcement -->
+      <div id="winner-banner" class="winner-card winner-reveal-anim" style="display:none;">
+        <div class="winner-badge">🏆</div>
+        <div class="winner-label">Official Election Result</div>
+        <div id="winner-name" class="winner-name">CANDIDATE NAME</div>
+        <div id="winner-stats" class="winner-stats">Elected with 0 Votes</div>
+      </div>
+
       <!-- Status Banner -->
       <div id="election-banner" style="padding:1rem 1.5rem; border-radius:12px; margin-bottom:1.5rem; font-weight:700; font-size:1rem; display:flex; align-items:center; gap:0.75rem; border:1px solid var(--border); background:var(--surface);">
         ⚪ Loading election status...
@@ -449,8 +457,15 @@ function startCountdown(endTimeStr) {
             document.getElementById('cd-hours').textContent = '00';
             document.getElementById('cd-mins').textContent = '00';
             document.getElementById('cd-secs').textContent = '00';
-            // Refresh UI once to show "Completed" state properly
-            loadVoting();
+            
+            // Auto-update backend to mark election as completed
+            apiFetch(`/config/election_${saSession.institution}`, {
+                method: 'POST',
+                body: JSON.stringify({ merge: true, data: { isActive: false, isCompleted: true } })
+            }).then(() => {
+                loadVoting();
+                loadAll();
+            }).catch(e => console.error("Auto-stop failed", e));
             return;
         }
         
@@ -989,6 +1004,31 @@ async function loadVoting() {
     const labels = candidates.map(c => c.name);
     const votes  = candidates.map(c => voters.filter(v => v.votedFor === c.regNum).length);
     const totalVotes = votes.reduce((a, b) => a + b, 0);
+
+    // ── Winner Announcement Logic ────────────────
+    const winnerBanner = document.getElementById('winner-banner');
+    if (election && election.isCompleted && totalVotes > 0) {
+        const maxVotes = Math.max(...votes);
+        const winners = candidates.filter((c, i) => votes[i] === maxVotes);
+        
+        winnerBanner.style.display = 'block';
+        const nameEl = document.getElementById('winner-name');
+        const statsEl = document.getElementById('winner-stats');
+        const badgeEl = document.querySelector('.winner-badge');
+
+        if (winners.length > 1) {
+            nameEl.textContent = "ELECTION TIED";
+            statsEl.innerHTML = `Dead heat between <strong>${winners.length}</strong> candidates with <strong>${maxVotes}</strong> votes each.`;
+            badgeEl.textContent = '⚖️';
+        } else {
+            const w = winners[0];
+            nameEl.textContent = (w.symbol || '') + ' ' + (w.name).toUpperCase();
+            statsEl.innerHTML = `Winner of the <strong>${election.electionName || 'Election'}</strong> with <strong>${maxVotes}</strong> votes.`;
+            badgeEl.textContent = '🏆';
+        }
+    } else {
+        winnerBanner.style.display = 'none';
+    }
 
     if (chartInstance) chartInstance.destroy();
     const ctx = document.getElementById('results-chart').getContext('2d');

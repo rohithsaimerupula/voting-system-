@@ -239,6 +239,14 @@
                 </div>
             </div>
 
+            <!-- Winner Announcement (for Voters) -->
+            <div id="voter-winner-card" class="winner-card winner-reveal-anim" style="display:none; padding:1.5rem; margin-bottom:1.5rem; border-radius:12px;">
+                <div class="winner-badge" style="width:60px; height:60px; font-size:2rem; margin-bottom:0.8rem;">🏆</div>
+                <div class="winner-label" style="font-size:0.7rem; letter-spacing:2px;">Official Winner</div>
+                <div id="vw-name" class="winner-name" style="font-size:1.8rem; margin:0.3rem 0;">NAME</div>
+                <div id="vw-stats" class="winner-stats" style="font-size:0.9rem;">Winner with 0 votes</div>
+            </div>
+
             <h2 id="login-title" class="text-center" style="margin-bottom: 0.6rem; font-size:1.8rem;">Welcome Back</h2>
             <div style="text-align:center;">
                 <span id="inst-display"></span>
@@ -756,18 +764,56 @@
         async function checkElectionCountdown() {
             if (isStaffMode) return; // Only for voters
             try {
-                const status = await StorageManager.getElectionStatus();
-                if (status && status.isActive && status.endTime) {
-                    document.getElementById('voter-countdown-card').style.display = 'block';
+                const [status, users] = await Promise.all([
+                    StorageManager.getElectionStatus(),
+                    StorageManager.getUsers().catch(() => [])
+                ]);
+
+                const winnerCard = document.getElementById('voter-winner-card');
+                const countdownCard = document.getElementById('voter-countdown-card');
+
+                if (status && status.isCompleted) {
+                    countdownCard.style.display = 'none';
+                    // Calculate Winner
+                    const inst = localStorage.getItem('ovs_inst_name');
+                    const candidates = users.filter(u => u.role === 'contestant' && u.institution === inst);
+                    const voters = users.filter(u => u.role === 'voter' && u.institution === inst);
+                    const votes = candidates.map(c => voters.filter(v => v.votedFor === c.regNum).length);
+                    const totalVotes = votes.reduce((a, b) => a + b, 0);
+
+                    if (totalVotes > 0) {
+                        winnerCard.style.display = 'block';
+                        const maxVotes = Math.max(...votes);
+                        const winners = candidates.filter((c, i) => votes[i] === maxVotes);
+                        
+                        const nameEl = document.getElementById('vw-name');
+                        const statsEl = document.getElementById('vw-stats');
+                        const badgeEl = winnerCard.querySelector('.winner-badge');
+
+                        if (winners.length > 1) {
+                            nameEl.textContent = "TIE RESULT";
+                            statsEl.innerHTML = `Election tied between <strong>${winners.length}</strong> candidates.`;
+                            badgeEl.textContent = '⚖️';
+                        } else {
+                            const w = winners[0];
+                            nameEl.textContent = (w.symbol || '') + ' ' + (w.name).toUpperCase();
+                            statsEl.innerHTML = `Winner of the <strong>${status.electionName || 'Election'}</strong> with <strong>${maxVotes}</strong> votes.`;
+                            badgeEl.textContent = '🏆';
+                        }
+                    }
+                } else if (status && status.isActive && status.endTime) {
+                    winnerCard.style.display = 'none';
+                    countdownCard.style.display = 'block';
                     if (status.electionName) {
                         document.getElementById('login-title').innerText = status.electionName;
                         document.getElementById('login-header-icon').textContent = '🗳️';
                     }
                     startVoterCountdown(status.endTime);
                 } else {
-                    document.getElementById('voter-countdown-card').style.display = 'none';
+                    winnerCard.style.display = 'none';
+                    countdownCard.style.display = 'none';
                 }
-            } catch (e) { console.error("Countdown fetch failed", e); }
+            } catch (e) { console.error("Checkout failed", e); }
         }
 
         function startVoterCountdown(endTimeStr) {
