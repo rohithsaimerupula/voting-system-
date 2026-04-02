@@ -280,6 +280,16 @@ app.delete('/api/users/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/users/orphans', async (req, res) => {
+    try {
+        const result = await db.execute({ 
+            sql: "DELETE FROM users WHERE role != 'developer' AND role != 'superadmin' AND (institution IS NULL OR institution = '' OR institution = 'Unknown')", 
+            args: [] 
+        });
+        res.json({ success: true, rowsAffected: result.rowsAffected });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/users/role/:role', async (req, res) => {
     try {
         await db.execute({ sql: "DELETE FROM users WHERE role = ?", args: [req.params.role] });

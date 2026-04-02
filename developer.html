@@ -390,7 +390,10 @@
 
       <!-- Super Admins Table -->
       <div class="section">
-        <h2>📋 All Super Admins</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin-bottom: 0;">📋 All Super Admins</h2>
+            <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
+        </div>
         <table>
           <thead>
             <tr>
@@ -532,6 +535,18 @@
       } catch (e) {
         msg.textContent = '❌ ' + e.message;
         retryBtn.style.display = 'block';
+        showToast(e.message, false);
+      }
+    }
+
+    async function purgeOrphanedUsers() {
+      const confirmed = confirm("🧹 WARNING: This will delete all users in the database who do NOT belong to any valid institution.\n\nAre you sure you want to purge orphaned data?");
+      if (!confirmed) return;
+      try {
+        const result = await api('/users/orphans', { method: 'DELETE' });
+        showToast(`✅ Purge complete! ${result.rowsAffected || 0} orphaned records were deleted.`);
+        loadConsole();
+      } catch (e) {
         showToast(e.message, false);
       }
     }
