@@ -385,7 +385,10 @@
     <!-- ── FOOTER STRIP ── -->
     <div class="footer-strip">
         <span>© <span id="year"></span> Online Voting System</span>
-        <span id="inst-label" style="color:var(--text-muted);font-weight:500;"></span>
+        <span>
+            <span id="inst-label" style="color:var(--text-muted);font-weight:500;"></span>
+            <a href="#" id="switch-inst-btn" onclick="resetGateway()" style="display:none; margin-left: 1rem; color:var(--cyan); text-decoration:none; font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1rem;">🔄 Switch Institution</a>
+        </span>
     </div>
 
     <script>
@@ -397,17 +400,20 @@
             if (e.key === 'Enter') verifyGateway();
         });
 
-        // --- Session Persistence & Auto-Unlock ---
+        // --- Targeted Auto-Unlock for "Home" Navigation ---
+        // Only skip the gateway if specifically coming from an internal page (p=home)
+        const isInternalHome = window.location.search.includes('p=home');
         const savedCode = localStorage.getItem('ovs_inst_code');
         const savedName = localStorage.getItem('ovs_inst_name');
         
-        if (savedName && savedCode) {
-            // Skip overlay, go straight to main page
+        if (isInternalHome && savedName && savedCode) {
+            // Internal Home Navigation: Skip overlay
             const overlay = document.getElementById('gateway-overlay');
             overlay.style.display = 'none';
             unlockGateway(savedName);
         } else {
-            // Standard Gateway: Pre-fill last code
+            // Fresh Visit or No Session: Always show Gateway
+            // Pre-fill last code for convenience
             const lastCode = localStorage.getItem('_ovs_last_gate_code');
             if (lastCode) document.getElementById('inst-code').value = lastCode;
         }
@@ -458,11 +464,22 @@
             overlay.style.pointerEvents = 'none';
             setTimeout(() => { overlay.style.display = 'none'; }, 700);
 
+            // Show Switch Institution button in footer
+            const switchBtn = document.getElementById('switch-inst-btn');
+            if (switchBtn) switchBtn.style.display = 'inline-block';
+
             // Update branding
             document.getElementById('brand-name').innerHTML =
                 `<span style="font-size:0.65rem;font-weight:400;letter-spacing:0.08em;color:var(--text-dim);display:block;margin-bottom:1px;-webkit-text-fill-color:var(--text-dim);">PORTAL</span>${instName}`;
 
             document.getElementById('inst-label').textContent = '⛩️ ' + instName;
+        }
+
+        function resetGateway() {
+            if (!confirm("Switch institutions? You will need to enter a new access code.")) return;
+            localStorage.removeItem('ovs_inst_code');
+            localStorage.removeItem('ovs_inst_name');
+            location.reload();
         }
 
         // Navbar scroll effect
