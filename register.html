@@ -271,7 +271,7 @@
             async function send() {
                 const sent = await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
                 if (sent) {
-                    alert("OTP Sent to " + email);
+                    alert("OTP Sent successfully! Check your inbox.");
                 }
                 btn.disabled = false;
                 btn.innerText = "Resend";

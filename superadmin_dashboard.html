@@ -453,7 +453,7 @@ async function saLoginStep() {
         otpSection.style.display = 'block';
         btn.textContent = 'Verify OTP & Login';
         err.style.color = 'var(--green)';
-        err.textContent = `OTP sent to ${user.email}! Check your inbox.`;
+        err.textContent = `OTP sent successfully! Check your inbox.`;
       } catch(emailErr) {
         btn.textContent = 'Login to Super Admin Panel';
         err.style.color = 'var(--red)';
