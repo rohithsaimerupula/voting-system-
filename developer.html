@@ -455,6 +455,23 @@
     const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
     let devSession = null;
 
+    // --- SESSION RECOVERY ---
+    (async function() {
+        const stored = localStorage.getItem('ovs_currentUser');
+        if (stored) {
+            try {
+                const user = JSON.parse(stored);
+                if (user.role === 'developer') {
+                    devSession = user;
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('console-screen').style.display = 'block';
+                    document.getElementById('dev-name-label').textContent = user.name;
+                    loadConsole();
+                }
+            } catch(e) {}
+        }
+    })();
+
     async function api(path, opts = {}) {
       const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText); }
@@ -509,7 +526,12 @@
     function devLogout() {
       devSession = null;
       localStorage.removeItem('ovs_currentUser');
-      window.location.href = 'login.html';
+      // Completely wipe institution context so we don't accidentally land in a voter login
+      localStorage.removeItem('ovs_inst_name');
+      localStorage.removeItem('ovs_inst_code');
+      localStorage.removeItem('ovs_inst_logo');
+      // Redirect to the HOME GATEWAY instead of login.html
+      window.location.href = 'index.html';
     }
 
     async function loadConsole() {
