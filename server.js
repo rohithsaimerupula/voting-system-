@@ -134,6 +134,11 @@ async function initDb() {
             try { await db.execute(sql); } catch (e) { /* Column already exists, skip */ }
         }
 
+        // --- Audit Logs Migration ---
+        try {
+            await db.execute("ALTER TABLE auditLogs ADD COLUMN institution TEXT");
+        } catch (e) { /* Already exists */ }
+
         console.log("Database tables initialized successfully.");
 
         // Default election config
@@ -390,22 +395,35 @@ app.post('/api/voters/can-vote-bulk', async (req, res) => {
 // ─────────────────────────────────────────
 app.post('/api/auditLogs', async (req, res) => {
     try {
-        const { action, user, details, timestamp } = req.body;
-        await db.execute({ sql: "INSERT INTO auditLogs (action, user, details, timestamp) VALUES (?, ?, ?, ?)", args: [action, user, details || "", timestamp] });
+        const { action, user, details, timestamp, institution } = req.body;
+        await db.execute({ 
+            sql: "INSERT INTO auditLogs (action, user, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)", 
+            args: [action, user, details || "", timestamp, institution || "Unknown"] 
+        });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/auditLogs', async (req, res) => {
     try {
-        const result = await db.execute("SELECT * FROM auditLogs ORDER BY timestamp DESC LIMIT 200");
+        const inst = req.query.institution;
+        let sql = "SELECT * FROM auditLogs";
+        let args = [];
+        if (inst) {
+            sql += " WHERE institution = ?";
+            args.push(inst);
+        }
+        sql += " ORDER BY timestamp DESC LIMIT 200";
+        const result = await db.execute({ sql, args });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/auditLogs', async (req, res) => {
     try {
-        await db.execute("DELETE FROM auditLogs");
+        const inst = req.query.institution;
+        if (!inst) return res.status(400).json({ error: "Institution required for clearing logs" });
+        await db.execute({ sql: "DELETE FROM auditLogs WHERE institution = ?", args: [inst] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

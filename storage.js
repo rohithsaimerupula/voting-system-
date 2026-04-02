@@ -44,16 +44,20 @@ const StorageManager = {
 
     async logAudit(action, userRegNum, details = "") {
         try {
+            const currentUser = this.getCurrentUser();
+            const institution = currentUser ? currentUser.institution : "Unknown";
             await fetchApi('/auditLogs', {
                 method: 'POST',
-                body: JSON.stringify({ action, user: userRegNum, details, timestamp: new Date().toISOString() })
+                body: JSON.stringify({ action, user: userRegNum, details, timestamp: new Date().toISOString(), institution })
             });
         } catch(e) { console.error("Audit Log Failure: ", e); }
     },
 
     async getAuditLogs() {
         try {
-            return await fetchApi('/auditLogs');
+            const currentUser = this.getCurrentUser();
+            const inst = currentUser ? currentUser.institution : "";
+            return await fetchApi(`/auditLogs?institution=${encodeURIComponent(inst)}`);
         } catch(e) { console.error(e); return []; }
     },
 

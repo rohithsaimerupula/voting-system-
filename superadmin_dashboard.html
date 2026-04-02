@@ -430,10 +430,10 @@ let allStudents = [];
 let countdownInterval = null;
 
 async function clearAuditLogs() {
-    if (!confirm('Are you sure you want to permanently clear ALL audit logs? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to permanently clear ALL audit logs for your institution? This action cannot be undone.')) return;
     try {
-        await apiFetch('/auditLogs', { method: 'DELETE' });
-        toast('Audit logs cleared');
+        await apiFetch(`/auditLogs?institution=${encodeURIComponent(saSession.institution)}`, { method: 'DELETE' });
+        toast('Institution audit logs cleared');
         loadAudit();
     } catch (e) { toast(e.message, false); }
 }
@@ -1117,7 +1117,7 @@ async function loadVoting() {
 
 async function loadAudit() {
   try {
-    const logs = await apiFetch('/auditLogs');
+    const logs = await apiFetch(`/auditLogs?institution=${encodeURIComponent(saSession.institution)}`);
     const tb = document.getElementById('audit-table');
     if (!logs.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">No logs</td></tr>'; return; }
     tb.innerHTML = logs.map(l=>`<tr>
