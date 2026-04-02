@@ -547,7 +547,7 @@
       <td>${sa.email || '-'}</td>
       <td><span class="badge badge-sa">${sa.status}</span></td>
       <td style="display:flex;gap:0.4rem;">
-        <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}','${sa.name}','${sa.email || ''}','${sa.institution || ''}')">Edit</button>
+        <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}')">Edit</button>
         <button class="btn-sm btn-danger" onclick="deleteSuperAdmin('${sa.regNum}')">Remove</button>
       </td>
     </tr>`).join('');
@@ -590,12 +590,14 @@
       } catch (e) { showToast(e.message, false); }
     }
 
-    function editSA(id, name, email, institution) {
-      document.getElementById('edit-sa-id').value = id;
-      document.getElementById('edit-sa-id-display').textContent = id;
-      document.getElementById('edit-sa-name').value = name;
-      document.getElementById('edit-sa-email').value = email || '';
-      document.getElementById('edit-sa-institution').value = institution || '';
+    function editSA(id) {
+      const sa = window.saCache.find(u => u.regNum === id);
+      if(!sa) return showToast('User data not found in cache.', false);
+      document.getElementById('edit-sa-id').value = sa.regNum;
+      document.getElementById('edit-sa-id-display').textContent = sa.regNum;
+      document.getElementById('edit-sa-name').value = sa.name || '';
+      document.getElementById('edit-sa-email').value = sa.email || '';
+      document.getElementById('edit-sa-institution').value = sa.institution || '';
       document.getElementById('edit-sa-pass').value = '';
       document.getElementById('edit-sa-modal').classList.add('open');
       document.getElementById('edit-sa-name').focus();
