@@ -4,30 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sub-Admin Dashboard — OVS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Shojumaru&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
       (function() {
-          var theme = localStorage.getItem('ovs_theme') || 'dark';
-          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('ovs_theme', 'dark');
       })();
-      function toggleTheme() {
-          var current = document.documentElement.getAttribute('data-theme') || 'dark';
-          var next = current === 'dark' ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('ovs_theme', next);
-      }
   </script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root { 
-      --bg:#0f172a; --surface:#1e293b; --border:rgba(249,115,22,0.4); 
-      --purple:#dc2626; --cyan:#ea580c; --green:#22c55e; --red:#ef4444; --gold:#f59e0b; 
+      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3); 
+      --purple:#ff2a4d; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --gold:#cccccc; 
       --text:#f8fafc; --muted:#cbd5e1; 
-    }
-    [data-theme="light"] {
-      --bg:#fdf6e3; --surface:#f4ebd8; --border:rgba(28,25,23,0.3);
-      --purple:#991b1b; --cyan:#c2410c; --green:#16a34a; --red:#b91c1c; --gold:#d97706;
-      --text:#1c1917; --muted:#57534e;
     }
     body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
     input,select{width:100%;padding:0.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-size:0.95rem;font-family:'Outfit',sans-serif;outline:none;transition:border 0.3s;}
@@ -35,7 +24,7 @@
     select option{background:#1e293b;}
     label{display:block;color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
     .btn{padding:0.75rem 1.5rem;border-radius:10px;border:none;cursor:pointer;font-size:0.95rem;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.3s;}
-    .btn-purple{background:linear-gradient(135deg,var(--purple),#7c3aed);color:white;}
+    .btn-purple{background:linear-gradient(135deg,var(--purple),#cc223e);color:white;}
     .btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:white;}
     .btn:hover{transform:translateY(-2px);opacity:0.9;}
     .btn-sm{padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif;font-weight:600;}
@@ -43,14 +32,14 @@
     .btn-g{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
     .btn-e{background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);}
     .layout{display:flex;min-height:100vh;}
-    .sidebar{width:230px;background:rgba(168,85,247,0.05);border-right:1px solid rgba(168,85,247,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;}
-    .brand{font-size:1.4rem;font-weight:900;color:var(--purple);margin-bottom:0.2rem;font-family:'Shojumaru', sans-serif;}
+    .sidebar{width:230px;background:rgba(255,42,77,0.05);border-right:1px solid rgba(255,42,77,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;}
+    .brand{font-size:1.4rem;font-weight:900;color:var(--purple);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
     .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:2rem;}
     .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.25rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
-    .nav-item:hover,.nav-item.active{background:rgba(168,85,247,0.1);color:var(--purple);font-weight:600;}
+    .nav-item:hover,.nav-item.active{background:rgba(255,42,77,0.1);color:var(--purple);font-weight:600;}
     .main{margin-left:230px;flex:1;padding:2rem;}
     .page{display:none;}.page.active{display:block;}
-    .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Shojumaru', sans-serif;}
+    .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Playfair Display', serif;}
     .page-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
     .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
     .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem;text-align:center;}
@@ -78,11 +67,14 @@
   </style>
 </head>
 <body>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
 
 <!-- AUTH -->
 <div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(168,85,247,0.08) 0%,var(--bg) 70%)">
   <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;">👥 Sub-Admin</div>
+    <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem; font-family: 'Playfair Display', serif;">VANGUARD Sub-Admin</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
     <div style="text-align:left;margin-bottom:1rem;"><label>Sub-Admin ID</label><input type="text" id="auth-id" placeholder="SADM01" maxlength="6"></div>
     <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
@@ -98,7 +90,6 @@
     <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
     <div class="nav-item" onclick="showPage('students')">🎓 My Class</div>
     <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
-      <div class="nav-item" onclick="toggleTheme()" style="color:var(--gold)">🌗 Toggle Theme</div>
       <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
@@ -278,7 +269,7 @@ function updateCharts(students) {
     type: 'pie',
     data: {
       labels: ['Accepted Details', 'Pending/Rejected'],
-      datasets: [{ data: [accepted, pending], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0 }]
+      datasets: [{ data: [accepted, pending], backgroundColor: ['#ff2a4d', '#333333'], borderWidth: 0 }]
     },
     options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Total Registrations Data', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
   });
@@ -288,8 +279,8 @@ function updateCharts(students) {
   voteChartInstance = new Chart(voteCtx, {
     type: 'pie',
     data: {
-      labels: ['Allowed to Vote', 'Not Allowed (Present)'],
-      datasets: [{ data: [allowed, notAllowed], backgroundColor: ['#a855f7', '#f59e0b'], borderWidth: 0 }]
+      labels: ['Allowed to Vote', 'Not Allowed'],
+      datasets: [{ data: [allowed, notAllowed], backgroundColor: ['#ffffff', '#ff2a4d'], borderWidth: 0 }]
     },
     options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Voting Allowed vs Present', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
   });
@@ -420,7 +411,33 @@ async function saveEdit(){
   }catch(e){toast(e.message,false);}
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')saLogin();});
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')saLogin();});
+
+// Initialize tsParticles Cyber Mesh Effect
+tsParticles.load("tsparticles", {
+    fpsLimit: 60,
+    particles: {
+        number: { value: 30, density: { enable: true, value_area: 800 } },
+        color: { value: ["#ffffff", "#ff2a4d"] },
+        shape: { type: "circle" },
+        opacity: { value: 0.2, random: true },
+        size: { value: 2, random: true },
+        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+        move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+    },
+    interactivity: {
+        detectsOn: "canvas",
+        events: {
+            onHover: { enable: true, mode: "grab" },
+            resize: true
+        },
+        modes: {
+            grab: { distance: 150, links: { opacity: 0.3 } }
+        }
+    },
+    retina_detect: true,
+    background: { color: "transparent" }
+});
 </script>
 </body>
 </html>

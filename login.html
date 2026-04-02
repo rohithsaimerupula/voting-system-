@@ -8,20 +8,15 @@
     <meta name="description" content="Securely login to the Online Voting System voter or staff portal.">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Shojumaru&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
         (function() {
-            var theme = localStorage.getItem('ovs_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('ovs_theme', 'dark');
         })();
-        function toggleTheme() {
-            var current = document.documentElement.getAttribute('data-theme') || 'dark';
-            var next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('ovs_theme', next);
-        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <style>
 
         /* ─── LOGIN PAGE LAYOUT ─── */
@@ -134,10 +129,8 @@
     </style>
 </head>
 
-<body class="theme-login">
-    <!-- Starfield -->
-    <div id="stars"></div>
-    <div id="stars2"></div>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
     <!-- SUPER ADMIN HIDDEN MODAL (Staff mode only) -->
     <style>
       @keyframes popIn { 0% { opacity:0; transform:scale(0.9) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
@@ -210,9 +203,8 @@
     </div>
 
     <nav>
-        <div class="brand" id="ovs-logo" style="cursor:pointer;">KONOHA</div>
+        <div class="brand" id="ovs-logo" style="cursor:pointer;">VANGUARD</div>
         <div style="display:flex; align-items:center; gap:0.5rem;">
-            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌗</button>
             <div class="nav-links" id="nav-right">
                 <!-- Populated by JS based on mode -->
             </div>
@@ -917,6 +909,32 @@
                 e.preventDefault();
                 document.getElementById('password').focus();
             }
+        });
+
+        // Initialize tsParticles Cyber Mesh Effect
+        tsParticles.load("tsparticles", {
+            fpsLimit: 60,
+            particles: {
+                number: { value: 50, density: { enable: true, value_area: 800 } },
+                color: { value: ["#ffffff", "#ff2a4d"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.4, random: true },
+                size: { value: 2, random: true },
+                links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.15, width: 1 },
+                move: { enable: true, speed: 0.8, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+            },
+            interactivity: {
+                detectsOn: "canvas",
+                events: {
+                    onHover: { enable: true, mode: "grab" },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 150, links: { opacity: 0.4 } }
+                }
+            },
+            retina_detect: true,
+            background: { color: "transparent" }
         });
     </script>
 </body>

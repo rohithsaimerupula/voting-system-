@@ -7,37 +7,31 @@
     <title>Profile Portal - OVS</title>
 
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
         (function() {
-            var theme = localStorage.getItem('ovs_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('ovs_theme', 'dark');
         })();
-        function toggleTheme() {
-            var current = document.documentElement.getAttribute('data-theme') || 'dark';
-            var next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('ovs_theme', next);
-        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="storage.js?v=3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
 </head>
 
 <body class="theme-register">
     <nav>
-        <div class="brand" onclick="window.location.href='index.html'">KONOHA</div>
+        <div class="brand" onclick="window.location.href='index.html'" style="font-family:'Playfair Display', serif; letter-spacing:-1px;">VANGUARD</div>
         <div class="nav-links" style="display:flex; align-items:center;">
-            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="margin-right: 0.5rem;">🌗</button>
             <button onclick="window.location.href='index.html'" class="btn-outline" style="margin-right:0.5rem; padding:0.5rem 1rem;">Home</button>
-            <button onclick="window.location.href='login.html'" class="submit-btn" style="width: auto;">Voter Login</button>
+            <button onclick="window.location.href='login.html'" class="submit-btn" style="width: auto;">Log In</button>
         </div>
     </nav>
 
     <div class="container animate-fade-in" style="max-width: 500px;">
         <!-- Login Section -->
         <div id="login-section" class="glass-panel" style="padding: 2.5rem;">
-            <h2 class="text-center" style="margin-bottom: 2rem;">Profile Management</h2>
+            <h2 class="text-center" style="margin-bottom: 2rem; font-family:'Playfair Display', serif; font-weight:700;">Profile Portal</h2>
             
             <!-- Role Selection Buttons -->
             <div class="login-tabs" style="display: flex; gap:10px; margin-bottom: 2rem;">
@@ -64,7 +58,7 @@
 
         <!-- Update Section -->
         <div id="update-section" class="glass-panel hidden" style="padding: 2.5rem;">
-            <h2 class="text-center" style="margin-bottom: 2rem;">Update Details</h2>
+            <h2 class="text-center" style="margin-bottom: 2rem; font-family:'Playfair Display', serif; font-weight:700;">Update Details</h2>
             <form id="profile-update-form">
                 <div class="form-group">
                     <label>Full Name</label>
@@ -321,6 +315,33 @@
                 btn.innerText = "Confirm Changes";
             }
         }
+    </script>
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
+    <script>
+        tsParticles.load("tsparticles", {
+            fpsLimit: 60,
+            particles: {
+                number: { value: 40, density: { enable: true, value_area: 800 } },
+                color: { value: ["#ffffff", "#ff2a4d"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.2, random: true },
+                size: { value: 2, random: true },
+                links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+                move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+            },
+            interactivity: {
+                detectsOn: "canvas",
+                events: {
+                    onHover: { enable: true, mode: "grab" },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 150, links: { opacity: 0.3 } }
+                }
+            },
+            retina_detect: true,
+            background: { color: "transparent" }
+        });
     </script>
 </body>
 </html>

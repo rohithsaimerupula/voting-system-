@@ -9,20 +9,15 @@
     <link rel="stylesheet" href="style.css">
     <script src="storage.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
         (function() {
-            var theme = localStorage.getItem('ovs_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('ovs_theme', 'dark');
         })();
-        function toggleTheme() {
-            var current = document.documentElement.getAttribute('data-theme') || 'dark';
-            var next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('ovs_theme', next);
-        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         /* Local overrides */
@@ -61,10 +56,12 @@
 </head>
 
 <body>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
+
     <nav>
-        <div class="brand">Voter Portal</div>
+        <div class="brand">VANGUARD Portal</div>
         <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
-            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌗</button>
             <span id="voter-name" style="color: var(--text-muted);">Welcome, Voter</span>
             <button class="btn-outline" onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
         </div>
@@ -719,6 +716,32 @@
             }
         };
         inactivityTime();
+
+        // Initialize tsParticles Cyber Mesh Effect
+        tsParticles.load("tsparticles", {
+            fpsLimit: 60,
+            particles: {
+                number: { value: 30, density: { enable: true, value_area: 800 } },
+                color: { value: ["#ffffff", "#ff2a4d"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.2, random: true },
+                size: { value: 2, random: true },
+                links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+                move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+            },
+            interactivity: {
+                detectsOn: "canvas",
+                events: {
+                    onHover: { enable: true, mode: "grab" },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 150, links: { opacity: 0.3 } }
+                }
+            },
+            retina_detect: true,
+            background: { color: "transparent" }
+        });
 
         init();
     </script>

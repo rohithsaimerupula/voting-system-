@@ -10,7 +10,7 @@
     <script src="storage.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
       .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;align-items:center;justify-content:center;}
       .modal-overlay.open{display:flex;}
@@ -18,11 +18,12 @@
       .modal-content-new h3{font-size:1.3rem;font-weight:700;margin-bottom:1.2rem;color:var(--neon-cyan);}
       .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
 </head>
 
 <body>
     <nav>
-        <div class="brand">Admin Panel</div>
+        <div class="brand" style="font-family:'Playfair Display', serif; letter-spacing:-1px;">VANGUARD Admin</div>
         <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
             <button class="theme-toggle-btn" style="display:none;" id="theme-btn"></button>
             <span id="admin-name" style="color: var(--text-muted);">Welcome, Admin</span>
@@ -224,10 +225,9 @@
             </div>
         </div>
 
-        <!-- Election Closed Banner (Moved to bottom) -->
+        <!-- Election Closed Banner -->
         <div id="election-closed-banner" class="hidden text-center" style="margin: 3rem 0;">
-            <h1 style="color: #f59e0b; font-size: 3rem; text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);">ELECTION IS
-                COMPLETED</h1>
+            <h1 style="color: #ff2a4d; font-size: 3rem; font-family:'Playfair Display', serif; text-shadow: 0 0 20px rgba(255, 42, 77, 0.3);">ELECTION COMPLETED</h1>
         </div>
 
         <!-- GOD EDIT MODAL -->
@@ -362,14 +362,33 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
-        // --- UI UTILS ---
-        // Light mode removed to enforce cosmic theme
+        // Enforce Vanguard Dark Theme
         function initTheme() {
-            // Force dark theme
-            localStorage.removeItem('ovs_theme');
-            document.body.classList.remove('light-mode');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('ovs_theme', 'dark');
         }
         initTheme();
+
+        // Initialize tsParticles Cyber Mesh
+        window.addEventListener('load', () => {
+            const tpDiv = document.createElement('div');
+            tpDiv.id = "tsparticles";
+            tpDiv.style.cssText = "position:fixed; inset:0; z-index:-1; pointer-events:none;";
+            document.body.appendChild(tpDiv);
+
+            tsParticles.load("tsparticles", {
+                fpsLimit: 60,
+                particles: {
+                    number: { value: 30, density: { enable: true, value_area: 800 } },
+                    color: { value: ["#ffffff", "#ff2a4d"] },
+                    shape: { type: "circle" },
+                    opacity: { value: 0.15, random: true },
+                    size: { value: 2, random: true },
+                    links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+                    move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+                }
+            });
+        });
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');

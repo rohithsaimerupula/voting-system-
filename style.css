@@ -1,68 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;600;700;800;900&family=Shojumaru&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;600;700;800;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap');
 /* ============================================================
-   ROOT DESIGN TOKENS — NARUTO THEME (LIGHT/DARK)
+   ROOT DESIGN TOKENS — VANGUARD PREMIUM TECH
    ============================================================ */
 :root {
-    /* DEFAULT DARK THEME (ANBU NIGHT / NINJA SCROLL) */
-    --bg-deep: #0f172a;
-    --bg-surface: #1e293b;
+    --bg-deep: #050505;
+    --bg-surface: #111111;
 
-    --neon-cyan: #f97316; /* Naruto Orange */
-    --neon-blue: #ea580c; 
-    --neon-purple: #dc2626; /* Sharingan Red */
-    --neon-pink: #ef4444; 
+    --neon-cyan: #ff2a4d; /* Crimson */
+    --neon-blue: #ef4444; 
+    --neon-purple: #991b1b; 
+    --neon-pink: #e11d48; 
 
     --primary: var(--neon-cyan);
     --secondary: var(--neon-purple);
 
     --danger: #dc2626;
-    --success: #22c55e;
+    --success: #10b981;
     --warning: #f59e0b;
 
-    --text-main: #f8fafc;
-    --text-muted: #cbd5e1;
-    --text-dim: #94a3b8;
+    --text-main: #fcfcfc;
+    --text-muted: #a3a3a3;
+    --text-dim: #737373;
 
-    --glass-bg: rgba(15, 23, 42, 0.95); /* Dark scroll */
-    --glass-border: rgba(249, 115, 22, 0.4); /* Orange thick ink */
-    --glass-highlight: rgba(249, 115, 22, 0.1);
-    --glass-shadow: 6px 6px 0px rgba(0, 0, 0, 0.9); /* Manga pop shadow */
-    --glass-glow-cyan: 0 0 20px rgba(249, 115, 22, 0.15);
+    --glass-bg: rgba(17, 17, 17, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-highlight: rgba(255, 42, 77, 0.05);
+    --glass-shadow: 0 40px 80px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --glass-glow-cyan: 0 0 40px rgba(255, 42, 77, 0.15);
 
-    --font-heading: 'Shojumaru', 'Outfit', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Outfit', 'Inter', sans-serif;
 
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 24px;
 
-    --transition-fast: 0.2s ease;
-    --transition-smooth: 0.4s ease;
-    --transition-bounce: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-bounce: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-theme="light"] {
-    /* LIGHT THEME (DAYTIME ACADEMY / PARCHMENT) */
-    --bg-deep: #fdf6e3;
-    --bg-surface: #f4ebd8;
-
-    --neon-cyan: #d97706; 
-    --neon-blue: #ea580c;
-    --neon-purple: #991b1b;
-    --neon-pink: #b91c1c;
-
-    --primary: var(--neon-cyan);
-    --secondary: var(--neon-purple);
-
-    --text-main: #1c1917;
-    --text-muted: #57534e;
-    --text-dim: #78716c;
-
-    --glass-bg: rgba(253, 246, 227, 0.98);
-    --glass-border: rgba(28, 25, 23, 0.3); /* Black outline */
-    --glass-highlight: rgba(0, 0, 0, 0.05);
-    --glass-shadow: 5px 5px 0px rgba(28, 25, 23, 0.9); /* Offset hard shadow */
-    --glass-glow-cyan: none;
+    /* Hardcode Dark, no light mode */
+    --bg-deep: #050505;
+    --bg-surface: #111111;
+    --text-main: #fcfcfc;
+    --text-muted: #a3a3a3;
+    --glass-bg: rgba(17, 17, 17, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.06);
 }
 
 
@@ -94,42 +79,19 @@ body {
     flex-direction: column;
     min-height: 100vh;
     position: relative;
-    /* Custom Kunai Cursor */
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23ea580c" d="M12 2L8 12l4 2v8h1v-8l4-2-5-10z"/></svg>') 12 12, auto;
+    cursor: default;
     overflow-x: hidden;
 }
 
 /* Base Link/Button Cursors */
 a, button, .btn, .submit-btn, select, input, .card {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path fill="%23dc2626" d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z"/></svg>') 13 13, pointer !important;
+    cursor: pointer !important;
 }
 
 /* ============================================================
-   NARUTO THEME CANVAS LAYERS (Kunai / Sakura)
+   VANGUARD DECORATIVE LAYERS
    ============================================================ */
-#stars, #stars2, #stars3 {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 0;
-}
-
-#stars { 
-    background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20l1-5h4l1 5"></path><path d="M13 15v-5"></path><path d="M12 2L9 7h6z"></path><circle cx="12" cy="18" r="2"></circle></svg>') repeat top left; 
-    animation: kunai-drift 100s linear infinite; 
-    background-size: 150px 150px;
-}
-#stars2 { 
-    background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(220,38,38,0.15)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>') repeat top left; 
-    animation: kunai-drift 150s linear infinite reverse; 
-    background-size: 200px 200px;
-}
-
-@keyframes kunai-drift {
-    from { background-position: 0 0; }
-    to { background-position: 500px 1000px; }
-}
+#stars, #stars2, #stars3 { display: none; }
 
 body::before { display: none; }
 
@@ -145,38 +107,35 @@ body::after {
 }
 
 body.theme-home::after {
-    background-image: radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px);
     background-size: 32px 32px;
-    opacity: 0.12;
+    opacity: 0.1;
 }
 
 body.theme-login::after {
     background-image:
-        linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
+        linear-gradient(rgba(255, 42, 77, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 42, 77, 0.05) 1px, transparent 1px);
     background-size: 40px 40px;
-    opacity: 0.2;
 }
 
 body.theme-admin::after {
     background-image:
-        linear-gradient(rgba(220, 38, 38, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(220, 38, 38, 0.12) 1px, transparent 1px);
+        linear-gradient(rgba(255, 42, 77, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 42, 77, 0.08) 1px, transparent 1px);
     background-size: 22px 22px;
-    opacity: 0.22;
 }
 
 body.theme-register::after {
-    background-image: radial-gradient(rgba(236, 72, 153, 0.25) 2px, transparent 2px);
+    background-image: radial-gradient(rgba(255, 42, 77, 0.1) 2px, transparent 2px);
     background-size: 28px 28px;
-    opacity: 0.14;
 }
 
 body.theme-voter::after {
     background: repeating-linear-gradient(
         45deg,
-        rgba(16, 185, 129, 0.07),
-        rgba(16, 185, 129, 0.07) 1px,
+        rgba(255, 42, 77, 0.03),
+        rgba(255, 42, 77, 0.03) 1px,
         transparent 1px,
         transparent 18px
     );
@@ -187,28 +146,29 @@ body.theme-voter::after {
    ============================================================ */
 h1, h2, h3, h4, .brand {
     font-family: var(--font-heading);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.01em;
     color: white;
     line-height: 1.1;
 }
 
 h1 {
-    font-size: clamp(2.8rem, 6vw, 5rem);
-    font-weight: 900;
-    letter-spacing: -0.04em;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
 }
 
 h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 700; }
-h3 { font-size: 1.5rem; font-weight: 600; }
-h4 { font-size: 1.1rem; font-weight: 600; }
+h3 { font-size: 1.5rem; font-weight: 600; font-family: var(--font-body); }
+h4 { font-size: 1.1rem; font-weight: 600; font-family: var(--font-body); }
 
 /* Gradient highlight text */
 .highlight {
-    background: linear-gradient(135deg, var(--neon-cyan) 0%, #a78bfa 50%, var(--neon-pink) 100%);
+    background: linear-gradient(135deg, #fff 0%, var(--neon-cyan) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.4));
+    filter: drop-shadow(0 0 30px rgba(255, 42, 77, 0.4));
+    font-style: italic;
 }
 
 .text-muted  { color: var(--text-muted) !important; }
@@ -218,7 +178,7 @@ h4 { font-size: 1.1rem; font-weight: 600; }
 
 /* Glow heading variant */
 .glow-title {
-    text-shadow: 0 0 40px rgba(6, 182, 212, 0.5), 0 0 80px rgba(139, 92, 246, 0.2);
+    text-shadow: 0 0 40px rgba(255, 42, 77, 0.6);
 }
 
 /* ============================================================
@@ -257,7 +217,7 @@ nav.scrolled {
 .brand {
     font-size: 1.4rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #fff 0%, rgba(6, 182, 212, 0.8) 100%);
+    background: linear-gradient(135deg, #fff 0%, #ff2a4d 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -271,36 +231,35 @@ nav.scrolled {
     gap: 0.75rem;
 }
 
-/* ============================================================
-   GLASS PANEL
-   ============================================================ */
 .glass-panel {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 2.5rem;
     box-shadow: var(--glass-shadow);
     color: var(--text-main);
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all var(--transition-smooth);
     position: relative;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
 }
 
 .glass-panel::before {
     content: '';
     position: absolute;
-    inset: -2px;
-    background: linear-gradient(45deg, var(--neon-cyan), transparent, var(--neon-purple));
+    inset: -1px;
+    background: linear-gradient(180deg, rgba(255,42,77,0.3), transparent);
     z-index: -1;
-    filter: blur(8px);
+    filter: blur(12px);
     opacity: 0;
-    border-radius: 22px;
-    transition: opacity 0.5s;
+    border-radius: inherit;
+    transition: opacity var(--transition-smooth);
 }
 
 .glass-panel:hover {
-    transform: translateY(-8px);
-    box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.9), 0 0 30px rgba(249, 115, 22, 0.15);
-    border-color: var(--neon-cyan);
+    transform: translateY(-4px);
+    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 40px rgba(255, 42, 77, 0.1);
+    border-color: rgba(255, 42, 77, 0.3);
 }
 
 .glass-panel:hover::before {
@@ -326,7 +285,7 @@ button, .btn {
     font-weight: 700;
     cursor: pointer;
     transition: all var(--transition-bounce);
-    box-shadow: 0 4px 15px rgba(249,115,22,0.4);
+    box-shadow: 0 4px 15px rgba(255,42,77,0.3);
     position: relative;
     overflow: hidden;
 }
@@ -349,7 +308,7 @@ button, .btn {
 
 .submit-btn:hover {
     transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 15px 30px rgba(249,115,22,0.6), 0 0 20px var(--neon-cyan);
+    box-shadow: 0 15px 30px rgba(255,42,77,0.4), 0 0 20px var(--neon-cyan);
     filter: brightness(1.2);
 }
 
@@ -379,7 +338,7 @@ button, .btn {
     position: absolute;
     top: 0; left: -100%;
     width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(249,115,22,0.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,42,77,0.2), transparent);
     transition: all 0.4s;
 }
 
@@ -793,7 +752,7 @@ tr:hover td { background: rgba(6, 182, 212, 0.03); }
 
 .toast-success { border-left: 3px solid var(--success);  }
 .toast-error   { border-left: 3px solid var(--danger);   }
-.toast-info    { border-left: 3px solid var(--neon-blue); }
+.toast-info    { border-left: 3px solid var(--neon-cyan); }
 .toast-warning { border-left: 3px solid var(--warning);  }
 
 /* ============================================================
@@ -873,4 +832,9 @@ tr:hover td { background: rgba(6, 182, 212, 0.03); }
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
     margin: 1.5rem 0;
+}
+
+/* Enforce Dark Mode: Hide all theme toggles */
+.theme-toggle-btn {
+    display: none !important;
 }

@@ -4,32 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Admin — OVS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Shojumaru&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
       (function() {
-          var theme = localStorage.getItem('ovs_theme') || 'dark';
-          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('ovs_theme', 'dark');
       })();
-      function toggleTheme() {
-          var current = document.documentElement.getAttribute('data-theme') || 'dark';
-          var next = current === 'dark' ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('ovs_theme', next);
-      }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { 
-      --bg:#0f172a; --surface:#1e293b; --border:rgba(249,115,22,0.4); 
-      --gold:#f59e0b; --cyan:#ea580c; --green:#22c55e; --red:#ef4444; --purple:#dc2626; 
+      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3); 
+      --gold:#ff2a4d; --cyan:#ffffff; --green:#ff2a4d; --red:#ff2a4d; --purple:#ff2a4d; 
       --text:#f8fafc; --muted:#cbd5e1; 
-    }
-    [data-theme="light"] {
-      --bg:#fdf6e3; --surface:#f4ebd8; --border:rgba(28,25,23,0.3);
-      --gold:#d97706; --cyan:#c2410c; --green:#16a34a; --red:#b91c1c; --purple:#991b1b;
-      --text:#1c1917; --muted:#57534e;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; }
     input, select { width: 100%; padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 0.95rem; font-family: 'Outfit', sans-serif; outline: none; transition: border 0.3s; margin-bottom: 0; }
@@ -37,10 +26,10 @@
     select option { background: #1e293b; }
     label { display: block; color: var(--muted); font-size: 0.78rem; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .btn { padding: 0.75rem 1.5rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; font-family: 'Outfit', sans-serif; transition: all 0.3s; }
-    .btn-gold { background: linear-gradient(135deg, var(--gold), #d97706); color: #000; }
-    .btn-cyan { background: linear-gradient(135deg, var(--cyan), #0284c7); color: white; }
-    .btn-green { background: linear-gradient(135deg, var(--green), #16a34a); color: white; }
-    .btn-red { background: linear-gradient(135deg, var(--red), #b91c1c); color: white; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #cc223e); color: white; }
+    .btn-cyan { background: linear-gradient(135deg, #ffffff, #cccccc); color: black; }
+    .btn-green { background: linear-gradient(135deg, #ff2a4d, #cc223e); color: white; }
+    .btn-red { background: linear-gradient(135deg, #ff2a4d, #cc223e); color: white; }
     .btn:hover { transform: translateY(-2px); opacity: 0.9; }
     .btn-sm { padding: 0.3rem 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-family: 'Outfit', sans-serif; font-weight: 600; }
     .btn-danger-sm { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
@@ -48,16 +37,16 @@
     .btn-info-sm { background: rgba(6,182,212,0.15); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); }
     /* Sidebar Layout */
     .layout { display: flex; min-height: 100vh; }
-    .sidebar { width: 240px; background: rgba(245,158,11,0.05); border-right: 1px solid rgba(245,158,11,0.15); padding: 1.5rem 1rem; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; }
-    .sidebar-brand { font-size: 1.4rem; font-weight: 900; color: var(--gold); margin-bottom: 0.25rem; font-family:'Shojumaru', sans-serif;}
+    .sidebar { width: 240px; background: rgba(255,42,77,0.05); border-right: 1px solid rgba(255,42,77,0.15); padding: 1.5rem 1rem; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; }
+    .sidebar-brand { font-size: 1.4rem; font-weight: 900; color: var(--gold); margin-bottom: 0.25rem; font-family:'Playfair Display', serif;}
     .sidebar-role { font-size: 0.75rem; color: var(--muted); margin-bottom: 2rem; }
     .nav-item { padding: 0.7rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 0.25rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.6rem; color: var(--muted); }
-    .nav-item:hover { background: rgba(245,158,11,0.1); color: var(--gold); }
-    .nav-item.active { background: rgba(245,158,11,0.15); color: var(--gold); font-weight: 600; }
+    .nav-item:hover { background: rgba(255,42,77,0.1); color: var(--gold); }
+    .nav-item.active { background: rgba(255,42,77,0.15); color: var(--gold); font-weight: 600; }
     .main { margin-left: 240px; flex: 1; padding: 2rem; }
     .page { display: none; }
     .page.active { display: block; }
-    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem; font-family:'Shojumaru', sans-serif;}
+    .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem; font-family:'Playfair Display', serif;}
     .page-sub { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
     .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; text-align: center; }
@@ -88,6 +77,9 @@
   </style>
 </head>
 <body>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
 
 <style>
   @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
@@ -105,7 +97,7 @@
     <!-- Logo -->
     <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size: 2.2rem; margin: 0 auto 1.5rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👑</div>
     
-    <h2 style="font-size:2.2rem; font-weight:900; color:#fff; margin-bottom:0.2rem; letter-spacing:-0.5px; font-family:'Shojumaru', sans-serif;">Super Admin</h2>
+    <h2 style="font-size:2.2rem; font-weight:900; color:#fff; margin-bottom:0.2rem; letter-spacing:-0.5px; font-family:'Playfair Display', serif;">VANGUARD Super-Portal</h2>
     <p style="color:var(--muted); font-size:0.9rem; margin-bottom:2.5rem; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Secure Access Portal</p>
     
     <!-- Credential Fields -->
@@ -163,7 +155,6 @@
     <div class="nav-item" onclick="showPage('voting')">🗳️ Voting Control</div>
     <div class="nav-item" onclick="showPage('audit')">📜 Audit Log</div>
     <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
-      <div class="nav-item" onclick="toggleTheme()" style="color:var(--gold)">🌗 Toggle Theme</div>
       <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
@@ -894,8 +885,8 @@ async function loadVoting() {
           datasets: [{
             label: 'Votes Received',
             data: votes,
-            backgroundColor: labels.map((_, i) => `hsla(${i * 60 + 180}, 70%, 60%, 0.6)`),
-            borderColor:     labels.map((_, i) => `hsla(${i * 60 + 180}, 70%, 60%, 1)`),
+            backgroundColor: labels.map((_, i) => i % 2 === 0 ? 'rgba(255, 42, 77, 0.8)' : 'rgba(255, 255, 255, 0.1)'),
+            borderColor:     labels.map((_, i) => i % 2 === 0 ? '#ff2a4d' : '#333333'),
             borderWidth: 2,
             borderRadius: 8
           }]
@@ -904,8 +895,8 @@ async function loadVoting() {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-            x: { ticks: { color: '#e2e8f0' }, grid: { display: false } }
+            y: { beginAtZero: true, ticks: { color: '#cbd5e1', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { ticks: { color: '#f8fafc' }, grid: { display: false } }
           }
         }
       });
@@ -1003,6 +994,32 @@ document.getElementById('sa-name').addEventListener('input', function() {
 });
 document.getElementById('sa-pass').addEventListener('input', function() {
   this.value = this.value.replace(/\s/g, '').slice(0, 6);
+});
+
+// Initialize tsParticles Cyber Mesh Effect
+tsParticles.load("tsparticles", {
+    fpsLimit: 60,
+    particles: {
+        number: { value: 30, density: { enable: true, value_area: 800 } },
+        color: { value: ["#ffffff", "#ff2a4d"] },
+        shape: { type: "circle" },
+        opacity: { value: 0.2, random: true },
+        size: { value: 2, random: true },
+        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+        move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+    },
+    interactivity: {
+        detectsOn: "canvas",
+        events: {
+            onHover: { enable: true, mode: "grab" },
+            resize: true
+        },
+        modes: {
+            grab: { distance: 150, links: { opacity: 0.3 } }
+        }
+    },
+    retina_detect: true,
+    background: { color: "transparent" }
 });
 </script>
 </body>

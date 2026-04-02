@@ -7,27 +7,24 @@
     <title>Register - OVS</title>
 
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Shojumaru&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
         (function() {
-            var theme = localStorage.getItem('ovs_theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('ovs_theme', 'dark');
         })();
-        function toggleTheme() {
-            var current = document.documentElement.getAttribute('data-theme') || 'dark';
-            var next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('ovs_theme', next);
-        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
 
 <body>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: 0; pointer-events: none;"></div>
+
     <nav>
-        <div class="brand" onclick="window.location.href='index.html'">KONOHA</div>
+        <div class="brand" onclick="window.location.href='index.html'">VANGUARD</div>
         <div class="nav-links" style="display:flex; align-items:center;">
-            <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="margin-right: 0.5rem;">🌗</button>
             <button onclick="window.location.href='index.html'" class="btn-outline"
                 style="padding: 0.5rem 1rem; margin-right: 0.5rem;">Back</button>
             <button onclick="window.location.href='login.html'" class="submit-btn"
@@ -654,7 +651,31 @@
                 reader.onerror = error => reject(error);
             });
         }
+        // Initialize tsParticles Cyber Mesh Effect
+        tsParticles.load("tsparticles", {
+            fpsLimit: 60,
+            particles: {
+                number: { value: 50, density: { enable: true, value_area: 800 } },
+                color: { value: ["#ffffff", "#ff2a4d"] },
+                shape: { type: "circle" },
+                opacity: { value: 0.4, random: true },
+                size: { value: 2, random: true },
+                links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.15, width: 1 },
+                move: { enable: true, speed: 0.8, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+            },
+            interactivity: {
+                detectsOn: "canvas",
+                events: {
+                    onHover: { enable: true, mode: "grab" },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 150, links: { opacity: 0.4 } }
+                }
+            },
+            retina_detect: true,
+            background: { color: "transparent" }
+        });
     </script>
 </body>
-
 </html>
