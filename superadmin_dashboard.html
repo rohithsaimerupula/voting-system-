@@ -233,6 +233,14 @@
             </select>
           </div>
           <div class="form-field"><label>Class</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Year</label>
+            <select id="sa-year">
+              <option value="1st">1st Year</option>
+              <option value="2nd">2nd Year</option>
+              <option value="3rd">3rd Year</option>
+              <option value="4th">4th Year</option>
+            </select>
+          </div>
           <div class="form-field"><label>Password <small style="color:var(--muted)">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1" maxlength="6"></div>
         </div>
         <button class="btn btn-purple" style="margin-top:1rem" onclick="createSubAdminSA()">Create Sub-Admin</button>
@@ -247,7 +255,7 @@
             <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
           </select>
         </div>
-        <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Class</th><th>Managed By</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Class</th><th>Year</th><th>Managed By</th><th>Actions</th></tr></thead>
         <tbody id="subadmin-table"></tbody></table>
       </div>
     </div>
@@ -273,7 +281,7 @@
         </select>
       </div>
       <div class="card" style="padding:0.5rem">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -405,9 +413,19 @@
               <option>CSC</option><option>AIDS</option>
           </select>
       </div>
+    <div class="form-grid" style="margin-bottom:1rem;">
       <div class="form-field" id="edit-class-group">
           <label>Class (e.g. CSE-5)</label>
           <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="form-field" id="edit-year-group">
+          <label>Year</label>
+          <select id="edit-year">
+              <option value="1st">1st Year</option>
+              <option value="2nd">2nd Year</option>
+              <option value="3rd">3rd Year</option>
+              <option value="4th">4th Year</option>
+          </select>
       </div>
     </div>
     
@@ -694,12 +712,13 @@ function renderAdminTable(admins) {
 
 function renderSubAdminTable(sas) {
   const tb = document.getElementById('subadmin-table');
-  if (!sas.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No sub-admins yet</td></tr>'; return; }
+  if (!sas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">No sub-admins yet</td></tr>'; return; }
   tb.innerHTML = sas.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
-    <td>${s.branch||'-'}</td><td>${s.class||'-'}</td><td>${s.managedBy||'-'}</td>
+    <td>${s.branch||'-'}</td><td>${s.class||'-'}</td><td>${s.year||'-'}</td>
+    <td>${s.managedBy||'-'}</td>
     <td style="display:flex;gap:0.4rem;">
-      <button class="btn-sm" style="background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);" onclick="editSubAdmin('${s.regNum}','${s.name}','${s.email||''}','${s.branch||''}','${s.class||''}')">Edit</button>
+      <button class="btn-sm" style="background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);" onclick="editSubAdmin('${s.regNum}','${s.name}','${s.email||''}','${s.branch||''}','${s.class||''}','${s.year||''}')">Edit</button>
       <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');
@@ -707,9 +726,10 @@ function renderSubAdminTable(sas) {
 
 function renderStudents(list) {
   const tb = document.getElementById('student-table');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">No students found</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">No students found</td></tr>'; return; }
   tb.innerHTML = list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
+    <td>${s.year||'-'}</td>
     <td>${s.branch||'-'}</td><td>${s.class||'-'}</td>
     <td>${s.canVote==1 ? '<span class="badge badge-active">✅ Yes</span>' : '<span class="badge badge-pending">❌ No</span>'}</td>
     <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
@@ -790,7 +810,7 @@ function editAdmin(id, name, email, branch) {
   document.getElementById('edit-modal').classList.add('open');
 }
 
-function editSubAdmin(id, name, email, branch, cls) {
+function editSubAdmin(id, name, email, branch, cls, year) {
   document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin';
   document.getElementById('edit-role').value = 'subadmin';
   document.getElementById('edit-regnum').value = id;
@@ -800,6 +820,7 @@ function editSubAdmin(id, name, email, branch, cls) {
   document.getElementById('edit-branch').value = branch || 'CSE';
   document.getElementById('edit-class-group').style.display = 'flex';
   document.getElementById('edit-class').value = cls || '';
+  document.getElementById('edit-year').value = year || '1st';
   document.getElementById('edit-pass').value = '';
   document.getElementById('edit-modal').classList.add('open');
 }
@@ -811,12 +832,16 @@ async function saveEdit() {
   const email = document.getElementById('edit-email').value.trim();
   const branch = document.getElementById('edit-branch').value;
   const cls = document.getElementById('edit-class').value.trim().toUpperCase();
+  const year = document.getElementById('edit-year').value;
   const pass = document.getElementById('edit-pass').value;
 
   if(!name) return toast('Name required', false);
   
   const updates = { name, email, branch };
-  if (role === 'subadmin') updates.class = cls;
+  if (role === 'subadmin') {
+    updates.class = cls;
+    updates.year = year;
+  }
   
   let validPwdFn = (pwd) => {
       // Validate password based on role length
@@ -875,14 +900,15 @@ async function createSubAdminSA() {
   const email=document.getElementById('sa-email').value.trim();
   const branch=document.getElementById('sa-branch').value;
   const cls=document.getElementById('sa-class').value.trim().toUpperCase();
+  const year=document.getElementById('sa-year').value;
   const pass=document.getElementById('sa-pass').value;
-  if(!id||!name||!branch||!cls||!pass) return toast('Fill all required fields',false);
+  if(!id||!name||!branch||!cls||!year||!pass) return toast('Fill all required fields',false);
   if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers', false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name) || (name.match(/\./g)||[]).length > 1) return toast('Name: max 30 chars, letters + one dot only', false);
   const pwdErr = validateStrictPassword(pass, 6, 6, 3, 1, 1);
   if (pwdErr) return toast('Sub-Admin password ' + pwdErr, false);
   try{
-    await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:branch,class:cls,institution:saSession.institution,managedBy:saSession.regNum,status:'active'})});
+    await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:branch,class:cls,year:year,institution:saSession.institution,managedBy:saSession.regNum,status:'active'})});
     toast(`Sub-Admin ${id} created for class ${cls}`);
     ['sa-id','sa-name','sa-email','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('sa-branch').value='';

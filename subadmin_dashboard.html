@@ -186,9 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (session && session.role === 'subadmin') {
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`Class: ${session.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${session.class} — ${session.branch} — ${session.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${session.class}`;
+    document.getElementById('class-label').textContent=`${session.year || ''} ${session.class||'-'}`;
+    document.getElementById('class-sub').textContent=`Managing ${session.year || ''} ${session.class} — ${session.branch} — ${session.institution}`;
+    document.getElementById('class-students-sub').textContent=`Students in ${session.year || ''} ${session.class}`;
     loadAll();
   } else {
     window.location.href = 'login.html?admin=true';
@@ -216,9 +216,9 @@ async function saLogin(){
     session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`Class: ${user.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${user.class} — ${user.branch} — ${user.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${user.class}`;
+    document.getElementById('class-label').textContent=`${user.year || ''} ${user.class||'-'}`;
+    document.getElementById('class-sub').textContent=`Managing ${user.year || ''} ${user.class} — ${user.branch} — ${user.institution}`;
+    document.getElementById('class-students-sub').textContent=`Students in ${user.year || ''} ${user.class}`;
     loadAll();
   }catch(e){err.textContent=e.message;}
 }
@@ -238,7 +238,7 @@ function showPage(id){
 
 async function loadAll(){
   try{
-    const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}`);
+    const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year||'1st')}`);
     classStudents=students;
     document.getElementById('s-students').textContent=students.length;
     document.getElementById('s-canvote').textContent=students.filter(s=>s.canVote==1).length;

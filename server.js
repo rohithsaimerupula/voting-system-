@@ -130,6 +130,7 @@ async function initDb() {
             `ALTER TABLE users ADD COLUMN voteStatus TEXT`,
             `ALTER TABLE users ADD COLUMN voteReceiptHash TEXT`,
             `ALTER TABLE users ADD COLUMN voteFingerprint TEXT`,
+            `ALTER TABLE users ADD COLUMN year TEXT`,
         ];
         for (const sql of newColumns) {
             try { await db.execute(sql); } catch (e) { /* Column already exists, skip */ }
@@ -214,14 +215,14 @@ app.post('/api/users/add', async (req, res) => {
         const u = req.body;
         const inst = u.institution || 'Unknown';
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote, year)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending',
                 boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait || null, u.webcamReg || null,
                 u.deviceFingerprint || null, u.inviteCode || null, u.campaignPoints || 0,
                 u.branch || null, u.class || null, u.managedBy || null,
-                boolInt(u.canVote)
+                boolInt(u.canVote), u.year || null
             ]
         });
         res.json({ success: true });
@@ -370,11 +371,16 @@ app.get('/api/superadmins', async (req, res) => {
 app.get('/api/voters/by-class/:class', async (req, res) => {
     try {
         const institution = req.query.institution;
+        const year = req.query.year;
         let sql = "SELECT * FROM users WHERE class = ? AND role IN ('voter','contestant')";
         const args = [decodeURIComponent(req.params.class)];
         if (institution) {
             sql += " AND institution = ?";
             args.push(decodeURIComponent(institution));
+        }
+        if (year) {
+            sql += " AND year = ?";
+            args.push(decodeURIComponent(year));
         }
         const result = await db.execute({ sql, args });
         res.json(result.rows);
