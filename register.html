@@ -15,6 +15,13 @@
         })();
     </script>
     <style>
+        .hidden { display: none !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
         @keyframes pulse-badge {
             0% { transform: scale(1); opacity: 0.8; }
             50% { transform: scale(1.05); opacity: 1; }
@@ -41,186 +48,187 @@
 
     <div class="container animate-fade-in" style="max-width: 600px;">
         <div class="glass-panel" style="padding: 2.5rem;">
-            <h2 class="text-center" style="margin-bottom: 0.5rem;">Registration Portal</h2>
-            <p id="inst-display" class="text-center" style="color:var(--cyan);font-weight:600;margin-bottom:2rem;letter-spacing:1px;"></p>
-
-            <form id="register-form">
-                <div class="form-group">
-                    <label>Register As</label>
-                    <select id="role" onchange="toggleFields()">
-                        <option value="voter">Voter</option>
-                        <option value="contestant">Candidate</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="name" required placeholder="John Doe" maxlength="50">
-                    <small style="color: var(--text-muted); font-size: 0.8rem;">Max 50 characters. No leading
-                        spaces.</small>
-                </div>
-
-                <div class="form-group">
-                    <label>Student Registration Number (Unique ID)</label>
-                    <input type="text" id="regNum" required placeholder="e.g. 21B001" maxlength="10">
-                    <small style="color: var(--text-muted); font-size: 0.8rem;">Max 10 characters
-                        (Alphanumeric).</small>
-                </div>
-
-                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label>Year</label>
-                        <select id="year">
-                            <option value="1st">1st Year</option>
-                            <option value="2nd">2nd Year</option>
-                            <option value="3rd">3rd Year</option>
-                            <option value="4th">4th Year</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Branch</label>
-                        <select id="branch">
-                            <option>CIVIL</option>
-                            <option>EEE</option>
-                            <option>MECH</option>
-                            <option>ECE</option>
-                            <option>CSE</option>
-                            <option>IT</option>
-                            <option>CAI</option>
-                            <option>CSD</option>
-                            <option>CSC</option>
-                            <option>AIDS</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Section</label>
-                        <input type="text" id="section" required placeholder="1" maxlength="1">
-                        <small style="color: var(--text-muted);">1 Digit (1-9)</small>
-                    </div>
-                </div>
-
-                <!-- Gmail & OTP (Simulated) -->
-                <div class="form-group">
-                    <label>Gmail Address</label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="email" id="email" required placeholder="example@gmail.com"
-                            oninput="resetOtpState()">
-                        <button type="button" class="submit-btn" id="send-otp-btn"
-                            style="width: 120px; font-size: 0.8rem;" onclick="sendOtp()">Get OTP</button>
-                    </div>
-                </div>
-
-                <div class="form-group hidden" id="otp-group">
-                    <label>Enter OTP</label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6">
-                        <button type="button" class="submit-btn" id="verify-otp-btn"
-                            style="width: auto; background: var(--success); color: white;"
-                            onclick="verifyOtp()">Verify</button>
-                    </div>
-                    <small id="otp-msg" class="text-muted"></small>
-                </div>
-
-                <!-- Portrait Upload (File) -->
-                <div class="form-group">
-                    <label>Upload ID Proof / Portrait (Image Only)</label>
-                    <input type="file" id="portrait" accept=".png, .jpg, .jpeg">
-                    <small style="color: var(--text-muted);">Used for AI ID verification. Images Only (.png, .jpg).</small>
-                </div>
-
-                <!-- Webcam Capture (Registration) -->
-                <!-- Webcam Capture -->
-                <div class="form-group">
-                    <label>Live Face Capture</label>
-                    <div
-                        style="background: black; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--glass-border);">
-                        <video id="webcam-video" autoplay playsinline
-                            style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);"></video>
-                        <canvas id="webcam-canvas" class="hidden"></canvas>
-                        <img id="webcam-preview" class="hidden"
-                            style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);">
-                    </div>
-
-                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                        <button type="button" class="btn-outline" id="start-cam-btn" style="width: 100%;"
-                            onclick="startWebcam()">Open Camera</button>
-                        <button type="button" class="submit-btn hidden" id="capture-btn"
-                            onclick="captureWebcam()">Capture Photo</button>
-                        <button type="button" class="btn-outline hidden" id="retake-btn"
-                            onclick="retakeWebcam()">Retake</button>
-                    </div>
-                    <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">For identity
-                        verification during voting.</small>
-                </div>
-
-                <!-- Contestant Specific -->
-                <div class="form-group hidden" id="symbol-group">
-                    <label>Election Symbol (Emoji Only)</label>
-                    <input type="text" id="symbol" placeholder="🦁">
-                    <small style="color: var(--text-muted);">Please enter a single Emoji.</small>
-                </div>
-
-                <div class="form-group hidden" id="manifesto-group">
-                    <label>Manifesto / Slogan</label>
-                    <textarea id="manifesto" placeholder="Why should people vote for you? (Max 150 chars)"
-                        maxlength="150" rows="3"
-                        style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
-                </div>
-
-                <div class="form-group hidden" id="invite-group">
-                    <label>Invite Code (Optional)</label>
-                    <input type="text" id="invite-code" placeholder="Candidate's Reg Number" autocomplete="off" maxlength="20">
-                    <small style="color: var(--text-muted);">Support a candidate and give them Campaign Points!</small>
-                </div>
-
-                <div class="form-group" id="password-group">
-                    <label>Password</label>
-                    <input type="password" id="password" required placeholder="e.g. abc@123" maxlength="10">
-                    <small style="color: var(--text-muted);">6-10 chars · 3+ letters · 1+ special char · 1+ number</small>
-                </div>
-
-
-
-                <button type="submit" id="final-submit-btn" class="submit-btn" style="margin-top: 1rem;"
-                    disabled>Complete Registration</button>
-                <p class="text-muted text-center mt-2" style="font-size: 0.8rem;">(Complete OTP & Face Capture to
-                    enable)</p>
-            </form>
-
-            <div id="error-container" class="hidden"
-                style="margin-top: 1rem; padding: 1rem; border-radius: 8px; background: rgba(220, 38, 38, 0.2); border: 1px solid var(--danger);">
-                <p class="text-danger text-center" id="error-text"></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Success Overlay -->
-    <div id="msg-container" class="hidden"
-        style="position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; backdrop-filter: blur(15px); overflow-y: auto;">
-        <div class="glass-panel"
-            style="padding: 3rem; max-width: 90%; border-color: var(--success); box-shadow: 0 0 50px rgba(16, 185, 129, 0.2);">
-            <div style="font-size: 5rem; animation: infoPop 0.5s; margin-bottom: 1rem;">🎉</div>
-            <h2 class="text-success" style="font-size: 2.5rem; margin-bottom: 1rem;">
-                Registration Submitted!</h2>
             
-            <!-- AI Status Badge -->
-            <div id="ai-status-badge" style="display: inline-block; padding: 0.5rem 1.2rem; border-radius: 50px; font-weight: 700; font-size: 0.85rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.15);">
-                Verifying...
+            <!-- LOADING OVERLAY -->
+            <div id="loading-overlay" class="hidden" style="position:fixed; inset:0; background:rgba(5,5,5,0.9); z-index:10000; align-items:center; justify-content:center; flex-direction:column; gap:1.5rem;">
+                <div class="spinner" style="width:64px; height:64px; border:4px solid rgba(255,42,77,0.2); border-top-color:#ff2a4d; border-radius:50%; animation:spin 1s linear infinite;"></div>
+                <p id="loading-msg" style="color:white; font-size:1.1rem; font-weight:600; font-family:'Outfit',sans-serif;">Uploading Encrypted Data...</p>
+                <p style="color:var(--muted); font-size:0.85rem;">Securing your digital identity — please do not refresh</p>
             </div>
 
-            <p id="msg-text"
-                style="font-size: 1.1rem; color: var(--text-muted); max-width: 400px; margin: 0 auto 2rem auto; line-height: 1.6;">
-                Your registration is pending Admin Approval. You will be able to login once approved.
-            </p>
+            <!-- SUCCESS SCREEN -->
+            <div id="success-screen" class="hidden" style="text-align:center; padding:3rem 2rem;">
+                <div style="width:96px; height:96px; background:rgba(34,197,94,0.1); border:2px solid #22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 2rem; animation:pulse-green 2s infinite;">
+                    <span style="font-size:3rem;">✅</span>
+                </div>
+                <h2 style="font-size:2.4rem; font-weight:900; color:#22c55e; margin-bottom:1rem; font-family:'Playfair Display',serif;">Registration Received!</h2>
+                <p style="color:var(--text); font-size:1.1rem; margin-bottom:2rem; max-width:500px; margin-inline:auto;">Your application for <strong><span id="reg-inst-name">...</span></strong> has been successfully submitted to our secure servers.</p>
+                
+                <div class="glass-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:1.5rem; margin-bottom:2.5rem; text-align:left;">
+                    <p style="color:#22c55e; font-weight:700; margin-bottom:0.75rem;">Next Steps:</p>
+                    <ol style="color:var(--muted); font-size:0.95rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        <li>Our AI is currently verifying your biometric data.</li>
+                        <li>Wait for your **Institutional Admin** to approve your profile.</li>
+                        <li>Once approved, you can login via the <strong>Home Gateway</strong>.</li>
+                    </ol>
+                </div>
 
-            <div id="msg-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <button class="submit-btn" style="width: auto; padding: 0.8rem 2rem;"
-                    onclick="window.location.href='index.html'">Back to Home</button>
+                <button class="submit-btn" onclick="window.location.href='index.html'">Return to Gateway</button>
+            </div>
+
+            <div id="registration-form-content">
+                <h2 class="title" style="margin-bottom: 0.5rem; font-size: 2.2rem; font-weight: 900; color: #ff2a4d; font-family:'Playfair Display', serif;">RECRUITMENT GATE</h2>
+                <div id="inst-badge" style="display:inline-block; margin-bottom: 2rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.82rem; color: var(--muted);">⛩️ Test University</div>
+
+                <form id="register-form">
+                    <div class="form-group">
+                        <label>Register As</label>
+                        <select id="role" onchange="toggleFields()">
+                            <option value="voter">Voter</option>
+                            <option value="contestant">Candidate</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="name" required placeholder="John Doe" maxlength="50">
+                        <small style="color: var(--text-muted); font-size: 0.8rem;">Max 50 characters. No leading
+                            spaces.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Student Registration Number (Unique ID)</label>
+                        <input type="text" id="regNum" required placeholder="e.g. 21B001" maxlength="10">
+                        <small style="color: var(--text-muted); font-size: 0.8rem;">Max 10 characters
+                            (Alphanumeric).</small>
+                    </div>
+
+                    <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label>Year</label>
+                            <select id="year">
+                                <option value="1st">1st Year</option>
+                                <option value="2nd">2nd Year</option>
+                                <option value="3rd">3rd Year</option>
+                                <option value="4th">4th Year</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Branch</label>
+                            <select id="branch">
+                                <option>CIVIL</option>
+                                <option>EEE</option>
+                                <option>MECH</option>
+                                <option>ECE</option>
+                                <option>CSE</option>
+                                <option>IT</option>
+                                <option>CAI</option>
+                                <option>CSD</option>
+                                <option>CSC</option>
+                                <option>AIDS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Section</label>
+                            <input type="text" id="section" required placeholder="1" maxlength="1">
+                            <small style="color: var(--text-muted);">1 Digit (1-9)</small>
+                        </div>
+                    </div>
+
+                    <!-- Gmail & OTP (Simulated) -->
+                    <div class="form-group">
+                        <label>Gmail Address</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="email" id="email" required placeholder="example@gmail.com"
+                                oninput="resetOtpState()">
+                            <button type="button" class="submit-btn" id="send-otp-btn"
+                                style="width: 120px; font-size: 0.8rem;" onclick="sendOtp()">Get OTP</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group hidden" id="otp-group">
+                        <label>Enter OTP</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6">
+                            <button type="button" class="submit-btn" id="verify-otp-btn"
+                                style="width: auto; background: var(--success); color: white;"
+                                onclick="verifyOtp()">Verify</button>
+                        </div>
+                        <small id="otp-msg" class="text-muted"></small>
+                    </div>
+
+                    <!-- Portrait Upload (File) -->
+                    <div class="form-group">
+                        <label>Upload ID Proof / Portrait (Image Only)</label>
+                        <input type="file" id="portrait" accept=".png, .jpg, .jpeg">
+                        <small style="color: var(--text-muted);">Used for AI ID verification. Images Only (.png, .jpg).</small>
+                    </div>
+
+                    <!-- Webcam Capture (Registration) -->
+                    <div class="form-group">
+                        <label>Live Face Capture</label>
+                        <div
+                            style="background: black; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--glass-border);">
+                            <video id="webcam-video" autoplay playsinline
+                                style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);"></video>
+                            <canvas id="webcam-canvas" class="hidden"></canvas>
+                            <img id="webcam-preview" class="hidden"
+                                style="width: 100%; height: 240px; object-fit: cover; transform: scaleX(-1);">
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button type="button" class="btn-outline" id="start-cam-btn" style="width: 100%;"
+                                onclick="startWebcam()">Open Camera</button>
+                            <button type="button" class="submit-btn hidden" id="capture-btn"
+                                onclick="captureWebcam()">Capture Photo</button>
+                            <button type="button" class="btn-outline hidden" id="retake-btn"
+                                onclick="retakeWebcam()">Retake</button>
+                        </div>
+                        <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">For identity
+                            verification during voting.</small>
+                    </div>
+
+                    <!-- Contestant Specific -->
+                    <div class="form-group hidden" id="symbol-group">
+                        <label>Election Symbol (Emoji Only)</label>
+                        <input type="text" id="symbol" placeholder="🦁">
+                        <small style="color: var(--text-muted);">Please enter a single Emoji.</small>
+                    </div>
+
+                    <div class="form-group hidden" id="manifesto-group">
+                        <label>Manifesto / Slogan</label>
+                        <textarea id="manifesto" placeholder="Why should people vote for you? (Max 150 chars)"
+                            maxlength="150" rows="3"
+                            style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
+                    </div>
+
+                    <div class="form-group hidden" id="invite-group">
+                        <label>Invite Code (Optional)</label>
+                        <input type="text" id="invite-code" placeholder="Candidate's Reg Number" autocomplete="off" maxlength="20">
+                        <small style="color: var(--text-muted);">Support a candidate and give them Campaign Points!</small>
+                    </div>
+
+                    <div class="form-group" id="password-group">
+                        <label>Password</label>
+                        <input type="password" id="password" required placeholder="e.g. abc@123" maxlength="10">
+                        <small style="color: var(--text-muted);">6-10 chars · 3+ letters · 1+ special char · 1+ number</small>
+                    </div>
+
+                    <button type="submit" id="final-submit-btn" class="submit-btn" style="margin-top: 1rem;"
+                        disabled>Complete Registration</button>
+                    <p class="text-muted text-center mt-2" style="font-size: 0.8rem;">(Complete OTP & Face Capture to
+                        enable)</p>
+                </form>
+
+                <div id="error-container" class="hidden"
+                    style="margin-top: 1rem; padding: 1rem; border-radius: 8px; background: rgba(220, 38, 38, 0.2); border: 1px solid var(--danger);">
+                    <p class="text-danger text-center" id="error-text"></p>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="storage.js?v=4"></script>
+    <script src="storage.js?v=5"></script>
     <script>
         // --- OTP & WEBCAM VARIABLES ---
         let otpVerified = false;
