@@ -445,7 +445,8 @@ const StorageManager = {
     },
 
     async generateVoteHash(voterRegNum, candidateRegNum) {
-        const str = voterRegNum + candidateRegNum + Date.now().toString() + Math.random().toString();
+        const cStr = typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum;
+        const str = voterRegNum + cStr + Date.now().toString() + Math.random().toString();
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
@@ -502,8 +503,24 @@ const StorageManager = {
                          stats.votesPending++;
                     } else {
                          stats.votesCast++;
-                         if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
-                         stats.candidateVotes[user.votedFor]++;
+                         // Handle multi-category JSON votes
+                         if (user.votedFor) {
+                             try {
+                                 const votedObj = JSON.parse(user.votedFor);
+                                 if (typeof votedObj === 'object') {
+                                     Object.values(votedObj).forEach(candRegNum => {
+                                         if (!stats.candidateVotes[candRegNum]) stats.candidateVotes[candRegNum] = 0;
+                                         stats.candidateVotes[candRegNum]++;
+                                     });
+                                 } else {
+                                     if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
+                                     stats.candidateVotes[user.votedFor]++;
+                                 }
+                             } catch(e) {
+                                 if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
+                                 stats.candidateVotes[user.votedFor]++;
+                             }
+                         }
                     }
                 } else {
                     stats.votesNotCast++;

@@ -528,8 +528,16 @@
                 const winnerDisplay = document.getElementById('winner-display');
                 if (election.isCompleted && stats.votesCast > 0) {
                     winnerDisplay.classList.remove('hidden');
-                    const winners = calculateWinner(stats);
-                    document.getElementById('winner-name').innerText = winners.map(w => `${w.name} (${w.votes} votes)`).join(', ');
+                    const catWinners = calculateWinner(stats);
+                    if (catWinners.length === 0) {
+                        document.getElementById('winner-name').innerText = 'No votes counted yet.';
+                    } else {
+                        document.getElementById('winner-name').innerHTML = catWinners.map(r => {
+                            const names = r.winners.map(w => `${w.symbol || ''} ${w.name}`).join(' & ');
+                            const tied = r.winners.length > 1 ? ' <span style="color:#f59e0b; font-size:0.8rem;">(TIED)</span>' : '';
+                            return `<div style="margin-bottom:0.5rem;"><span style="color:var(--gold-primary); font-size:0.9rem;">${r.cat}:</span> ${names}${tied} <span style="color:#94a3b8; font-size:0.85rem;">(${r.maxVotes} votes)</span></div>`;
+                        }).join('');
+                    }
                 } else {
                     winnerDisplay.classList.add('hidden');
                 }
@@ -615,22 +623,28 @@
             });
         }
 
-        // --- WINNER LOGIC ---
+        // --- WINNER LOGIC (Multi-Category) ---
         function calculateWinner(stats) {
-            let maxVotes = 0;
-            let winners = [];
-            Object.entries(stats.candidateVotes).forEach(([regNum, count]) => {
-                if (count > maxVotes) {
-                    maxVotes = count;
-                    winners = [regNum];
-                } else if (count === maxVotes && count > 0) {
-                    winners.push(regNum);
-                }
+            // Group contestants by category
+            const catGroups = {};
+            stats.contestants.forEach(c => {
+                const cat = c.category || 'General';
+                if (!catGroups[cat]) catGroups[cat] = [];
+                catGroups[cat].push(c);
             });
-            return winners.map(reg => {
-                const c = stats.contestants.find(u => u.regNum === reg);
-                return { name: c ? c.name : reg, votes: maxVotes };
+
+            const results = [];
+            Object.entries(catGroups).forEach(([cat, cands]) => {
+                let maxVotes = 0;
+                let winners = [];
+                cands.forEach(c => {
+                    const v = stats.candidateVotes[c.regNum] || 0;
+                    if (v > maxVotes) { maxVotes = v; winners = [c]; }
+                    else if (v === maxVotes && v > 0) { winners.push(c); }
+                });
+                if (winners.length > 0) results.push({ cat, winners, maxVotes });
             });
+            return results;
         }
 
         // --- TABLE LOGIC ---

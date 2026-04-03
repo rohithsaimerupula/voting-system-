@@ -375,7 +375,7 @@
             }
         }
 
-        let queuedVoteId = null;
+        let ballotCart = {}; // { categoryName: { id, name } }
 
         async function loadCandidates() {
             candidatesGrid.innerHTML = '<p class="text-center text-muted">Loading candidates...</p>';
@@ -406,53 +406,134 @@
                 });
             }
 
-            // Render Candidates with Debate Board Injection
-            for(const c of candidates) {
-                const card = document.createElement('div');
-                card.className = 'candidate-card';
-                card.innerHTML = `
-                    <img src="${c.portrait || 'https://via.placeholder.com/150'}" alt="${c.name}" class="candidate-photo">
-                    <div class="candidate-info">
-                        <h3>${c.name}</h3>
-                        <p class="text-muted">${c.regNum} • Sec: ${c.section}</p>
-                        <p style="margin-top:0.5rem;">Symbol: <span style="font-size:1.5rem;">${c.symbol}</span></p>
-                        <p style="margin-top:1rem; font-size:0.9rem; font-style:italic;">"${c.manifesto || "No manifesto provided."}"</p>
-                    </div>
-                    
-                    <div style="width:100%; display:flex; gap:10px; margin-top:1rem;">
-                        <button class="vote-btn" style="flex:1" onclick="queueVote('${c.regNum}', '${c.name}')">Add to Cart 🛒</button>
-                    </div>
+            // Fetch configured Categories
+            let definedCategories = [];
+            try {
+                const res = await fetch('/api/config/categories_' + encodeURIComponent(currentUser.institution));
+                if(res.ok) {
+                    const data = await res.json();
+                    if(data.value && data.value.categories) definedCategories = data.value.categories;
+                    else if(data.categories) definedCategories = data.categories;
+                }
+            } catch(e){}
 
-                    <div class="debate-section">
-                        <p style="font-weight:bold; font-size:0.9rem; color:var(--text-muted);">Q&A Board</p>
-                        <div id="qa-list-${c.regNum}" style="max-height:100px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.85rem;"></div>
-                        <div style="display:flex; gap:5px;">
-                            <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:4px; color:white; font-size:0.8rem;">
-                            <button onclick="askQuestion('${c.regNum}')" style="background:var(--neon-blue); border:none; color:white; border-radius:4px; padding:0 10px; cursor:pointer;">Ask</button>
+            // Group candidates by category
+            const grouped = {};
+            candidates.forEach(c => {
+                const cat = c.category || 'General';
+                if(!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(c);
+            });
+
+            const categoriesToRender = new Set([...definedCategories, ...Object.keys(grouped)]);
+            
+            categoriesToRender.forEach(cat => {
+                const catCandidates = grouped[cat] || [];
+                if(catCandidates.length === 0) return; // Handle empty intelligently
+
+                const sectionHeader = document.createElement('h2');
+                sectionHeader.className = 'title';
+                sectionHeader.style.marginTop = '2.5rem';
+                sectionHeader.style.marginBottom = '1rem';
+                sectionHeader.style.fontSize = '1.8rem';
+                sectionHeader.style.color = 'var(--neon-cyan)';
+                sectionHeader.style.textAlign = 'left';
+                sectionHeader.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+                sectionHeader.style.paddingBottom = '0.5rem';
+                sectionHeader.innerText = cat + " Category";
+                candidatesGrid.appendChild(sectionHeader);
+
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+                grid.style.gap = '1.5rem';
+
+                catCandidates.forEach(c => {
+                    const card = document.createElement('div');
+                    card.className = 'candidate-card';
+                    card.id = `card-${c.regNum}`;
+                    card.innerHTML = `
+                        <img src="${c.portrait || 'https://via.placeholder.com/150'}" alt="${c.name}" class="candidate-photo">
+                        <div class="candidate-info">
+                            <h3>${c.name}</h3>
+                            <p class="text-muted">${c.regNum} • Sec: ${c.section}</p>
+                            <p style="margin-top:0.5rem;">Symbol: <span style="font-size:1.5rem;">${c.symbol}</span></p>
+                            <p style="margin-top:1rem; font-size:0.9rem; font-style:italic;">"${c.manifesto || "No manifesto provided."}"</p>
                         </div>
-                    </div>
-                `;
-                candidatesGrid.appendChild(card);
-                loadQuestions(c.regNum);
-            }
+                        
+                        <div style="width:100%; display:flex; gap:10px; margin-top:1rem;">
+                            <button class="vote-btn btn-outline" id="btn-vote-${c.regNum}" style="flex:1" onclick="queueVote('${c.regNum}', '${c.name.replace(/'/g, "\\'")}', '${cat.replace(/'/g, "\\'")}')">Select for ${cat}</button>
+                        </div>
+
+                        <div class="debate-section">
+                            <p style="font-weight:bold; font-size:0.9rem; color:var(--text-muted);">Q&A Board</p>
+                            <div id="qa-list-${c.regNum}" style="max-height:100px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.85rem;"></div>
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:4px; color:white; font-size:0.8rem;">
+                                <button onclick="askQuestion('${c.regNum}')" style="background:var(--neon-blue); border:none; color:white; border-radius:4px; padding:0 10px; cursor:pointer;">Ask</button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                    loadQuestions(c.regNum);
+                });
+                candidatesGrid.appendChild(grid);
+            });
+            updateCartUI();
         }
 
-        function queueVote(id, name) {
-            queuedVoteId = id;
-            showToast(`Added ${name} to Voting Cart!`, "success");
-            const actBtn = document.createElement('button');
-            actBtn.className = 'submit-btn';
-            actBtn.innerText = `Finalize Vote for ${name} ➔`;
-            actBtn.style.marginTop = "2rem";
-            actBtn.style.background = "linear-gradient(135deg, var(--success), #059669)";
-            actBtn.onclick = () => startVoteFlow(id, name);
+        function queueVote(id, name, cat) {
+            ballotCart[cat] = { id, name };
+            showToast(`Selected ${name} for ${cat}`, "success");
             
-            // Clear existing cart buttons
-            const existing = document.getElementById('cart-finalize');
-            if(existing) existing.remove();
+            // Visual feedback
+            document.querySelectorAll(`button[id^="btn-vote-"]`).forEach(b => {
+                if(b.innerText.includes(`for ${cat}`)) {
+                    b.innerText = `Select for ${cat}`;
+                    b.style.background = 'transparent';
+                    b.classList.remove('btn-green');
+                    b.classList.add('btn-outline');
+                }
+            });
+            const selBtn = document.getElementById(`btn-vote-${id}`);
+            if(selBtn) {
+                selBtn.innerText = `Selected ✅`;
+                selBtn.style.background = 'var(--neon-green)';
+                selBtn.style.color = 'black';
+                selBtn.classList.remove('btn-outline');
+            }
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            let actBtn = document.getElementById('cart-finalize');
+            const totalSelected = Object.keys(ballotCart).length;
+
+            if(!actBtn && totalSelected > 0) {
+                actBtn = document.createElement('button');
+                actBtn.className = 'submit-btn';
+                actBtn.id = 'cart-finalize';
+                actBtn.style.marginTop = "3rem";
+                actBtn.style.position = 'sticky';
+                actBtn.style.bottom = '20px';
+                actBtn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+                actBtn.style.zIndex = '1000';
+                actBtn.style.background = "linear-gradient(135deg, var(--neon-cyan), var(--neon-blue))";
+                actBtn.style.color = 'black';
+                
+                // Add to root container
+                document.getElementById('voting-section').appendChild(actBtn);
+            }
             
-            actBtn.id = 'cart-finalize';
-            candidatesGrid.parentElement.appendChild(actBtn);
+            if(actBtn) {
+                if(totalSelected === 0) {
+                    actBtn.remove();
+                } else {
+                    const desc = Object.entries(ballotCart).map(([k,v]) => `${k}: ${v.name}`).join(' | ');
+                    actBtn.innerText = `Finalize Ballot (${totalSelected} selected) ➔`;
+                    actBtn.onclick = () => startVoteFlow(desc);
+                }
+            }
         }
 
         async function loadQuestions(candidateId) {
@@ -478,10 +559,9 @@
             loadQuestions(candidateId);
         }
 
-        function startVoteFlow(id, name) {
-            selectedCandidateId = id;
+        function startVoteFlow(desc) {
             const modal = document.getElementById('confirm-modal');
-            document.getElementById('confirm-candidate-name').innerText = name;
+            document.getElementById('confirm-candidate-name').innerHTML = `<span style="font-size:1.2rem; color:var(--text-muted);">Confirming Ballot for:</span><br>` + Object.entries(ballotCart).map(([k,v]) => `<strong>${k}:</strong> ${v.name}`).join('<br>');
             // Reset State
             currentStep = 1;
             voteOtp = null;
@@ -588,8 +668,15 @@
                 if (!voteWebcamPhoto) return;
 
                 try {
-                    // Update Storage.js vote method to handle photo
-                    const hash = await StorageManager.vote(currentUser.regNum, selectedCandidateId, voteWebcamPhoto);
+                    // Prepare the candidateRegNum payload
+                    const candidatePayload = {};
+                    Object.entries(ballotCart).forEach(([cat, data]) => {
+                        candidatePayload[cat] = data.id;
+                    });
+
+                    const hash = await StorageManager.vote(currentUser.regNum, candidatePayload, voteWebcamPhoto);
+                    
+                    
                     showToast("Vote Submitted Successfully! Generating Receipt...", "success");
 
                     // Generate Receipt PDF
@@ -628,36 +715,41 @@
                     doc.text("Voter ID:", 30, 60);
                     doc.text(currentUser.regNum, 80, 60);
 
-                    const cand = candidates.find(c => c.regNum === selectedCandidateId);
-                    const votedName = cand ? `${cand.name} (${cand.symbol})` : selectedCandidateId;
-                    doc.text("Voted For:", 30, 70);
+                    doc.text("Voted Categories:", 30, 70);
                     doc.setFont("helvetica", "bold");
-                    doc.text(votedName, 80, 70);
+                    let yOffset = 70;
+                    Object.entries(ballotCart).forEach(([cat, data]) => {
+                        const cand = candidates.find(c => c.regNum === data.id);
+                        const candName = cand ? `${cand.name} (${cand.symbol})` : data.name;
+                        doc.text(`${cat}: ${candName}`, 80, yOffset);
+                        yOffset += 10;
+                    });
                     doc.setFont("helvetica", "normal");
 
-                    doc.text("Date & Time:", 30, 80);
+                    doc.text("Date & Time:", 30, yOffset);
                     const timeStr = new Date().toLocaleString();
-                    doc.text(timeStr, 80, 80);
+                    doc.text(timeStr, 80, yOffset);
 
-                    doc.text("Status:", 30, 90);
+                    yOffset += 10;
+                    doc.text("Status:", 30, yOffset);
                     doc.setTextColor(0, 150, 0);
-                    doc.text("VERIFIED & CAST", 80, 90);
+                    doc.text("VERIFIED & CAST", 80, yOffset);
 
-                    let yPos = 110;
+                    yOffset += 20;
                     doc.setTextColor(0, 0, 0); // Black
                     doc.setFontSize(12);
-                    doc.text("Vote Receipt Hash:", 30, yPos);
+                    doc.text("Vote Receipt Hash:", 30, yOffset);
                     doc.setFont("courier", "bold");
-                    doc.text(hash, 80, yPos);
+                    doc.text(hash, 80, yOffset);
                     
                     doc.setFont("helvetica", "normal");
                     doc.setFontSize(10);
                     doc.setTextColor(150, 150, 150);
-                    doc.text("Keep this hash secure. It validates your vote without revealing your choice.", 30, yPos + 10);
+                    doc.text("Keep this hash secure. It validates your vote without revealing your choice.", 30, yOffset + 10);
                     
                     // Footer
                     doc.setFontSize(8);
-                    doc.text("This receipt confirms your participation in the election.", 105, 140, null, null, "center");
+                    doc.text("This receipt confirms your participation in the election.", 105, yOffset + 30, null, null, "center");
 
                     doc.save(`OVS_Vote_Receipt_${currentUser.regNum}.pdf`);
 

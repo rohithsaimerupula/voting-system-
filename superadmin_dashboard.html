@@ -407,6 +407,23 @@
             <button class="btn" style="flex:1; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.4);" onclick="resetElection()">🔄 Full Reset</button>
           </div>
         </div>
+
+        <!-- Election Categories -->
+        <div class="card" id="categories-manager-card">
+          <h3>📂 Election Categories</h3>
+          <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem; line-height:1.4;">
+            Define the categories (e.g. Boys CR, President). Candidates will choose one, and voters will vote for one per category.
+          </p>
+          <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+            <input type="text" id="new-category-input" placeholder="e.g. Girls CR" style="flex:1;">
+            <button class="btn btn-purple" onclick="addElectionCategory()">+ Add</button>
+          </div>
+          <div id="categories-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+             <!-- Rendered list of categories -->
+          </div>
+          <button class="btn-sm" style="margin-top:1rem; width:100%; border:1px solid var(--purple); color:var(--purple); background:rgba(168,85,247,0.1);" onclick="saveCategories()">💾 Save Categories</button>
+        </div>
+
       </div>
 
       <!-- Results Chart -->
@@ -496,6 +513,7 @@ let countdownInterval = null;
 let regCountdownInterval = null;
 let currentElectionConfig = null;
 let currentRegistrationConfig = null;
+let electionCategories = [];
 
 async function clearAuditLogs() {
     if (!confirm('Are you sure you want to permanently clear ALL audit logs for your institution? This action cannot be undone.')) return;
@@ -1145,6 +1163,69 @@ async function stopElection() {
   } catch(e) { toast(e.message, false); }
 }
 
+// ── Categories Management ──
+async function loadElectionCategories() {
+    try {
+        const res = await apiFetch(`/config/categories_${saSession.institution}`);
+        if (res && res.categories) {
+            electionCategories = res.categories;
+            renderCategoriesList();
+        }
+    } catch(e) {}
+}
+
+function renderCategoriesList() {
+    const list = document.getElementById('categories-list');
+    list.innerHTML = '';
+    if(electionCategories.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted); text-align:center; padding:1rem; font-size:0.85rem;">No categories defined.</div>';
+        return;
+    }
+    electionCategories.forEach((cat, idx) => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        div.style.padding = '0.5rem 0.8rem';
+        div.style.background = 'rgba(255,255,255,0.05)';
+        div.style.borderRadius = '6px';
+        div.innerHTML = `
+            <span style="font-weight:600;">${cat}</span>
+            <button style="background:transparent; border:none; color:var(--red); cursor:pointer; font-size:1.2rem; line-height:1;" onclick="removeElectionCategory(${idx})">&times;</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function addElectionCategory() {
+    const input = document.getElementById('new-category-input');
+    const val = input.value.trim();
+    if(!val) return;
+    if(electionCategories.includes(val)) return toast('Category already exists', false);
+    electionCategories.push(val);
+    input.value = '';
+    renderCategoriesList();
+}
+
+function removeElectionCategory(idx) {
+    if(confirm('Remove this category? Note: This will not delete previously assigned roles.')) {
+        electionCategories.splice(idx, 1);
+        renderCategoriesList();
+    }
+}
+
+async function saveCategories() {
+    try {
+        await apiFetch(`/config/categories_${saSession.institution}`, {
+            method: 'POST',
+            body: JSON.stringify({ merge: true, data: { categories: electionCategories } })
+        });
+        toast('Categories saved successfully!');
+    } catch(e) {
+        toast('Error saving categories: ' + e.message, false);
+    }
+}
+
 async function loadVoting() {
   try {
     const [users, election, registration] = await Promise.all([
@@ -1238,6 +1319,10 @@ async function loadVoting() {
       if (regCountdownInterval) clearInterval(regCountdownInterval);
     }
 
+    // ── Categories ───────────────────────────────
+    await loadElectionCategories();
+    renderCategoriesList();
+
     // ── Live Stats ───────────────────────────────
     const voters     = users.filter(u => u.role === 'voter'      && u.institution === inst);
     const candidates = users.filter(u => u.role === 'contestant' && u.institution === inst);
@@ -1251,32 +1336,63 @@ async function loadVoting() {
     document.getElementById('v-voted').textContent    = voted;
     document.getElementById('v-pct').textContent      = pct + '%';
 
+    // ── Pre-calculate Multi-Category Votes ───────
+    let voteCounts = {};
+    voters.forEach(v => {
+        if(!v.hasVoted || !v.votedFor) return;
+        let votesObj = {};
+        try {
+            votesObj = JSON.parse(v.votedFor);
+            if (typeof votesObj !== 'object') throw new Error("flat");
+        } catch(e) {
+            votesObj = { 'General': v.votedFor };
+        }
+        Object.values(votesObj).forEach(candRegNum => {
+            voteCounts[candRegNum] = (voteCounts[candRegNum] || 0) + 1;
+        });
+    });
+
     // ── Bar Chart ────────────────────────────────
     const labels = candidates.map(c => c.name);
-    const votes  = candidates.map(c => voters.filter(v => v.votedFor === c.regNum).length);
+    const votes  = candidates.map(c => voteCounts[c.regNum] || 0);
     const totalVotes = votes.reduce((a, b) => a + b, 0);
 
-    // ── Winner Announcement Logic ────────────────
+    // ── Category Winners Announcement ────────────
     const winnerBanner = document.getElementById('winner-banner');
     if (election && election.isCompleted && totalVotes > 0) {
-        const maxVotes = Math.max(...votes);
-        const winners = candidates.filter((c, i) => votes[i] === maxVotes);
-        
         winnerBanner.style.display = 'block';
         const nameEl = document.getElementById('winner-name');
         const statsEl = document.getElementById('winner-stats');
         const badgeEl = document.querySelector('.winner-badge');
+        
+        let categoryWinners = {};
+        candidates.forEach(c => {
+            let cat = c.category || 'General';
+            let v = voteCounts[c.regNum] || 0;
+            if(!categoryWinners[cat]) categoryWinners[cat] = { max: -1, cands: [] };
+            if(v > categoryWinners[cat].max) {
+                 categoryWinners[cat] = { max: v, cands: [c] };
+            } else if (v === categoryWinners[cat].max) {
+                 categoryWinners[cat].cands.push(c);
+            }
+        });
 
-        if (winners.length > 1) {
-            nameEl.textContent = "ELECTION TIED";
-            statsEl.innerHTML = `Dead heat between <strong>${winners.length}</strong> candidates with <strong>${maxVotes}</strong> votes each.`;
-            badgeEl.textContent = '⚖️';
-        } else {
-            const w = winners[0];
-            nameEl.textContent = (w.symbol || '') + ' ' + (w.name).toUpperCase();
-            statsEl.innerHTML = `Winner of the <strong>${election.electionName || 'Election'}</strong> with <strong>${maxVotes}</strong> votes.`;
-            badgeEl.textContent = '🏆';
-        }
+        let winHtml = '';
+        Object.entries(categoryWinners).forEach(([cat, data]) => {
+             if(data.max > 0) {
+                 let names = data.cands.map(x => (x.symbol || '👤') + ' ' + String(x.name).toUpperCase()).join(' & ');
+                 let tiedStr = data.cands.length > 1 ? '<span style="color:var(--danger); font-size:0.8rem; margin-left:0.5rem; background:rgba(239,68,68,0.2); padding:0.2rem 0.5rem; border-radius:4px;">TIED</span>' : '';
+                 winHtml += `<div style="margin-top:0.75rem; padding:0.75rem; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
+                     <div style="font-size:0.75rem; color:var(--gold); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.2rem;">${cat}</div>
+                     <div style="font-size:1.3rem; font-weight:800; color:white;">${names} ${tiedStr} <span style="font-size:0.9rem; font-weight:normal; color:var(--muted)">(${data.max} votes)</span></div>
+                 </div>`;
+             }
+        });
+
+        nameEl.innerHTML = winHtml || "NO WINNERS DECLARED";
+        statsEl.innerHTML = `Final Results for <strong>${election.electionName || 'Election'}</strong>`;
+        badgeEl.textContent = '🏆';
+        
     } else {
         winnerBanner.style.display = 'none';
     }
@@ -1321,7 +1437,7 @@ async function loadVoting() {
       tallyEl.innerHTML = `
         <table>
           <thead><tr>
-            <th>#</th><th>Candidate</th><th>Reg No</th><th>Branch</th>
+            <th>#</th><th>Candidate</th><th>Reg No</th><th>Category</th><th>Branch</th>
             <th>Votes</th><th>Share %</th>
           </tr></thead>
           <tbody>
@@ -1332,6 +1448,7 @@ async function loadVoting() {
                 <div style="font-size:0.78rem;color:var(--muted);">${c.email||''}</div>
               </td>
               <td><strong>${c.regNum}</strong></td>
+              <td style="color:var(--purple);font-size:0.85rem;font-weight:bold;">${c.category||'GENERAL'}</td>
               <td>${c.branch||'-'}</td>
               <td><strong style="color:var(--cyan);font-size:1.1rem;">${c.votes}</strong></td>
               <td>

@@ -88,6 +88,7 @@ async function initDb() {
                 deviceFingerprint TEXT,
                 inviteCode TEXT,
                 campaignPoints INTEGER DEFAULT 0,
+                category TEXT,   -- category explicitly for contestants
                 PRIMARY KEY (regNum, institution)
             )`,
             `CREATE TABLE IF NOT EXISTS auditLogs (
@@ -141,6 +142,7 @@ async function initDb() {
             `ALTER TABLE users ADD COLUMN voteReceiptHash TEXT`,
             `ALTER TABLE users ADD COLUMN voteFingerprint TEXT`,
             `ALTER TABLE users ADD COLUMN year TEXT`,
+            `ALTER TABLE users ADD COLUMN category TEXT`,
         ];
         for (const sql of newColumns) {
             try { await db.execute(sql); } catch (e) { /* Column already exists, skip */ }
@@ -225,14 +227,14 @@ app.post('/api/users/add', async (req, res) => {
         const u = req.body;
         const inst = u.institution || 'Unknown';
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote, year)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote, year, category)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending',
                 boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait || null, u.webcamReg || null,
                 u.deviceFingerprint || null, u.inviteCode || null, u.campaignPoints || 0,
                 u.branch || null, u.class || null, u.managedBy || null,
-                boolInt(u.canVote), u.year || null
+                boolInt(u.canVote), u.year || null, u.category || null
             ]
         });
         res.json({ success: true });
@@ -425,21 +427,29 @@ app.get('/api/voters/by-branch/:branch', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Mark canVote for a voter
+// Mark canVote for a voter — scoped to institution
 app.post('/api/voters/can-vote', async (req, res) => {
     try {
-        const { regNum, canVote } = req.body;
-        await db.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), regNum] });
+        const { regNum, canVote, institution } = req.body;
+        if (!institution) return res.status(400).json({ error: "Institution required for voting control" });
+        await db.execute({ 
+            sql: "UPDATE users SET canVote = ? WHERE regNum = ? AND institution = ?", 
+            args: [boolInt(canVote), regNum, decodeURIComponent(institution)] 
+        });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Bulk mark canVote for array of regNums
+// Bulk mark canVote for array of regNums — scoped to institution
 app.post('/api/voters/can-vote-bulk', async (req, res) => {
     try {
-        const { regNums, canVote } = req.body;
+        const { regNums, canVote, institution } = req.body;
+        if (!institution) return res.status(400).json({ error: "Institution required for bulk control" });
         for (const r of regNums) {
-            await db.execute({ sql: "UPDATE users SET canVote = ? WHERE regNum = ?", args: [boolInt(canVote), r] });
+            await db.execute({ 
+                sql: "UPDATE users SET canVote = ? WHERE regNum = ? AND institution = ?", 
+                args: [boolInt(canVote), r, decodeURIComponent(institution)] 
+            });
         }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -593,9 +603,11 @@ app.post('/api/vote', async (req, res) => {
         if (v.hasVoted === 1) return res.status(400).json({ error: "You have already voted!" });
         if (v.isBanned === 1) return res.status(403).json({ error: "Voting rights suspended." });
 
+        const candidateStr = typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : String(candidateRegNum || "");
+
         await db.execute({
             sql: `UPDATE users SET hasVoted = 1, votedFor = ?, votedAt = ?, votePhoto = ?, status = 'pending_vote_verification', voteStatus = 'pending', voteReceiptHash = ?, voteFingerprint = ? WHERE regNum = ?`,
-            args: [candidateRegNum, timestamp, votePhoto, secureHash, fp, voterRegNum]
+            args: [candidateStr, timestamp, votePhoto, secureHash, fp, voterRegNum]
         });
         await db.execute({ sql: "INSERT INTO publicLedger (receiptHash, timestamp, status) VALUES (?, ?, 'pending_verification')", args: [secureHash, timestamp] });
         res.json({ success: true });

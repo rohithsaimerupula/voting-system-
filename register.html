@@ -87,6 +87,14 @@
                         </select>
                     </div>
 
+                    <div class="form-group hidden" id="category-group">
+                        <label>Election Category</label>
+                        <select id="category">
+                            <option value="">Loading Categories...</option>
+                        </select>
+                        <small style="color: var(--text-muted); font-size: 0.8rem;">Select the position you are running for.</small>
+                    </div>
+
                     <div class="form-group">
                         <label>Full Name</label>
                         <input type="text" id="name" required placeholder="John Doe" maxlength="50">
@@ -245,6 +253,29 @@
         } else {
             document.getElementById('inst-badge').innerText = "⛩️ " + userInst;
             checkRegistrationStatus(userInst);
+            loadCategories(userInst);
+        }
+
+        async function loadCategories(inst) {
+            try {
+                const API_URL = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+                const res = await fetch(`${API_URL}/config/categories_${encodeURIComponent(inst)}`);
+                const sel = document.getElementById('category');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.categories && data.categories.length > 0) {
+                        sel.innerHTML = '';
+                        data.categories.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c;
+                            opt.textContent = c;
+                            sel.appendChild(opt);
+                        });
+                    } else {
+                        sel.innerHTML = '<option value="">No categories globally defined</option>';
+                    }
+                }
+            } catch(e) { console.error("Categories fetch fail", e); }
         }
 
         async function checkRegistrationStatus(inst) {
@@ -499,10 +530,14 @@
             const role = document.getElementById('role').value;
             const symbolGroup = document.getElementById('symbol-group');
             const passGroup = document.getElementById('password-group');
+            const categoryGroup = document.getElementById('category-group');
 
             if (role === 'contestant') {
                 symbolGroup.classList.remove('hidden');
                 document.getElementById('symbol').required = true;
+                
+                categoryGroup.classList.remove('hidden');
+                document.getElementById('category').required = true;
 
                 passGroup.classList.add('hidden'); // Candidate: No Password
                 document.getElementById('password').required = false;
@@ -515,6 +550,9 @@
             } else {
                 symbolGroup.classList.add('hidden');
                 document.getElementById('symbol').required = false;
+
+                categoryGroup.classList.add('hidden');
+                document.getElementById('category').required = false;
 
                 passGroup.classList.remove('hidden'); // Voter: Password Required
                 document.getElementById('password').required = true;
@@ -547,6 +585,7 @@
             const password = passInput.value;
             const symbol = symbolInput.value;
             const email = document.getElementById('email').value;
+            const categoryVal = role === 'contestant' ? document.getElementById('category').value : null;
             const manifestoVal = role === 'contestant' ? document.getElementById('manifesto').value : null;
 
             if (name.length > 50) return showError("Name too long (Max 50).");
@@ -574,6 +613,7 @@
             if (role === 'contestant') {
                 const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/;
                 if (!emojiRegex.test(symbol)) { return showError("Symbol must be a valid Emoji (e.g. 🦁)."); }
+                if (!categoryVal) { return showError("Super Admin has not defined any valid Electoral Categories yet. You cannot register as a candidate."); }
             }
 
             errorContainer.classList.add('hidden');
@@ -659,6 +699,8 @@
                 portrait: portraitBase64, hasVoted: false, email,
                 webcamReg: webcamPhoto, aiVerified,
                 status: aiVerified ? 'active' : 'pending',
+                category: categoryVal,
+                campaignPoints: 0,
                 createdAt: new Date().toISOString()
             };
 
