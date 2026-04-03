@@ -857,7 +857,7 @@ async function saveEdit() {
   }
 
   try {
-    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify(updates) });
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(saSession.institution)}`, { method:'PATCH', body:JSON.stringify(updates) });
     toast(`${id} details updated successfully!`);
     closeEditModal();
     loadAll();
@@ -919,7 +919,7 @@ async function createSubAdminSA() {
 async function removeUser(id) {
   if (!confirm(`Remove ${id}? This cannot be undone.`)) return;
   try {
-    await apiFetch(`/users/${id}`, { method:'DELETE' });
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(saSession.institution)}`, { method:'DELETE' });
     toast(`${id} removed`);
     loadAll();
   } catch(e) { toast(e.message, false); }

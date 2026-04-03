@@ -1280,7 +1280,8 @@
 
             try {
                 const apiUrl = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-                const response = await fetch(apiUrl + '/users/' + id, {
+                const inst = currentUser.institution || 'Unknown';
+                const response = await fetch(apiUrl + '/users/' + id + '?institution=' + encodeURIComponent(inst), {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates)
