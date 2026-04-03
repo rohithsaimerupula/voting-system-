@@ -327,7 +327,7 @@ function renderStudents(list){
 
 async function acceptStudent(id) {
   try {
-    await apiFetch(`/users/${id}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
     toast(`Registration accepted for ${id}`);
     loadAll();
   } catch(e) { toast(e.message, false); }
@@ -352,7 +352,7 @@ async function toggleVote(regNum,val){
 
 async function removeStudent(id){
   if(!confirm(`Remove student ${id}?`)) return;
-  try{await apiFetch(`/users/${id}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
+  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
   catch(e){toast(e.message,false);}
 }
 
@@ -408,7 +408,7 @@ async function saveEdit(){
   }
 
   try{
-    await apiFetch(`/users/${id}`,{method:'PATCH',body:JSON.stringify(updates)});
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(updates)});
     toast('Student details updated!');closeEdit();loadAll();
   }catch(e){toast(e.message,false);}
 }
