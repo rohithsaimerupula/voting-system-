@@ -182,7 +182,19 @@
         <button class="btn btn-cyan" style="margin-top:1rem" onclick="createSubAdmin()">Create Sub-Admin</button>
       </div>
       <div class="card">
-        <h3>📋 Sub-Admins in My Branch</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap;">
+          <h3 style="margin:0;">📋 Sub-Admins in My Branch</h3>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <label style="margin:0;font-size:0.8rem;color:var(--muted);white-space:nowrap;">Filter by Year:</label>
+            <select id="sa-filter-year" onchange="applySaFilter()" style="max-width:140px;margin:0;padding:0.4rem;font-size:0.85rem;background:rgba(255,42,77,0.05);border:1px solid rgba(255,42,77,0.2);color:white;border-radius:8px;">
+              <option value="">All Years</option>
+              <option value="1st">1st Year</option>
+              <option value="2nd">2nd Year</option>
+              <option value="3rd">3rd Year</option>
+              <option value="4th">4th Year</option>
+            </select>
+          </div>
+        </div>
         <table><thead><tr><th>ID</th><th>Name</th><th>Year</th><th>Class</th><th>Email</th><th>Actions</th></tr></thead>
         <tbody id="sa-table"></tbody></table>
       </div>
@@ -232,6 +244,7 @@
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let branchStudents = [];
+let allBranchSubAdmins = [];
 
 let chartReg = null, chartVote = null;
 
@@ -305,6 +318,7 @@ async function loadAll(){
     document.getElementById('s-canvote').textContent=canVote;
     document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
     document.getElementById('s-subadmins').textContent=subadmins.length;
+    allBranchSubAdmins = subadmins;
     renderCharts(students.length, accepted, pending, canVote);
     renderStudents(students);
     renderSaTable(subadmins);
@@ -376,13 +390,13 @@ async function grantAllVote(){
   if(eligible.length === 0) return toast('No active students to grant access to.', false);
   try{
     const ids=eligible.map(s=>s.regNum);
-    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:ids,canVote:true})});
+    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:ids,canVote:true,institution:session.institution})});
     toast(`Vote granted to ${eligible.length} active students!`); loadAll();
   }catch(e){toast(e.message,false);}
 }
 
 async function toggleVote(regNum,val){
-  try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val})});toast(val?'Vote granted!':'Vote revoked');loadAll();}
+  try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote granted!':'Vote revoked');loadAll();}
   catch(e){toast(e.message,false);}
 }
 
@@ -394,7 +408,7 @@ async function removeStudent(id){
 
 function renderSaTable(list){
   const tb=document.getElementById('sa-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins yet</td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins found matching criteria</td></tr>';return;}
   tb.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
     <td style="display:flex;gap:0.4rem;">
@@ -402,6 +416,12 @@ function renderSaTable(list){
       <button class="btn-sm btn-d" onclick="removeSA('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');
+}
+
+function applySaFilter() {
+  const year = document.getElementById('sa-filter-year').value;
+  const filtered = year ? allBranchSubAdmins.filter(s => (s.year||'') === year) : allBranchSubAdmins;
+  renderSaTable(filtered);
 }
 
 function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }

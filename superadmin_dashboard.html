@@ -247,12 +247,20 @@
       </div>
       <div class="card">
         <h3>📋 All Sub-Admins</h3>
-        <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;">
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
           <label style="margin:0;white-space:nowrap;">Filter by Branch:</label>
-          <select id="sa-filter-branch" onchange="applySubAdminFilter()" style="max-width:200px;margin:0">
+          <select id="sa-filter-branch" onchange="applySubAdminFilter()" style="max-width:160px;margin:0">
             <option value="">All Branches</option>
             <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
             <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option>
+          </select>
+          <label style="margin:0;white-space:nowrap;">Year:</label>
+          <select id="sa-filter-year" onchange="applySubAdminFilter()" style="max-width:140px;margin:0">
+            <option value="">All Years</option>
+            <option value="1st">1st Year</option>
+            <option value="2nd">2nd Year</option>
+            <option value="3rd">3rd Year</option>
+            <option value="4th">4th Year</option>
           </select>
         </div>
         <table><thead><tr><th>ID</th><th>Name</th><th>Branch</th><th>Class</th><th>Year</th><th>Managed By</th><th>Actions</th></tr></thead>
@@ -279,6 +287,7 @@
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
         </select>
+        <button class="btn btn-green" onclick="grantAllInstitutionVote()" style="min-width:140px;margin:0;padding:0.6rem 1rem;font-size:0.85rem;border-radius:10px;font-weight:700;">Grant All Vote</button>
       </div>
       <div class="card" style="padding:0.5rem">
         <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
@@ -727,10 +736,10 @@ function renderSubAdminTable(sas) {
 
 function renderStudents(list) {
   const tb = document.getElementById('student-table');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">No students found</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="empty">No students found</td></tr>'; return; }
   tb.innerHTML = list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
-    <td>${s.year||'-'}</td>
+    <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--purple);">${s.year||'1st'}</span></td>
     <td>${s.branch||'-'}</td><td>${s.class||'-'}</td>
     <td>${s.canVote==1 ? '<span class="badge badge-active">✅ Yes</span>' : '<span class="badge badge-pending">❌ No</span>'}</td>
     <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
@@ -769,7 +778,12 @@ let allSubAdmins = [];
 
 function applySubAdminFilter() {
   const branch = document.getElementById('sa-filter-branch').value;
-  const filtered = branch ? allSubAdmins.filter(s => (s.branch||'') === branch) : allSubAdmins;
+  const year = document.getElementById('sa-filter-year').value;
+  const filtered = allSubAdmins.filter(s => {
+    const matchBranch = !branch || (s.branch||'') === branch;
+    const matchYear = !year || (s.year||'') === year;
+    return matchBranch && matchYear;
+  });
   renderSubAdminTable(filtered);
 }
 
@@ -887,8 +901,27 @@ function validatePassword(pwd, minLen, maxLen) {
 
 async function toggleCanVote(regNum, val) {
   try {
-    await apiFetch('/voters/can-vote', { method:'POST', body:JSON.stringify({ regNum, canVote: val }) });
+    await apiFetch('/voters/can-vote', { 
+        method:'POST', 
+        body:JSON.stringify({ regNum, canVote: val, institution: saSession.institution }) 
+    });
     toast(val ? 'Vote access granted!' : 'Vote access revoked');
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function grantAllInstitutionVote() {
+  if (!confirm('Grant vote access to ALL ACTIVE students in the ENTIRE institution?')) return;
+  const activeStudents = allStudents.filter(s => s.status === 'active');
+  if (!activeStudents.length) return toast('No active students found to grant access to.', false);
+  
+  try {
+    const ids = activeStudents.map(s => s.regNum);
+    await apiFetch('/voters/can-vote-bulk', { 
+        method:'POST', 
+        body:JSON.stringify({ regNums: ids, canVote: true, institution: saSession.institution }) 
+    });
+    toast(`Vote access granted to ${ids.length} students!`);
     loadAll();
   } catch(e) { toast(e.message, false); }
 }
