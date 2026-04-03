@@ -214,18 +214,9 @@
 
         async function init() {
             try {
-                // Fetch status and CANDIDATES (Securely)
-                const election = await StorageManager.getElectionStatus();
-                // Check if voted - Trust session or fetch fresh user?
-                // For simplicity and speed, trust session if updated correctly, but let's re-fetch self to be safe against multi-device.
-                // Since we don't have getSelf endpoint, we rely on currentUser from localStorage which is updated by vote().
-                // To be extra safe, we could re-login or fetchUser(id).
-                // Let's stick to currentUser for now as it's sufficient for this scope.
-
                 const statusHeader = document.getElementById('election-status-header');
                 const statusDesc = document.getElementById('election-status-desc');
                 const votingSection = document.getElementById('voting-section');
-                const votedSection = document.getElementById('voted-section');
 
                 // Announcements Ticker
                 const news = await StorageManager.getAnnouncement();
@@ -234,49 +225,77 @@
                     marquee.style.cssText = "background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); color:black; font-weight:bold; width:100%; position:fixed; top:0; left:0; z-index:9999; padding:0.5rem; white-space:nowrap; overflow:hidden;";
                     marquee.innerHTML = `<marquee behavior='scroll' direction='left'>📢 IMPORTANT: ${news}</marquee>`;
                     document.body.prepend(marquee);
-                    document.querySelector('nav').style.marginTop = "2rem"; // Push nav down
+                    document.querySelector('nav').style.marginTop = "2rem";
                 }
 
-                // 1. Check if voted
-                // Ban Check
-                if (currentUser.isBanned) {
+                // Fetch fresh user data from server (avoids stale session cache)
+                const freshUser = await fetch(`/api/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
+                    .then(r => r.ok ? r.json() : currentUser)
+                    .catch(() => currentUser);
+                const user = freshUser || currentUser;
+
+                // ═══════════════════════════════════════════
+                // STATE 1: BANNED
+                // ═══════════════════════════════════════════
+                if (user.isBanned === 1 || user.isBanned === true) {
                     statusHeader.innerText = "Voting Rights Suspended 🚫";
                     statusHeader.style.color = "var(--danger)";
-                    statusDesc.innerText = "Your account has been restricted by the Administrator.";
-                    votingSection.classList.add('hidden');
-                    document.getElementById('live-turnout-container').style.display = 'none';
-                    return;
-                }
-
-                // canVote Gate — Admin/Sub-Admin must grant access
-                const freshUser = await fetch(`/api/users/${currentUser.regNum}`).then(r=>r.json()).catch(()=>currentUser);
-                if (!freshUser.canVote || freshUser.canVote === 0) {
-                    statusHeader.innerText = "Access Not Granted Yet ⏳";
-                    statusHeader.style.color = "var(--warning, #f59e0b)";
-                    statusDesc.innerHTML = `<strong style="color:#f59e0b;">Admin/Sub-Admin has not given you access yet!</strong><br><span style="font-size:0.9rem;color:#64748b;">Please contact your class Sub-Admin or Branch Admin to grant you voting access.</span>`;
+                    statusDesc.innerHTML = `<strong style="color:var(--danger);">Your account has been permanently restricted by the Administrator.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">If you believe this is an error, please contact your institution's administrator.</span>`;
                     votingSection.classList.add('hidden');
                     return;
                 }
 
-                if (currentUser.hasVoted) {
+                // ═══════════════════════════════════════════
+                // STATE 2: PENDING — waiting for admin to approve registration
+                // ═══════════════════════════════════════════
+                if (user.status === 'pending') {
+                    statusHeader.innerHTML = `⏳ Registration Pending Approval`;
+                    statusHeader.style.color = "#f59e0b";
+                    statusDesc.innerHTML = `
+                        <div style="margin-top:1.5rem; padding:2rem; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:16px; max-width:500px; margin-inline:auto;">
+                            <div style="font-size:3.5rem; margin-bottom:1rem;">🔍</div>
+                            <p style="color:#f59e0b; font-weight:700; font-size:1.1rem; margin-bottom:0.75rem;">AI Face Verification was inconclusive</p>
+                            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.7; margin-bottom:1.25rem;">
+                                Your registration has been submitted but requires <strong style="color:white;">manual review</strong> by your college Admin or Sub-Admin before you can access the election.
+                            </p>
+                            <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:1rem; text-align:left;">
+                                <p style="color:#f59e0b; font-weight:700; font-size:0.82rem; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:1px;">What happens next?</p>
+                                <ul style="color:var(--text-muted); font-size:0.88rem; line-height:2; padding-left:1.2rem; margin:0;">
+                                    <li>Your Branch Admin or Class Sub-Admin will review your ID proof</li>
+                                    <li>Once approved, your account will be activated automatically</li>
+                                    <li>Contact your class Sub-Admin if approval is taking too long</li>
+                                </ul>
+                            </div>
+                            <p style="margin-top:1rem; color:rgba(255,255,255,0.3); font-size:0.78rem;">↻ Refresh this page to check your approval status</p>
+                        </div>`;
+                    votingSection.classList.add('hidden');
+                    return;
+                }
+
+                // ═══════════════════════════════════════════
+                // STATE 3: ALREADY VOTED
+                // ═══════════════════════════════════════════
+                // ═══════════════════════════════════════════
+                // STATE 3: ALREADY VOTED
+                // ═══════════════════════════════════════════
+                if (user.hasVoted === 1 || user.hasVoted === true) {
                     statusHeader.innerText = "You have already voted! 🎉";
                     statusHeader.style.color = "var(--success)";
-                    const rec = currentUser.voteReceiptHash || "Pending Generation";
+                    const rec = user.voteReceiptHash || currentUser.voteReceiptHash || "Pending Generation";
                     statusDesc.innerHTML = `Your vote has been securely recorded.<br><br>
                     <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px; border:1px solid var(--glass-border); display:inline-block;">
                         <span style="color:var(--text-muted); font-size:0.9rem;">Cryptographic Receipt Hash:</span><br>
                         <strong style="color:var(--neon-cyan); letter-spacing:2px; font-family:monospace;">${rec}</strong>
                     </div><br>
-                    <a href="https://twitter.com/intent/tweet?text=I%20just%20voted%20securely%20using%20OVS!%20%23IVoted" target="_blank" class="social-badge">Share 'I Voted' Badge 🚀</a>
-                    `;
-                    // timerDisplay.innerText = ""; // Assuming timerDisplay is not present or handled elsewhere
+                    <a href="https://twitter.com/intent/tweet?text=I%20just%20voted%20securely%20using%20OVS!%20%23IVoted" target="_blank" class="social-badge">Share 'I Voted' Badge 🚀</a>`;
                     votingSection.classList.add('hidden');
                     return;
                 }
-                // Old voted section logic removed as per instruction.
-                // The above block replaces the old `voted-section` display.
 
-                // 2. Election Active? (Manual OR Scheduled)
+                // ═══════════════════════════════════════════
+                // STATE 4: ELECTION STATUS CHECK
+                // ═══════════════════════════════════════════
+                const election = await StorageManager.getElectionStatus();
                 const now = new Date().getTime();
                 const startT = election.startTime ? new Date(election.startTime).getTime() : 0;
                 const endT = election.endTime ? new Date(election.endTime).getTime() : 0;
@@ -288,48 +307,71 @@
                     if (now >= startT) isScheduledActive = true;
                 }
 
-                if (election.isActive || isScheduledActive) {
-                    // Double check if ENDED due to schedule (even if active flag is stuck)
-                    if (endT && now > endT) {
-                        statusHeader.innerText = "Election Closed";
-                        statusHeader.className = "text-danger";
-                        statusDesc.innerText = "Voting time has ended. Results will be declared soon.";
-                        return;
-                    }
+                const electionEnded = endT && now > endT;
+                const electionIsLive = (election.isActive || isScheduledActive) && !electionEnded;
 
-                    // CHECK IF TOO EARLY
-                    if (startT && now < startT) {
-                        statusHeader.innerText = "Election Scheduled";
-                        statusHeader.className = "text-warning";
-                        statusDesc.innerText = `Voting starts at ${new Date(election.startTime).toLocaleString()}`;
-                        return;
-                    }
-
-                    statusHeader.innerText = "Active Election";
-                    statusHeader.className = "text-success";
-                    statusDesc.innerText = "Polls are open. Select a candidate below.";
-
-                    await loadCandidates(); // Call the new loadCandidates function
-
-                    votingSection.classList.remove('hidden');
-                } else {
-                    // Not active and Not in schedule
-                    statusHeader.innerText = "Election Closed";
-                    statusHeader.className = "text-danger";
-                    if (endT && now > endT) {
-                        statusDesc.innerText = "Voting has ended.";
+                if (!electionIsLive) {
+                    if (election.isCompleted) {
+                        statusHeader.innerText = "Election Completed 🏁";
+                        statusHeader.style.color = "var(--danger)";
+                        statusDesc.innerHTML = `<strong>Voting has concluded.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Results will be declared by the Administrator soon.</span>`;
+                    } else if (electionEnded) {
+                        statusHeader.innerText = "Election Closed 🔒";
+                        statusHeader.style.color = "var(--danger)";
+                        statusDesc.innerHTML = `<strong>Voting time has ended.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Results will be declared soon.</span>`;
                     } else if (startT && now < startT) {
-                        statusHeader.innerText = "Upcoming Election";
-                        statusHeader.className = "text-info";
+                        statusHeader.innerText = "Upcoming Election 📅";
+                        statusHeader.style.color = "var(--neon-cyan)";
                         statusDesc.innerText = `Voting starts at ${new Date(election.startTime).toLocaleString()}`;
                     } else {
-                        statusDesc.innerText = "Voting is currently paused or not started.";
+                        statusHeader.innerText = "Election Closed 🔒";
+                        statusHeader.style.color = "var(--danger)";
+                        statusDesc.innerHTML = `<strong>Election is not currently active.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Please wait for your college Admin to open the polls.</span>`;
                     }
+                    votingSection.classList.add('hidden');
+                    return;
                 }
+
+                // ═══════════════════════════════════════════
+                // STATE 5: ELECTION LIVE — canVote not granted yet
+                // ═══════════════════════════════════════════
+                if (!user.canVote || user.canVote === 0) {
+                    statusHeader.innerText = "Waiting for Voting Access ⏳";
+                    statusHeader.style.color = "#f59e0b";
+                    statusDesc.innerHTML = `
+                        <div style="margin-top:1.5rem; padding:2rem; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:16px; max-width:500px; margin-inline:auto;">
+                            <div style="font-size:3.5rem; margin-bottom:1rem;">&#x1F5DD;&#xFE0F;</div>
+                            <p style="color:#f59e0b; font-weight:700; font-size:1.1rem; margin-bottom:0.75rem;">Election is LIVE — Your Access is Pending</p>
+                            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.7; margin-bottom:1.25rem;">
+                                The polls are open, but your <strong style="color:white;">Admin or Sub-Admin</strong> has not yet granted you permission to cast a vote.
+                            </p>
+                            <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:1rem; text-align:left;">
+                                <p style="color:#f59e0b; font-weight:700; font-size:0.82rem; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:1px;">What to do?</p>
+                                <ul style="color:var(--text-muted); font-size:0.88rem; line-height:2; padding-left:1.2rem; margin:0;">
+                                    <li>Contact your class <strong style="color:white;">Sub-Admin</strong> to grant you voting access</li>
+                                    <li>Or reach out to your branch <strong style="color:white;">Admin</strong></li>
+                                    <li>Once granted, refresh this page to cast your vote</li>
+                                </ul>
+                            </div>
+                            <p style="margin-top:1rem; color:rgba(255,255,255,0.3); font-size:0.78rem;">Refresh this page after receiving access</p>
+                        </div>`;
+                    votingSection.classList.add('hidden');
+                    return;
+                }
+
+                // ═══════════════════════════════════════════
+                // STATE 6: ELECTION LIVE + ACCESS GRANTED — SHOW CANDIDATES
+                // ═══════════════════════════════════════════
+                statusHeader.innerText = "Active Election 🗳️";
+                statusHeader.style.color = "var(--success)";
+                statusDesc.innerText = "Polls are open. Select a candidate below and cast your vote.";
+                await loadCandidates();
+                votingSection.classList.remove('hidden');
+
             } catch (err) {
                 console.error(err);
                 document.getElementById('election-status-header').innerText = "Connection Error";
-                document.getElementById('election-status-desc').innerText = "Is the server running?";
+                document.getElementById('election-status-desc').innerText = "Is the server running? Please refresh the page.";
             }
         }
 

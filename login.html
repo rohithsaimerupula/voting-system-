@@ -557,8 +557,9 @@
                         return;
                     }
 
-                    // Status Check
-                    if (user.status === 'pending') {
+                    // Status Check — pending voters reach dashboard to see proper status screen
+                    const isStaffRole = ['admin', 'subadmin', 'superadmin'].includes(user.role);
+                    if (user.status === 'pending' && isStaffRole) {
                         showError("Account Pending Approval. Please contact Admin.");
                         submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
                         return;

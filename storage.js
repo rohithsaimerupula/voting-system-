@@ -249,7 +249,11 @@ const StorageManager = {
             if (!userData) return null;
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
-            if (userData.status === 'pending') throw new Error("Your registration is pending Admin Approval.");
+            // NOTE: pending-status voters ARE allowed to login so they see the
+            // "awaiting admin approval" screen inside the dashboard itself.
+            // Only staff roles (admin/subadmin/superadmin) are hard-blocked when pending.
+            const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role);
+            if (userData.status === 'pending' && isStaffRole) throw new Error("Your account is pending approval.");
 
             // Enforce Institution Isolation for all roles except Developer
             const activeInst = localStorage.getItem('ovs_inst_name');

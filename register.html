@@ -243,7 +243,7 @@
             alert('Access Denied. Please enter your College Access Code first.');
             window.location.href = 'index.html';
         } else {
-            document.getElementById('inst-display').innerText = "⛩️ " + userInst;
+            document.getElementById('inst-badge').innerText = "⛩️ " + userInst;
         }
 
         // Initialize Face API Models
@@ -607,29 +607,44 @@
             };
 
             await StorageManager.addUser(user);
-            
-            // --- UI Update with AI Badge ---
-            const badge = document.getElementById('ai-status-badge');
-            const msgText = document.getElementById('msg-text');
-            
+
+            // --- Show Success Screen ---
+            const instName = localStorage.getItem('ovs_inst_name') || 'Your Institution';
+            document.getElementById('reg-inst-name').innerText = instName;
+
+            const nextStepsList = document.getElementById('success-next-steps');
+            const successTitle = document.getElementById('success-title');
+            const successIcon = document.getElementById('success-icon');
+            const successIconContainer = document.getElementById('success-icon-container');
+
             if (aiVerified) {
-                badge.innerHTML = "AI Verified ✅";
-                badge.style.background = "rgba(34, 197, 94, 0.15)";
-                badge.style.color = "#22c55e";
-                badge.style.borderColor = "rgba(34, 197, 94, 0.4)";
-                badge.style.boxShadow = "0 0 20px rgba(34, 197, 94, 0.2)";
-                msgText.innerHTML = "Identity confirmed by AI. Your account is <strong>INSTANTLY ACTIVE</strong>! You can now login via the home gateway and vote.";
+                successTitle.innerText = "Registration Complete!";
+                successTitle.style.color = "#22c55e";
+                successIconContainer.style.borderColor = "#22c55e";
+                successIconContainer.style.background = "rgba(34, 197, 94, 0.1)";
+                successIcon.innerText = "✅";
+                nextStepsList.innerHTML = `
+                    <li>✅ AI has <strong>instantly verified</strong> your identity.</li>
+                    <li>🔑 Your account is <strong>ACTIVE</strong>. You may now login.</li>
+                    <li>🗳️ Head to the Gateway and use your Reg Number &amp; Password to vote.</li>
+                `;
             } else {
-                badge.innerHTML = "Pending Human Review ⏳";
-                badge.style.background = "rgba(245, 158, 11, 0.15)";
-                badge.style.color = "#f59e0b";
-                badge.style.borderColor = "rgba(245, 158, 11, 0.4)";
-                badge.style.animation = "pulse-badge 2s infinite";
-                msgText.innerHTML = "Face match was inconclusive. Your registration is <strong>PENDING approval</strong> by a College Admin. You will be able to log in once approved manually.";
+                successTitle.innerText = "Registration Submitted!";
+                successTitle.style.color = "#f59e0b";
+                successIconContainer.style.borderColor = "#f59e0b";
+                successIconContainer.style.background = "rgba(245, 158, 11, 0.1)";
+                successIconContainer.style.animation = "pulse-badge 2s infinite";
+                successIcon.innerText = "⏳";
+                nextStepsList.innerHTML = `
+                    <li>⏳ Your registration is <strong>PENDING</strong> Admin approval.</li>
+                    <li>📧 You will be notified once your account is approved.</li>
+                    <li>🔑 After approval, return to the Gateway to login and vote.</li>
+                `;
             }
 
-            document.getElementById('register-form').classList.add('hidden');
-            msgContainer.classList.remove('hidden');
+            // Hide form, show success
+            document.getElementById('registration-form-content').classList.add('hidden');
+            document.getElementById('success-screen').classList.remove('hidden');
 
         } catch (err) {
             console.error("[Registration Error]", err);
