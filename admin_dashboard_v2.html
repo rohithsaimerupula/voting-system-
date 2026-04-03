@@ -293,7 +293,7 @@ async function loadAll(){
   try{
     const [students,subadmins]=await Promise.all([
       apiFetch(`/voters/by-branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`),
-      apiFetch(`/staff/managed-by/${session.regNum}`)
+      apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
     ]);
     branchStudents=students;
     const accepted = students.filter(s=>s.status==='active').length;

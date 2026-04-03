@@ -365,6 +365,19 @@ app.get('/api/staff/managed-by/:adminId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Get staff by branch and institution (admin use)
+app.get('/api/staff/branch/:branch', async (req, res) => {
+    try {
+        const institution = req.query.institution;
+        if (!institution) return res.status(400).json({ error: "Institution required" });
+        const result = await db.execute({
+            sql: "SELECT * FROM users WHERE branch = ? AND institution = ? AND role = 'subadmin'",
+            args: [decodeURIComponent(req.params.branch), decodeURIComponent(institution)]
+        });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Get all Super Admins (developer use)
 app.get('/api/superadmins', async (req, res) => {
     try {
