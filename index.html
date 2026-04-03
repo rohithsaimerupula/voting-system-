@@ -385,7 +385,10 @@
     <!-- ── FOOTER STRIP ── -->
     <div class="footer-strip">
         <span>© <span id="year"></span> Online Voting System</span>
-        <span id="inst-label" style="color:var(--text-muted);font-weight:500;"></span>
+        <div style="display: flex; align-items: center;">
+            <span id="inst-label" style="color:var(--text-muted);font-weight:500;"></span>
+            <button id="reset-gateway-btn" onclick="resetGateway()" style="display:none; margin-left: 1rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 0.8rem; transition: background 0.3s;">Switch Institution</button>
+        </div>
     </div>
 
     <script>
@@ -410,6 +413,17 @@
         } else if (lastCode) {
             // Fresh visit: Show Gateway but pre-fill code
             document.getElementById('inst-code').value = lastCode;
+        }
+
+        const codeMap = { "VIEW2026": "Vignan's Institute of Engineering for Women", "VIIT2026": "Vignan's Institute of Information Technology", "TEST2026": "Test University" };
+
+        function resetGateway() {
+            localStorage.removeItem('ovs_inst_name');
+            localStorage.removeItem('ovs_inst_code');
+            localStorage.removeItem('ovs_inst_logo');
+            localStorage.removeItem('ovs_gate_unlocked');
+            localStorage.removeItem('_ovs_last_gate_code');
+            window.location.reload();
         }
 
         async function verifyGateway() {
@@ -464,6 +478,7 @@
                 `<span style="font-size:0.65rem;font-weight:400;letter-spacing:0.08em;color:var(--text-dim);display:block;margin-bottom:1px;-webkit-text-fill-color:var(--text-dim);">PORTAL</span>${instName}`;
 
             document.getElementById('inst-label').textContent = '— ' + instName;
+            document.getElementById('reset-gateway-btn').style.display = 'inline-block';
         }
 
         // Navbar scroll effect

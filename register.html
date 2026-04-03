@@ -56,25 +56,23 @@
                 <p style="color:var(--muted); font-size:0.85rem;">Securing your digital identity — please do not refresh</p>
             </div>
 
-            <!-- SUCCESS SCREEN -->
-            <div id="success-screen" class="hidden" style="text-align:center; padding:3rem 2rem;">
-                <div style="width:96px; height:96px; background:rgba(34,197,94,0.1); border:2px solid #22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 2rem; animation:pulse-green 2s infinite;">
-                    <span style="font-size:3rem;">✅</span>
-                </div>
-                <h2 style="font-size:2.4rem; font-weight:900; color:#22c55e; margin-bottom:1rem; font-family:'Playfair Display',serif;">Registration Received!</h2>
-                <p style="color:var(--text); font-size:1.1rem; margin-bottom:2rem; max-width:500px; margin-inline:auto;">Your application for <strong><span id="reg-inst-name">...</span></strong> has been successfully submitted to our secure servers.</p>
-                
-                <div class="glass-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:1.5rem; margin-bottom:2.5rem; text-align:left;">
-                    <p style="color:#22c55e; font-weight:700; margin-bottom:0.75rem;">Next Steps:</p>
-                    <ol style="color:var(--muted); font-size:0.95rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem;">
-                        <li>Our AI is currently verifying your biometric data.</li>
-                        <li>Wait for your **Institutional Admin** to approve your profile.</li>
-                        <li>Once approved, you can login via the <strong>Home Gateway</strong>.</li>
-                    </ol>
-                </div>
+                <!-- SUCCESS SCREEN -->
+                <div id="success-screen" class="hidden" style="text-align:center; padding:3rem 2rem;">
+                    <div id="success-icon-container" style="width:96px; height:96px; background:rgba(34,197,94,0.1); border:2px solid #22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 2rem; animation:pulse-green 2s infinite;">
+                        <span id="success-icon" style="font-size:3rem;">✅</span>
+                    </div>
+                    <h2 id="success-title" style="font-size:2.4rem; font-weight:900; color:#22c55e; margin-bottom:1rem; font-family:'Playfair Display',serif;">Registration Complete!</h2>
+                    <p style="color:var(--text); font-size:1.1rem; margin-bottom:2rem; max-width:500px; margin-inline:auto;">Your application for <strong><span id="reg-inst-name">...</span></strong> has been successfully submitted to our secure servers.</p>
+                    
+                    <div class="glass-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:1.5rem; margin-bottom:2.5rem; text-align:left;">
+                        <p id="success-next-steps-title" style="color:#22c55e; font-weight:700; margin-bottom:0.75rem;">Next Steps:</p>
+                        <ol id="success-next-steps" style="color:var(--muted); font-size:0.95rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem;">
+                            <!-- Dynamically injected -->
+                        </ol>
+                    </div>
 
-                <button class="submit-btn" onclick="window.location.href='index.html'">Return to Gateway</button>
-            </div>
+                    <button class="submit-btn" onclick="window.location.href='index.html'">Return to Gateway</button>
+                </div>
 
             <div id="registration-form-content">
                 <h2 class="title" style="margin-bottom: 0.5rem; font-size: 2.2rem; font-weight: 900; color: #ff2a4d; font-family:'Playfair Display', serif;">RECRUITMENT GATE</h2>
@@ -604,6 +602,7 @@
                 manifesto: manifestoVal, inviteCode: inviteCodeVal,
                 portrait: portraitBase64, hasVoted: false, email,
                 webcamReg: webcamPhoto, aiVerified,
+                status: aiVerified ? 'active' : 'pending',
                 createdAt: new Date().toISOString()
             };
 
@@ -619,14 +618,14 @@
                 badge.style.color = "#22c55e";
                 badge.style.borderColor = "rgba(34, 197, 94, 0.4)";
                 badge.style.boxShadow = "0 0 20px rgba(34, 197, 94, 0.2)";
-                msgText.innerHTML = "Identity confirmed by AI. Your account is <strong>INSTANTLY ACTIVE</strong>! You can now login and vote.";
+                msgText.innerHTML = "Identity confirmed by AI. Your account is <strong>INSTANTLY ACTIVE</strong>! You can now login via the home gateway and vote.";
             } else {
                 badge.innerHTML = "Pending Human Review ⏳";
                 badge.style.background = "rgba(245, 158, 11, 0.15)";
                 badge.style.color = "#f59e0b";
                 badge.style.borderColor = "rgba(245, 158, 11, 0.4)";
                 badge.style.animation = "pulse-badge 2s infinite";
-                msgText.innerHTML = "Face match was inconclusive. Your registration is <strong>PENDING approval</strong> by a College Admin.";
+                msgText.innerHTML = "Face match was inconclusive. Your registration is <strong>PENDING approval</strong> by a College Admin. You will be able to log in once approved manually.";
             }
 
             document.getElementById('register-form').classList.add('hidden');
