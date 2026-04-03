@@ -445,6 +445,7 @@ if (!saSession || saSession.role !== 'superadmin') {
     window.location.href = 'login.html?admin=true';
 }
 let allStudents = [];
+let chartInstance = null;
 let countdownInterval = null;
 
 async function clearAuditLogs() {
