@@ -356,6 +356,43 @@
           </div>
         </div>
 
+        <!-- Registration Scheduler -->
+        <div class="card" id="registration-schedule-card">
+          <h3 id="r-schedule-card-title">📝 Registration Schedule</h3>
+          
+          <!-- Countdown View (Hidden by default) -->
+          <div id="r-countdown-container" style="display:none; text-align:center; padding:1rem 0; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:1rem;">
+            <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">⏳ Time Remaining</div>
+            <div style="display:flex; justify-content:center; gap:1.2rem;">
+              <div><div id="r-cd-days" style="font-size:1.8rem; font-weight:900; color:var(--cyan); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Days</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="r-cd-hours" style="font-size:1.8rem; font-weight:900; color:var(--cyan); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Hours</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="r-cd-mins" style="font-size:1.8rem; font-weight:900; color:var(--cyan); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Mins</div></div>
+              <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+              <div><div id="r-cd-secs" style="font-size:1.8rem; font-weight:900; color:var(--cyan); line-height:1;">00</div><div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Secs</div></div>
+            </div>
+            <button class="btn-sm" style="margin-top:1.2rem; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);" onclick="toggleRegScheduleMode(true)">⚙️ Modify Schedule</button>
+            <button class="btn-sm" style="margin-top:0.5rem; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3);" onclick="stopRegistration()">⏹ End Registration</button>
+          </div>
+
+          <!-- Scheduler Inputs -->
+          <div id="r-scheduler-inner" style="display:flex; flex-direction:column; gap:1rem;">
+            <div class="form-field">
+              <label>Start Date & Time</label>
+              <input type="datetime-local" id="r-start">
+            </div>
+            <div class="form-field">
+              <label>End Date & Time</label>
+              <input type="datetime-local" id="r-end">
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+               <button class="btn btn-cyan" style="flex:2" id="r-start-btn" onclick="setRegistrationTimes()">▶ Start Registration</button>
+               <button class="btn-sm" id="r-cancel-edit" style="flex:1; display:none; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--border);" onclick="toggleRegScheduleMode(false)">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Live Stats -->
         <div class="card">
           <h3>📊 Live Participation</h3>
@@ -456,6 +493,9 @@ if (!saSession || saSession.role !== 'superadmin') {
 let allStudents = [];
 let chartInstance = null;
 let countdownInterval = null;
+let regCountdownInterval = null;
+let currentElectionConfig = null;
+let currentRegistrationConfig = null;
 
 async function clearAuditLogs() {
     if (!confirm('Are you sure you want to permanently clear ALL audit logs for your institution? This action cannot be undone.')) return;
@@ -483,6 +523,26 @@ function toggleScheduleMode(isEditing) {
         scheduler.style.display = 'none';
         countdown.style.display = 'block';
         title.textContent = '⏳ Election Live Countdown';
+    }
+}
+
+function toggleRegScheduleMode(isEditing) {
+    const scheduler = document.getElementById('r-scheduler-inner');
+    const countdown = document.getElementById('r-countdown-container');
+    const cancelBtn = document.getElementById('r-cancel-edit');
+    const startBtn = document.getElementById('r-start-btn');
+    const title = document.getElementById('r-schedule-card-title');
+
+    if (isEditing) {
+        scheduler.style.display = 'flex';
+        countdown.style.display = 'none';
+        cancelBtn.style.display = 'block';
+        startBtn.textContent = '💾 Update Schedule';
+        title.textContent = '⚙️ Modify Reg Schedule';
+    } else {
+        scheduler.style.display = 'none';
+        countdown.style.display = 'block';
+        title.textContent = '⏳ Registration Live Countdown';
     }
 }
 
@@ -525,6 +585,45 @@ function startCountdown(endTimeStr) {
     
     update();
     countdownInterval = setInterval(update, 1000);
+}
+
+function startRegCountdown(endTimeStr) {
+    if (regCountdownInterval) clearInterval(regCountdownInterval);
+    const endTime = new Date(endTimeStr).getTime();
+    
+    function update() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+        
+        if (distance < 0) {
+            clearInterval(regCountdownInterval);
+            document.getElementById('r-cd-days').textContent = '00';
+            document.getElementById('r-cd-hours').textContent = '00';
+            document.getElementById('r-cd-mins').textContent = '00';
+            document.getElementById('r-cd-secs').textContent = '00';
+            
+            apiFetch(`/config/registration_${saSession.institution}`, {
+                method: 'POST',
+                body: JSON.stringify({ merge: true, data: { isActive: false, isCompleted: true } })
+            }).then(() => {
+                loadVoting();
+            }).catch(e => console.error("Auto-stop reg failed", e));
+            return;
+        }
+        
+        const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((distance % (1000 * 60)) / 1000);
+        
+        document.getElementById('r-cd-days').textContent = String(d).padStart(2, '0');
+        document.getElementById('r-cd-hours').textContent = String(h).padStart(2, '0');
+        document.getElementById('r-cd-mins').textContent = String(m).padStart(2, '0');
+        document.getElementById('r-cd-secs').textContent = String(s).padStart(2, '0');
+    }
+    
+    update();
+    regCountdownInterval = setInterval(update, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -960,6 +1059,9 @@ async function removeUser(id) {
 }
 
 async function setElectionTimes() {
+  if (currentRegistrationConfig && currentRegistrationConfig.isActive) {
+      return toast('Cannot start Election: Registration is currently active! Stop registration first.', false);
+  }
   const name = document.getElementById('v-name').value.trim();
   const start = document.getElementById('v-start').value;
   const end = document.getElementById('v-end').value;
@@ -981,6 +1083,43 @@ async function setElectionTimes() {
     });
     toast('Election times set & activated!');
     loadVoting(); // Refresh to update title
+  } catch(e) { toast(e.message, false); }
+}
+
+async function setRegistrationTimes() {
+  if (currentElectionConfig && currentElectionConfig.isActive) {
+      return toast('Cannot start Registration: Election is currently active! Stop election first.', false);
+  }
+  const start = document.getElementById('r-start').value;
+  const end = document.getElementById('r-end').value;
+  if (!start||!end) return toast('Set both start and end times', false);
+  try {
+    await apiFetch(`/config/registration_${saSession.institution}`, { 
+        method:'POST', 
+        body:JSON.stringify({ 
+            merge:true, 
+            data:{ 
+                isActive:true, 
+                isCompleted:false, 
+                startTime:start, 
+                endTime:end
+            } 
+        }) 
+    });
+    toast('Registration schedule set & activated!');
+    loadVoting();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function stopRegistration() {
+  if (!confirm('End registration phase right now? Users will not be able to register.')) return;
+  try {
+    await apiFetch(`/config/registration_${saSession.institution}`, {
+      method: 'POST',
+      body: JSON.stringify({ merge: true, data: { isActive: false, isCompleted: true } })
+    });
+    toast('Registration ended & marked as completed!');
+    loadVoting();
   } catch(e) { toast(e.message, false); }
 }
 
@@ -1008,15 +1147,19 @@ async function stopElection() {
 
 async function loadVoting() {
   try {
-    const [users, election] = await Promise.all([
+    const [users, election, registration] = await Promise.all([
       apiFetch('/users'),
-      apiFetch(`/config/election_${saSession.institution}`).catch(() => ({}))
+      apiFetch(`/config/election_${saSession.institution}`).catch(() => ({})),
+      apiFetch(`/config/registration_${saSession.institution}`).catch(() => ({}))
     ]);
+
+    currentElectionConfig = election;
+    currentRegistrationConfig = registration;
 
     const inst = saSession.institution;
     document.getElementById('voting-inst-sub').textContent = `Election management — ${inst}`;
 
-    // ── Banner & Countdown Logic ────────────────
+    // ── Banner & Countdown Logic (Election) ────────────────
     const banner = document.getElementById('election-banner');
     const schInner = document.getElementById('v-scheduler-inner');
     const countContainer = document.getElementById('v-countdown-container');
@@ -1025,6 +1168,7 @@ async function loadVoting() {
     const nameInput = document.getElementById('v-name');
 
     if (election && election.isActive) {
+      // (Election rendering)
       banner.style.background = 'rgba(34,197,94,0.1)';
       banner.style.borderColor = 'rgba(34,197,94,0.4)';
       banner.style.color = 'var(--green)';
@@ -1064,6 +1208,34 @@ async function loadVoting() {
       title.textContent = '⏱️ Election Schedule';
       startBtn.textContent = '▶ Start Election';
       if (countdownInterval) clearInterval(countdownInterval);
+    }
+
+    // ── Countdown Logic (Registration) ────────────────
+    const rSchInner = document.getElementById('r-scheduler-inner');
+    const rCountContainer = document.getElementById('r-countdown-container');
+    const rTitle = document.getElementById('r-schedule-card-title');
+    const rStartBtn = document.getElementById('r-start-btn');
+
+    if (registration && registration.isActive) {
+      toggleRegScheduleMode(false);
+      if (registration.endTime) startRegCountdown(registration.endTime);
+      rTitle.textContent = '⏳ Registration Live';
+      
+      // Pre-fill times
+      if (registration.startTime) document.getElementById('r-start').value = registration.startTime.slice(0,16);
+      if (registration.endTime)   document.getElementById('r-end').value   = registration.endTime.slice(0,16);
+    } else if (registration && registration.isCompleted) {
+      rSchInner.style.display = 'flex';
+      rCountContainer.style.display = 'none';
+      rTitle.textContent = '🔴 Registration Ended';
+      rStartBtn.textContent = '▶ Restart Registration';
+      if (regCountdownInterval) clearInterval(regCountdownInterval);
+    } else {
+      rSchInner.style.display = 'flex';
+      rCountContainer.style.display = 'none';
+      rTitle.textContent = '📝 Registration Schedule';
+      rStartBtn.textContent = '▶ Start Registration';
+      if (regCountdownInterval) clearInterval(regCountdownInterval);
     }
 
     // ── Live Stats ───────────────────────────────

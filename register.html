@@ -244,6 +244,47 @@
             window.location.href = 'index.html';
         } else {
             document.getElementById('inst-badge').innerText = "⛩️ " + userInst;
+            checkRegistrationStatus(userInst);
+        }
+
+        async function checkRegistrationStatus(inst) {
+            try {
+                const API_URL = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+                const res = await fetch(`${API_URL}/config/registration_${encodeURIComponent(inst)}`);
+                if (res.ok) {
+                    const config = await res.json();
+                    const now = new Date().getTime();
+                    
+                    if (config && config.isActive === false && config.isCompleted === true) {
+                        return lockRegistrationGate("Registrations are officially closed by your institution.");
+                    } else if (config && config.isActive === false && config.isCompleted === false) {
+                        return lockRegistrationGate("Registrations have not been started yet. Please wait for an admin to open the portal.");
+                    }
+                    
+                    if (config && config.isActive) {
+                        if (config.startTime && now < new Date(config.startTime).getTime()) {
+                            return lockRegistrationGate(`Registrations will automatically open on <br><strong style="color:var(--gold)">${new Date(config.startTime).toLocaleString()}</strong>`);
+                        }
+                        if (config.endTime && now > new Date(config.endTime).getTime()) {
+                            return lockRegistrationGate("The registration deadline has passed.");
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("Lockout check failed", e);
+            }
+        }
+        
+        function lockRegistrationGate(msg) {
+            const formContent = document.getElementById('registration-form-content');
+            formContent.innerHTML = `
+                <div style="text-align:center; padding: 3rem 1rem;">
+                    <div style="font-size:3.5rem; margin-bottom:1rem;">🛑</div>
+                    <h2 style="font-size: 2rem; font-weight: 900; color: var(--danger); font-family:'Playfair Display', serif; margin-bottom:1rem;">GATE CLOSED</h2>
+                    <p style="color:var(--text-muted); line-height:1.6; max-width:400px; margin:0 auto;">${msg}</p>
+                    <button class="btn-outline" style="margin-top:2rem;" onclick="window.location.href='index.html'">Return to Home</button>
+                </div>
+            `;
         }
 
         // Initialize Face API Models
