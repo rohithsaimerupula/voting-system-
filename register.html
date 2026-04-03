@@ -220,7 +220,7 @@
         </div>
     </div>
 
-    <script src="storage.js?v=3"></script>
+    <script src="storage.js?v=4"></script>
     <script>
         // --- OTP & WEBCAM VARIABLES ---
         let otpVerified = false;
@@ -265,8 +265,10 @@
 
         function sendOtp() {
             const email = document.getElementById('email').value;
-            if (!email || !email.includes('@gmail.com')) {
-                return showError("Please enter a valid Gmail address.");
+            // Relaxed regex to allow institutional emails (e.g., @viit.edu.in)
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(email)) {
+                return showError("Please enter a valid email address.");
             }
 
             // SIMULATED BACKEND SEND

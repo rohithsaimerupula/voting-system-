@@ -54,13 +54,13 @@ async function initDb() {
         // Main users table with new hierarchy columns
         await db.batch([
             `CREATE TABLE IF NOT EXISTS users (
-                regNum TEXT PRIMARY KEY,
+                regNum TEXT,
+                institution TEXT,
                 password TEXT,
                 role TEXT,       -- developer | superadmin | admin | subadmin | voter | contestant
                 name TEXT,
                 email TEXT,
                 status TEXT,     -- active | pending | rejected
-                institution TEXT,
                 branch TEXT,     -- for admin/subadmin/voter
                 class TEXT,      -- for subadmin/voter
                 managedBy TEXT,  -- regNum of the admin who manages a subadmin
@@ -77,7 +77,8 @@ async function initDb() {
                 webcamReg TEXT,
                 deviceFingerprint TEXT,
                 inviteCode TEXT,
-                campaignPoints INTEGER DEFAULT 0
+                campaignPoints INTEGER DEFAULT 0,
+                PRIMARY KEY (regNum, institution)
             )`,
             `CREATE TABLE IF NOT EXISTS auditLogs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -211,41 +212,63 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users/add', async (req, res) => {
     try {
         const u = req.body;
+        const inst = u.institution || 'Unknown';
         await db.execute({
-            sql: `INSERT INTO users (regNum, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, institution, branch, class, managedBy, canVote)
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
-                u.regNum, u.password, u.role, u.name || '', u.email || '', u.status || 'pending',
+                u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending',
                 boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait || null, u.webcamReg || null,
                 u.deviceFingerprint || null, u.inviteCode || null, u.campaignPoints || 0,
-                u.institution || null, u.branch || null, u.class || null, u.managedBy || null,
+                u.branch || null, u.class || null, u.managedBy || null,
                 boolInt(u.canVote)
             ]
         });
         res.json({ success: true });
     } catch (e) {
-        if (e.message.includes('UNIQUE constraint failed')) return res.status(400).json({ error: "Registration Number already exists." });
+        if (e.message.includes('unique constraint') || e.message.includes('PRIMARY KEY')) 
+            return res.status(400).json({ error: "Registration Number already exists at this institution." });
         res.status(500).json({ error: e.message });
     }
 });
 
 app.get('/api/users/:id', async (req, res) => {
     try {
-        const result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [req.params.id] });
+        const regNum = req.params.id;
+        const institution = req.query.institution;
+        
+        let sql = "SELECT * FROM users WHERE regNum = ?";
+        let args = [regNum];
+        
+        if (institution) {
+            sql += " AND institution = ?";
+            args.push(institution);
+        }
+
+        const result = await db.execute({ sql, args });
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+        
+        // If multiple matches and no institution provided, warn but return first
         res.json(result.rows[0]);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch('/api/users/:id', async (req, res) => {
     try {
+        const regNum = req.params.id;
+        const institution = req.query.institution;
         const updates = req.body;
+        
+        if (!institution) return res.status(400).json({ error: "Institution required for identification" });
+        
         const keys = Object.keys(updates);
         if (keys.length === 0) return res.json({ success: true });
+        
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => { const v = updates[k]; return typeof v === 'boolean' ? boolInt(v) : v; });
-        values.push(req.params.id);
-        await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ?`, args: values });
+        
+        values.push(regNum, institution);
+        await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND institution = ?`, args: values });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -253,9 +276,12 @@ app.patch('/api/users/:id', async (req, res) => {
 app.delete('/api/users/:id', async (req, res) => {
     try {
         const id = req.params.id;
+        const institution = req.query.institution;
+
+        if (!institution) return res.status(400).json({ error: "Institution required for deletion" });
 
         // Check if this user is a Super Admin — if so, cascade-delete entire institution
-        const userResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [id] });
+        const userResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [id, institution] });
         if (userResult.rows.length > 0 && userResult.rows[0].role === 'superadmin') {
             const institution = userResult.rows[0].institution;
 
@@ -280,7 +306,7 @@ app.delete('/api/users/:id', async (req, res) => {
         }
 
         // Regular (non-super-admin) delete — just remove the single user
-        await db.execute({ sql: "DELETE FROM users WHERE regNum = ?", args: [id] });
+        await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [id, institution] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

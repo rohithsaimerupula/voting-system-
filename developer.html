@@ -511,7 +511,8 @@
       const errEl = document.getElementById('auth-error');
       errEl.textContent = '';
       try {
-        const user = await api(`/users/${id}`);
+        // Developers have institution: "Unknown" in the new schema (from migration)
+        const user = await api(`/users/${id}?institution=Unknown`);
         if (user.role !== 'developer') throw new Error('Not a developer account.');
         const hashed = btoa(pass);
         if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
@@ -691,7 +692,7 @@
         updates.password = btoa(newPass);
       }
       try {
-        await api(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
+        await api(`/users/${id}?institution=${encodeURIComponent(institution)}`, { method: 'PATCH', body: JSON.stringify(updates) });
         showToast(`${id} updated successfully!`);
         closeEditModal();
         loadConsole();
@@ -717,7 +718,7 @@
       const confirmed = confirm(`⚠️ PERMANENT DELETE — CANNOT BE UNDONE\n\nRemoving Super Admin: ${id}\nInstitution: ${instCell}\n\nThis will AUTOMATICALLY delete:\n• All Admins of this institution\n• All Sub-Admins of this institution\n• All Students/Voters of this institution\n• All Candidates of this institution\n• The institution's election history & config\n• The institution's Gateway Access Code\n\nAre you absolutely sure?`);
       if (!confirmed) return;
       try {
-        const result = await api(`/users/${id}`, { method: 'DELETE' });
+        const result = await api(`/users/${id}?institution=${encodeURIComponent(instCell)}`, { method: 'DELETE' });
         if (result.cascadeDeleted) {
           showToast(`✅ Institution "${result.institution}" fully wiped — Super Admin & all data removed.`);
         } else {

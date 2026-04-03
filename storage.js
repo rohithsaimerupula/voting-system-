@@ -129,7 +129,7 @@ const StorageManager = {
     },
 
     // --- OFFLINE/FIRESTORE IMAGE COMPRESSION ---
-    async compressImage(base64Str, maxWidth = 500, maxHeight = 500, quality = 0.5) {
+    async compressImage(base64Str, maxWidth = 350, maxHeight = 350, quality = 0.3) {
         if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image')) return base64Str; 
         try {
             return await new Promise((resolve, reject) => {
@@ -195,14 +195,14 @@ const StorageManager = {
             // Check if user exists
             let existingUser;
             try {
-                existingUser = await fetchApi(`/users/${user.regNum}`);
+                existingUser = await fetchApi(`/users/${user.regNum}?institution=${encodeURIComponent(user.institution)}`);
             } catch (e) { existingUser = null; }
 
             if (existingUser) {
                 if (existingUser.isBanned || existingUser.isBanned === 1) {
-                    throw new Error("This Registration Number is permanently BANNED and cannot register again.");
+                    throw new Error("This Registration Number is permanently BANNED at this institution.");
                 }
-                throw new Error("Registration Number already exists.");
+                throw new Error("Registration Number already exists at this institution.");
             }
 
             if (user.role === 'voter' && user.inviteCode) {
@@ -210,7 +210,7 @@ const StorageManager = {
                 const candidates = await this.getCandidates();
                 const cand = candidates.find(c => c.inviteCode === user.inviteCode);
                 if (cand) {
-                    await fetchApi(`/users/${cand.regNum}`, {
+                    await fetchApi(`/users/${cand.regNum}?institution=${encodeURIComponent(user.institution)}`, {
                         method: 'PATCH',
                         body: JSON.stringify({ campaignPoints: (cand.campaignPoints || 0) + 1 })
                     });
@@ -222,7 +222,8 @@ const StorageManager = {
             const fp = await this.checkAndLogFingerprint('register', user.regNum);
             user.deviceFingerprint = fp;
 
-            await fetchApi('/users/add', {
+            const inst = user.institution || 'Unknown';
+            await fetchApi(`/users/add?institution=${encodeURIComponent(inst)}`, {
                 method: 'POST',
                 body: JSON.stringify(user)
             });
@@ -236,9 +237,10 @@ const StorageManager = {
     // --- LOGIN ---
     async login(regNum, password, skip2FA = false) {
         try {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
             let userData;
             try {
-                userData = await fetchApi(`/users/${regNum}`);
+                userData = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`);
             } catch (e) {
                 if (e.message === "Not found") return null;
                 throw new Error(`Backend connection failed: ${e.message}. If on Vercel, ensure TURSO DB variables are set.`);
@@ -287,12 +289,13 @@ const StorageManager = {
     },
 
     async resetPassword(regNum, newPassword) {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         let doc;
-        try { doc = await fetchApi(`/users/${regNum}`); } catch(e) { throw new Error("User not found"); }
+        try { doc = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`); } catch(e) { throw new Error("User not found"); }
         if (!doc) throw new Error("User not found");
 
         const hashedPwd = await this.hashPassword(newPassword);
-        await fetchApi(`/users/${regNum}`, {
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, {
             method: 'PATCH',
             body: JSON.stringify({ password: hashedPwd })
         });
@@ -304,7 +307,8 @@ const StorageManager = {
             updates.password = await this.hashPassword(updates.password);
         }
 
-        await fetchApi(`/users/${regNum}`, {
+        const inst = updates.institution || (this.getCurrentUser()?.institution) || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, {
             method: 'PATCH',
             body: JSON.stringify(updates)
         });
@@ -320,8 +324,9 @@ const StorageManager = {
     async sendResetOtp(regNum) {
         console.log(`[StorageManager] Attempting password reset for: ${regNum}`);
         try {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
             let userData;
-            try { userData = await fetchApi(`/users/${regNum}`); } catch(e) { }
+            try { userData = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`); } catch(e) { }
             
             if (!userData) {
                 console.warn(`[StorageManager] Reset failed: User ID ${regNum} not found.`);
@@ -463,7 +468,8 @@ const StorageManager = {
             })
         });
 
-        let voterData = await fetchApi(`/users/${voterRegNum}`);
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        let voterData = await fetchApi(`/users/${voterRegNum}?institution=${encodeURIComponent(inst)}`);
         this.saveSession({ ...voterData, hasVoted: true, votedFor: candidateRegNum, voteReceiptHash: secureHash, voteStatus: 'pending' });
         this.logAudit("Vote Cast (Pending)", voterRegNum, `Receipt: ${secureHash}`);
         return secureHash;
@@ -603,30 +609,36 @@ const StorageManager = {
         });
     },
     async approveUser(regNum) {
-        await fetchApi(`/users/${regNum}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
         this.logAudit("Approved User", regNum);
     },
     async rejectUser(regNum, reason) {
-        await fetchApi(`/users/${regNum}`, { method: 'DELETE' });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'DELETE' });
         this.logAudit("Rejected User", regNum, reason);
     },
     async deleteUser(regNum) {
-        await fetchApi(`/users/${regNum}`, { method: 'DELETE' });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'DELETE' });
         this.logAudit("Deleted User Account", regNum);
     },
     async banUser(regNum) {
-        await fetchApi(`/users/${regNum}`, { method: 'PATCH', body: JSON.stringify({ isBanned: 1 }) });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ isBanned: 1 }) });
         this.logAudit("Banned User", regNum);
     },
     async unbanUser(regNum) {
-        await fetchApi(`/users/${regNum}`, { method: 'PATCH', body: JSON.stringify({ isBanned: 0 }) });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ isBanned: 0 }) });
         this.logAudit("Unbanned User", regNum);
     },
     async verifyVote(regNum, isValid) {
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         if (isValid) {
-            await fetchApi(`/users/${regNum}`, { method: 'PATCH', body: JSON.stringify({ voteStatus: 'verified', status: 'active' }) });
+            await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ voteStatus: 'verified', status: 'active' }) });
         } else {
-            await fetchApi(`/users/${regNum}`, { method: 'PATCH', body: JSON.stringify({ hasVoted: 0, votedFor: null, voteStatus: null, status: 'active' }) });
+            await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ hasVoted: 0, votedFor: null, voteStatus: null, status: 'active' }) });
         }
     },
 
