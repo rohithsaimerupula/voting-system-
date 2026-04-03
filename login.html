@@ -597,6 +597,15 @@
             el.classList.remove('hidden');
         }
 
+        // BFCache fix: Reset button state if user navigates back to this page
+        window.addEventListener('pageshow', function (event) {
+            const submitBtn = document.getElementById('login-btn');
+            if (submitBtn && submitBtn.innerText === "Verifying...") {
+                submitBtn.innerText = "Secure Login";
+                submitBtn.disabled = false;
+            }
+        });
+
         // --- RECOVERY LOGIC ---
         let recoveryRegNum = null;
         let recoveryOtp = null;

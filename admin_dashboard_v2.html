@@ -416,6 +416,12 @@ async function saveEdit() {
 
   if(!name) return toast('Name required', false);
   
+  if (role === 'subadmin') {
+      if (!cls.startsWith(session.branch + '-')) {
+          return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
+      }
+  }
+
   const updates = { name, email, class: cls };
   
   if (role === 'subadmin' && pass && pass.trim() !== '') {
@@ -490,6 +496,7 @@ async function createSubAdmin(){
   const cls = document.getElementById('sa-class').value.trim().toUpperCase();
   const pass = document.getElementById('sa-pass').value;
   if(!id||!name||!cls||!pass) return toast('Fill all required fields',false);
+  if(!cls.startsWith(session.branch + '-')) return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
   if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
   const pwdErr = validatePassword(pass, 6);
