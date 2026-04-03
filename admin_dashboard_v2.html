@@ -138,7 +138,14 @@
       <div class="page-title">🎓 Branch Students</div>
       <div class="page-sub">Manage student registrations, edits, and vote access for your branch</div>
       <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
-        <input class="search-bar" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search students..." oninput="filterStudents(this.value)">
+        <input class="search-bar" id="sf-search" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search students..." oninput="applyStudentFilters()">
+        <select id="sf-year" onchange="applyStudentFilters()" style="min-width:140px;margin:0; background:var(--surface); border:1px solid var(--border); color:white; border-radius:8px; padding:0.6rem;">
+          <option value="">All Years</option>
+          <option value="1st">1st Year</option>
+          <option value="2nd">2nd Year</option>
+          <option value="3rd">3rd Year</option>
+          <option value="4th">4th Year</option>
+        </select>
         <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
       </div>
       <div class="card" style="padding:0.5rem; overflow-x:auto;">
@@ -342,7 +349,17 @@ async function acceptStudent(id) {
   } catch(e) { toast(e.message, false); }
 }
 
-function filterStudents(q){renderStudents(branchStudents.filter(s=>[s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q.toLowerCase())));}
+function applyStudentFilters(){
+  const q = (document.getElementById('sf-search').value || '').toLowerCase();
+  const year = document.getElementById('sf-year').value;
+  const filtered = branchStudents.filter(s => {
+    const matchQ = !q || [s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q);
+    const matchYear = !year || (s.year||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
+    return matchQ && matchYear;
+  });
+  renderStudents(filtered);
+}
+function filterStudents(q){ applyStudentFilters(); }
 
 async function grantAllVote(){
   if(!confirm('Grant vote access to ALL ACTIVE students in this branch?')) return;
