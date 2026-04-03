@@ -269,6 +269,9 @@
                             return lockRegistrationGate("The registration deadline has passed.");
                         }
                     }
+                } else {
+                    // Config not found or some other error = timer hasn't been set up yet. Close by default.
+                    return lockRegistrationGate("Registrations have not been started yet. Please wait for the Super Admin to configure the registration schedule.");
                 }
             } catch(e) {
                 console.error("Lockout check failed", e);
