@@ -266,10 +266,10 @@
         <input type="text" id="sf-class" onchange="applyStudentFilters()" placeholder="Class (e.g. CSE-5)" style="flex:1;min-width:140px;max-width:180px;margin:0" oninput="this.value=this.value.toUpperCase();applyStudentFilters();">
         <select id="sf-year" onchange="applyStudentFilters()" style="flex:1;min-width:120px;max-width:160px;margin:0">
           <option value="">All Years</option>
-          <option value="1st Year">1st Year</option>
-          <option value="2nd Year">2nd Year</option>
-          <option value="3rd Year">3rd Year</option>
-          <option value="4th Year">4th Year</option>
+          <option value="1st">1st Year</option>
+          <option value="2nd">2nd Year</option>
+          <option value="3rd">3rd Year</option>
+          <option value="4th">4th Year</option>
         </select>
       </div>
       <div class="card" style="padding:0.5rem">
@@ -737,8 +737,8 @@ function applyStudentFilters() {
     const matchQ = !q || [s.regNum,s.name,s.branch,s.class].join(' ').toLowerCase().includes(q);
     const matchBranch = !branch || (s.branch||'') === branch;
     const matchClass = !cls || (s.class||'').includes(cls);
-    // Year stored as '1st Year', '2nd Year', etc. in the database
-    const matchYear = !year || (s.year||s.class||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
+    // Year stored as '1st', '2nd', etc. in the database
+    const matchYear = !year || (s.year||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
     return matchQ && matchBranch && matchClass && matchYear;
   });
   renderStudents(filtered);
