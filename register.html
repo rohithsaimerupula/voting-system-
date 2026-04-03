@@ -30,7 +30,7 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
 
 <body>
     <!-- Cyber Mesh Particles -->
@@ -247,16 +247,28 @@
         }
 
         // Initialize Face API Models
-        Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights')
-        ]).then(() => {
-            console.log("[OVS AI] Face Recognition Models Loaded successfully.");
-            faceModelsLoaded = true;
-        }).catch(err => {
-            console.error("[OVS AI] Error loading models:", err);
-        });
+        // Guard: ensure faceapi is loaded before attempting model load
+        function loadFaceModels() {
+            if (typeof faceapi === 'undefined') {
+                console.warn("[OVS AI] face-api.js not yet available, retrying in 500ms...");
+                setTimeout(loadFaceModels, 500);
+                return;
+            }
+            Promise.all([
+                faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
+                faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
+                faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights')
+            ]).then(() => {
+                console.log("[OVS AI] ✅ Face Recognition Models Loaded successfully.");
+                faceModelsLoaded = true;
+                // Show AI ready indicator
+                const badge = document.getElementById('inst-badge');
+                if (badge) badge.title = 'AI Face Verification: Ready';
+            }).catch(err => {
+                console.error("[OVS AI] ❌ Error loading models:", err);
+            });
+        }
+        loadFaceModels();
 
 
 
