@@ -19,23 +19,33 @@ const turso = createClient({
 // ─────────────────────────────────────────
 //  DB RETRY WRAPPER (handles Turso cold-start sleeps)
 // ─────────────────────────────────────────
-async function retryWithBackoff(fn, retries = 3, delayMs = 3000) {
+async function retryWithBackoff(fn, retries = 6, delayMs = 3000) {
+    let lastError = null;
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             const result = await Promise.race([
                 fn(),
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('DB_TIMEOUT')), 20000)
+                    setTimeout(() => reject(new Error('DB_TIMEOUT')), 25000)
                 )
             ]);
             return result;
         } catch (e) {
-            const isTimeout = e.message.includes('DB_TIMEOUT') || e.message.includes('ECONNREFUSED') || e.message.includes('fetch failed');
+            lastError = e;
+            const isTimeout = e.message.includes('DB_TIMEOUT') || 
+                             e.message.includes('ECONNREFUSED') || 
+                             e.message.includes('fetch failed') ||
+                             e.message.includes('ETIMEDOUT') ||
+                             e.message.includes('socket hang up');
+
             if (isTimeout && attempt < retries) {
-                console.warn(`[DB] Attempt ${attempt} failed (cold start?). Retrying in ${delayMs * attempt}ms...`);
-                await new Promise(r => setTimeout(r, delayMs * attempt));
+                console.warn(`[DB] Attempt ${attempt}/${retries} failed (network/cold-start). Retrying in ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
             } else {
-                throw new Error(`DB_TIMEOUT: Turso did not respond after ${retries} attempts. Please try again in a moment.`);
+                // If it's not a timeout (e.g. SQL error), Throw it immediately
+                if (!isTimeout) throw e;
+                // If we ran out of retries, throw the timeout error
+                throw new Error(`❌ DB_TIMEOUT: Turso did not respond after ${retries} attempts. Please try again in a moment. (Original: ${e.message})`);
             }
         }
     }
