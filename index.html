@@ -397,16 +397,16 @@
             if (e.key === 'Enter') verifyGateway();
         });
 
-        // --- Session Memory: Remember unlock status for "Back" and "Home" navigation ---
-        const sessionUnlocked = sessionStorage.getItem('ovs_gate_unlocked');
-        const sessionInstName = sessionStorage.getItem('ovs_inst_name');
+        // --- Device Memory: Remember unlock status for this browser ---
+        const gateUnlocked = localStorage.getItem('ovs_gate_unlocked');
+        const instName = localStorage.getItem('ovs_inst_name');
         const lastCode = localStorage.getItem('_ovs_last_gate_code');
 
-        if (sessionUnlocked === 'true' && sessionInstName) {
-            // "Back" or "Home" navigation in same tab: Skip Gateway
+        if (gateUnlocked === 'true' && instName) {
+            // Already unlocked on this device: Skip Gateway
             const overlay = document.getElementById('gateway-overlay');
             overlay.style.display = 'none';
-            unlockGateway(sessionInstName);
+            unlockGateway(instName);
         } else if (lastCode) {
             // Fresh visit: Show Gateway but pre-fill code
             document.getElementById('inst-code').value = lastCode;
@@ -432,12 +432,11 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Verification failed');
 
-                // Session Memory: Only lasts as long as the tab is open
-                sessionStorage.setItem('ovs_gate_unlocked', 'true');
-                sessionStorage.setItem('ovs_inst_name', data.institution);
-
-                // Unlocked Gateway: Only save last code for convenience to pre-fill next time
+                // Persistence: Unlock the gateway for this device
+                localStorage.setItem('ovs_gate_unlocked', 'true');
+                localStorage.setItem('ovs_inst_name', data.institution);
                 localStorage.setItem('_ovs_last_gate_code', code);
+                
                 unlockGateway(data.institution);
             } catch (e) {
                 err.textContent = '✗ ' + e.message;

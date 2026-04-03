@@ -715,7 +715,10 @@ function renderStudents(list) {
     <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-      <button class="btn-sm ${s.canVote==1?'btn-danger-sm':'btn-success-sm'}" onclick="toggleCanVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>
+      ${s.status === 'active' 
+        ? `<button class="btn-sm ${s.canVote==1?'btn-danger-sm':'btn-success-sm'}" onclick="toggleCanVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>` 
+        : `<button class="btn-sm" style="background:rgba(255,255,255,0.05);color:var(--muted);cursor:not-allowed;" title="Requires Admin Approval" disabled>Grant Vote</button>`
+      }
       <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');

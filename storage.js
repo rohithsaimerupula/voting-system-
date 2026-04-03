@@ -134,7 +134,6 @@ const StorageManager = {
         try {
             return await new Promise((resolve, reject) => {
             const img = new Image();
-            img.src = base64Str;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let width = img.width;
@@ -161,8 +160,10 @@ const StorageManager = {
                 resolve(compressedString);
             };
             img.onerror = () => {
+                console.warn("StorageManager: Image compression failed, using original.");
                 resolve(base64Str);
             };
+            img.src = base64Str;
             });
         } catch (e) {
             console.warn("StorageManager.compressImage failed:", e);
