@@ -543,16 +543,16 @@
       msg.textContent = 'Connecting to database...';
       retryBtn.style.display = 'none';
       try {
-        const [allUsers, superAdmins] = await Promise.all([api('/users'), api('/superadmins')]);
-        window.allUsersCache = allUsers;
-        window.saCache = superAdmins;
+        const data = await api('/dev/stats');
+        const { counts, superAdmins } = data;
         
+        window.saCache = superAdmins;
         overlay.style.display = 'none';
-        document.getElementById('stat-sa').textContent = superAdmins.length;
-        const institutions = [...new Set(superAdmins.map(s => s.institution).filter(Boolean))];
-        window.instCache = institutions;
-        document.getElementById('stat-inst').textContent = institutions.length;
-        document.getElementById('stat-users').textContent = allUsers.length;
+
+        document.getElementById('stat-sa').textContent = counts.saCount;
+        document.getElementById('stat-inst').textContent = counts.instCount;
+        document.getElementById('stat-users').textContent = counts.studentCount;
+        
         renderSaTable(superAdmins);
       } catch (e) {
         msg.textContent = '❌ ' + e.message;

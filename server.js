@@ -293,7 +293,14 @@ app.get('/api/users/:id', async (req, res) => {
         }
 
         const result = await db.execute({ sql, args });
-        if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+        if (result.rows.length === 0) {
+            // Fallback: Check if the user is a developer/global account (no institution filter)
+            const globalResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [regNum] });
+            if (globalResult.rows.length > 0 && globalResult.rows[0].role === 'developer') {
+                return res.json(globalResult.rows[0]);
+            }
+            return res.status(404).json({ error: "Not found" });
+        }
         
         // If multiple matches and no institution provided, warn but return first
         res.json(result.rows[0]);
@@ -581,6 +588,28 @@ app.post('/api/auditLogs', async (req, res) => {
             args: [action, user, details || "", timestamp, institution || "Unknown"] 
         });
         res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────
+//  DEVELOPER / CORE INFRASTRUCTURE
+// ────────────────────────────────────────
+app.get('/api/dev/stats', async (req, res) => {
+    try {
+        const stats = await db.execute(`
+            SELECT 
+                (SELECT COUNT(*) FROM users WHERE role = 'superadmin') as saCount,
+                (SELECT COUNT(*) FROM users WHERE role = 'admin') as adminCount,
+                (SELECT COUNT(*) FROM users WHERE role = 'subadmin') as subAdminCount,
+                (SELECT COUNT(*) FROM users WHERE role IN ('voter','contestant')) as studentCount,
+                (SELECT COUNT(DISTINCT institution) FROM users WHERE institution IS NOT NULL) as instCount
+            FROM users LIMIT 1
+        `);
+        const saResult = await db.execute("SELECT regNum, name, institution, email, status FROM users WHERE role = 'superadmin' ORDER BY name ASC");
+        res.json({
+            counts: stats.rows[0],
+            superAdmins: saResult.rows
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
