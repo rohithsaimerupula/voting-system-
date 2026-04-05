@@ -52,6 +52,70 @@
         text-decoration: none; margin-top: 1rem; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.4);
     }
     .social-badge:hover { transform: scale(1.05); }
+
+    /* ─── ELECTION TIMER ─── */
+    .election-timer-banner {
+        margin-bottom: 2rem;
+        padding: 1.5rem 2rem;
+        background: rgba(6, 182, 212, 0.05);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    .timer-label h4 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--neon-cyan);
+        margin-bottom: 0.3rem;
+        font-weight: 800;
+    }
+
+    .timer-label p {
+        font-size: 0.95rem;
+        color: white;
+        font-weight: 600;
+    }
+
+    .timer-display {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .time-block {
+        text-align: center;
+        min-width: 50px;
+    }
+
+    .time-value {
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: white;
+        font-family: var(--font-heading);
+        line-height: 1;
+    }
+
+    .time-unit {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        letter-spacing: 0.05em;
+        margin-top: 0.2rem;
+    }
+
+    @media (max-width: 640px) {
+        .election-timer-banner {
+            flex-direction: column;
+            gap: 1.2rem;
+            text-align: center;
+            padding: 1.5rem;
+        }
+    }
     </style>
 </head>
 
@@ -69,11 +133,14 @@
 
     <div class="container animate-fade-in" style="max-width: 1000px;">
 
-        <!-- Status Banner -->
-        <div class="glass-panel text-center" style="padding: 3rem; margin-bottom: 2rem;">
+        <!-- Election Timer -->
+        <div id="election-timer-container"></div>
+
+        <!-- Status Banner (Secondary) -->
+        <div id="status-banner" class="glass-panel text-center hidden" style="padding: 2rem; margin-bottom: 2rem;">
             <h2 id="election-status-header"
-                style="margin-bottom: 0.5rem; font-family: var(--font-heading); font-size: 2rem;">checking...</h2>
-            <p id="election-status-desc" class="text-muted">Connecting to election server...</p>
+                style="margin-bottom: 0.5rem; font-family: var(--font-heading); font-size: 1.5rem;"></h2>
+            <p id="election-status-desc" class="text-muted"></p>
         </div>
 
         <!-- Voting Section -->
@@ -294,85 +361,150 @@
                 }
 
                 // ═══════════════════════════════════════════
-                // STATE 4: ELECTION STATUS CHECK
+                // STATE 4: ELECTION TIMER & ACCESS
                 // ═══════════════════════════════════════════
-                const election = await StorageManager.getElectionStatus();
-                const now = new Date().getTime();
-                const startT = election.startTime ? new Date(election.startTime).getTime() : 0;
-                const endT = election.endTime ? new Date(election.endTime).getTime() : 0;
-
-                let isScheduledActive = false;
-                if (startT && endT) {
-                    if (now >= startT && now < endT) isScheduledActive = true;
-                } else if (startT && !endT) {
-                    if (now >= startT) isScheduledActive = true;
-                }
-
-                const electionEnded = endT && now > endT;
-                const electionIsLive = (election.isActive || isScheduledActive) && !electionEnded;
-
-                if (!electionIsLive) {
-                    if (election.isCompleted) {
-                        statusHeader.innerText = "Election Completed 🏁";
-                        statusHeader.style.color = "var(--danger)";
-                        statusDesc.innerHTML = `<strong>Voting has concluded.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Results will be declared by the Administrator soon.</span>`;
-                    } else if (electionEnded) {
-                        statusHeader.innerText = "Election Closed 🔒";
-                        statusHeader.style.color = "var(--danger)";
-                        statusDesc.innerHTML = `<strong>Voting time has ended.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Results will be declared soon.</span>`;
-                    } else if (startT && now < startT) {
-                        statusHeader.innerText = "Upcoming Election 📅";
-                        statusHeader.style.color = "var(--neon-cyan)";
-                        statusDesc.innerText = `Voting starts at ${new Date(election.startTime).toLocaleString()}`;
-                    } else {
-                        statusHeader.innerText = "Election Closed 🔒";
-                        statusHeader.style.color = "var(--danger)";
-                        statusDesc.innerHTML = `<strong>Election is not currently active.</strong><br><span style="color:var(--text-muted); font-size:0.9rem;">Please wait for your college Admin to open the polls.</span>`;
-                    }
-                    votingSection.classList.add('hidden');
-                    return;
-                }
-
-                // ═══════════════════════════════════════════
-                // STATE 5: ELECTION LIVE — canVote not granted yet
-                // ═══════════════════════════════════════════
-                if (!user.canVote || user.canVote === 0) {
-                    statusHeader.innerText = "Waiting for Voting Access ⏳";
-                    statusHeader.style.color = "#f59e0b";
-                    statusDesc.innerHTML = `
-                        <div style="margin-top:1.5rem; padding:2rem; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:16px; max-width:500px; margin-inline:auto;">
-                            <div style="font-size:3.5rem; margin-bottom:1rem;">&#x1F5DD;&#xFE0F;</div>
-                            <p style="color:#f59e0b; font-weight:700; font-size:1.1rem; margin-bottom:0.75rem;">Election is LIVE — Your Access is Pending</p>
-                            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.7; margin-bottom:1.25rem;">
-                                The polls are open, but your <strong style="color:white;">Admin or Sub-Admin</strong> has not yet granted you permission to cast a vote.
-                            </p>
-                            <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:1rem; text-align:left;">
-                                <p style="color:#f59e0b; font-weight:700; font-size:0.82rem; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:1px;">What to do?</p>
-                                <ul style="color:var(--text-muted); font-size:0.88rem; line-height:2; padding-left:1.2rem; margin:0;">
-                                    <li>Contact your class <strong style="color:white;">Sub-Admin</strong> to grant you voting access</li>
-                                    <li>Or reach out to your branch <strong style="color:white;">Admin</strong></li>
-                                    <li>Once granted, refresh this page to cast your vote</li>
-                                </ul>
-                            </div>
-                            <p style="margin-top:1rem; color:rgba(255,255,255,0.3); font-size:0.78rem;">Refresh this page after receiving access</p>
-                        </div>`;
-                    votingSection.classList.add('hidden');
-                    return;
-                }
-
-                // ═══════════════════════════════════════════
-                // STATE 6: ELECTION LIVE + ACCESS GRANTED — SHOW CANDIDATES
-                // ═══════════════════════════════════════════
-                statusHeader.innerText = "Active Election 🗳️";
-                statusHeader.style.color = "var(--success)";
-                statusDesc.innerText = "Polls are open. Select a candidate below and cast your vote.";
-                await loadCandidates();
-                votingSection.classList.remove('hidden');
+                checkElectionStatus();
 
             } catch (err) {
                 console.error(err);
                 document.getElementById('election-status-header').innerText = "Connection Error";
-                document.getElementById('election-status-desc').innerText = "Is the server running? Please refresh the page.";
+                document.getElementById('status-banner').classList.remove('hidden');
+            }
+        }
+
+        async function checkElectionStatus() {
+            const statusHeader = document.getElementById('election-status-header');
+            const statusDesc = document.getElementById('election-status-desc');
+            const statusBanner = document.getElementById('status-banner');
+            const timerContainer = document.getElementById('election-timer-container');
+            const votingSection = document.getElementById('voting-section');
+
+            try {
+                const election = await StorageManager.getElectionStatus();
+                const user = await fetch(`/api/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
+                    .then(r => r.ok ? r.json() : currentUser)
+                    .catch(() => currentUser);
+
+                const updateTimer = () => {
+                    const now = new Date().getTime();
+                    const startT = election.startTime ? new Date(election.startTime).getTime() : 0;
+                    const endT = election.endTime ? new Date(election.endTime).getTime() : 0;
+                    
+                    let targetDate, labelText, statusText, colorClass = "var(--neon-cyan)";
+                    let isClosed = false, isLive = false, isUpcoming = false;
+
+                    if (!startT || !endT) {
+                        statusHeader.innerText = "Election Not Scheduled";
+                        statusDesc.innerText = "Please wait for your college Admin to open the polls.";
+                        statusBanner.classList.remove('hidden');
+                        timerContainer.innerHTML = '';
+                        votingSection.classList.add('hidden');
+                        return;
+                    }
+
+                    if (now < startT) {
+                        targetDate = startT;
+                        labelText = "Election Starts In";
+                        statusText = "Prepare to cast your vote";
+                        isUpcoming = true;
+                    } else if (now < endT) {
+                        targetDate = endT;
+                        labelText = "Election Ends In";
+                        statusText = "Polls are open — Cast your vote!";
+                        colorClass = "var(--success)";
+                        isLive = true;
+                    } else {
+                        isClosed = true;
+                    }
+
+                    if (isClosed) {
+                        timerContainer.innerHTML = `
+                            <div class="election-timer-banner" style="border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05);">
+                                <div class="timer-label" style="text-align:center; width:100%;">
+                                    <h4 style="color: #f87171;">Status</h4>
+                                    <p style="font-size:1.1rem;">Election has Concluded</p>
+                                </div>
+                            </div>
+                        `;
+                        statusBanner.classList.add('hidden');
+                        votingSection.classList.add('hidden');
+                        
+                        if (election.isCompleted) {
+                            statusHeader.innerText = "Results Locked 🏁";
+                            statusDesc.innerHTML = "Voting has concluded. Results will be declared soon.";
+                            statusBanner.classList.remove('hidden');
+                        }
+                        return;
+                    }
+
+                    // Handle Countdown
+                    const diff = targetDate - now;
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    timerContainer.innerHTML = `
+                        <div class="election-timer-banner" style="border-color: ${colorClass}44; background: ${colorClass}08;">
+                            <div class="timer-label">
+                                <h4 style="color: ${colorClass};">${labelText}</h4>
+                                <p>${statusText}</p>
+                            </div>
+                            <div class="timer-display">
+                                <div class="time-block">
+                                    <div class="time-value">${days}</div>
+                                    <div class="time-unit">D</div>
+                                </div>
+                                <div class="time-block">
+                                    <div class="time-value">${hours}</div>
+                                    <div class="time-unit">H</div>
+                                </div>
+                                <div class="time-block">
+                                    <div class="time-value">${mins}</div>
+                                    <div class="time-unit">M</div>
+                                </div>
+                                <div class="time-block">
+                                    <div class="time-value">${secs}</div>
+                                    <div class="time-unit">S</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Handle Access Logic
+                    if (isLive) {
+                        if (!user.canVote || user.canVote === 0) {
+                            statusHeader.innerText = "Access Pending ⏳";
+                            statusHeader.style.color = "#f59e0b";
+                            statusDesc.innerHTML = `
+                                <div style="margin-top:1.5rem; padding:1.5rem; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:12px; max-width:500px; margin-inline:auto;">
+                                    <p style="color:#f59e0b; font-weight:700; margin-bottom:0.5rem;">Polls are LIVE — Waiting for Permission</p>
+                                    <p style="color:var(--text-muted); font-size:0.9rem;">Your college Admin has not yet granted you voting access. Please contact them or wait for activation.</p>
+                                </div>
+                            `;
+                            statusBanner.classList.remove('hidden');
+                            votingSection.classList.add('hidden');
+                        } else {
+                            statusBanner.classList.add('hidden');
+                            votingSection.classList.remove('hidden');
+                            if (candidatesGrid.children.length === 0 || candidatesGrid.innerText.includes('Loading')) {
+                                loadCandidates();
+                            }
+                        }
+                    } else if (isUpcoming) {
+                        statusBanner.classList.add('hidden');
+                        votingSection.classList.add('hidden');
+                    }
+                };
+
+                updateTimer();
+                setInterval(updateTimer, 1000);
+
+            } catch (err) {
+                console.error(err);
+                statusHeader.innerText = "Connection Error";
+                statusDesc.innerText = "Please check your internet and refresh.";
+                statusBanner.classList.remove('hidden');
             }
         }
 

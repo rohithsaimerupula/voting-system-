@@ -423,8 +423,9 @@
             Every vote is protected, every voice is counted.
         </p>
 
-        <!-- Registration Timer Placeholder -->
+        <!-- Timers Placeholder -->
         <div id="reg-timer-container"></div>
+        <div id="election-timer-container"></div>
 
         <!-- Role Cards -->
         <div class="path-cards">
@@ -555,6 +556,81 @@
             
             // Start Registration Countdown
             initRegistrationTimer();
+            // Start Election Countdown
+            initElectionTimer();
+        }
+
+        async function initElectionTimer() {
+            const container = document.getElementById('election-timer-container');
+            const election = await StorageManager.getElectionStatus();
+            
+            if (!election || !election.startTime || !election.endTime) return;
+
+            const updateTimer = () => {
+                const now = new Date().getTime();
+                const start = new Date(election.startTime).getTime();
+                const end = new Date(election.endTime).getTime();
+                
+                let targetDate, labelText, statusText, colorClass = "var(--neon-green)";
+                
+                if (now < start) {
+                    targetDate = start;
+                    labelText = "Election Starts In";
+                    statusText = "Get ready to cast your vote";
+                    colorClass = "var(--neon-cyan)";
+                } else if (now < end) {
+                    targetDate = end;
+                    labelText = "Election Ends In";
+                    statusText = "Your voice matters — Vote now!";
+                    colorClass = "#f59e0b"; // Warning/Active Amber
+                } else {
+                    container.innerHTML = `
+                        <div class="reg-timer-banner" style="border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);">
+                            <div class="timer-label">
+                                <h4 style="color: var(--text-dim);">Status</h4>
+                                <p>Election Period Finished</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const diff = targetDate - now;
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                container.innerHTML = `
+                    <div class="reg-timer-banner" style="margin-top: 1rem; border-color: ${colorClass}44; background: ${colorClass}08;">
+                        <div class="timer-label">
+                            <h4 style="color: ${colorClass};">${labelText}</h4>
+                            <p>${statusText}</p>
+                        </div>
+                        <div class="timer-display">
+                            <div class="time-block">
+                                <div class="time-value">${days}</div>
+                                <div class="time-unit">Days</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${hours}</div>
+                                <div class="time-unit">Hrs</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${mins}</div>
+                                <div class="time-unit">Mins</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${secs}</div>
+                                <div class="time-unit">Secs</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
         }
 
         async function initRegistrationTimer() {
