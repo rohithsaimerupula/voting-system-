@@ -658,27 +658,27 @@
             
             progress.style.width = score + "%";
             
-            if (score >= 60) {
+            if (score >= 40) {
                 aiVerified = true;
                 progress.style.background = "#22c55e";
                 badge.innerText = "Verified ✅";
                 badge.style.background = "rgba(34,197,94,0.15)";
                 badge.style.color = "#22c55e";
                 msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`;
-            } else if (score >= 40) {
+            } else if (score >= 25) {
                 aiVerified = false;
                 progress.style.background = "#f59e0b";
                 badge.innerText = "Partial Match ⏳";
                 badge.style.background = "rgba(245,158,11,0.15)";
                 badge.style.color = "#f59e0b";
-                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Confidence is low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`;
+                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Confidence is a bit low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`;
             } else {
                 aiVerified = false;
                 progress.style.background = "#ff2a4d";
                 badge.innerText = "Mismatch 🚫";
                 badge.style.background = "rgba(239,68,68,0.15)";
                 badge.style.color = "#ff2a4d";
-                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>The photos do not appear to match. You may still proceed, but an Admin will manually verify your identity before approval.`;
+                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Biometric data does not match the ID card portrait. Please retake the photo or use a clearer ID image.`;
             }
         }
 
