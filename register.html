@@ -1216,20 +1216,32 @@
         /**
          * Detects blank/empty images by analyzing pixel brightness variance.
          * Returns true if the image appears blank (all white, black, or solid color).
+         * Returns false on any error so it never blocks the registration flow.
          */
         function isImageBlank(canvas) {
-            const ctx = canvas.getContext('2d');
-            // Sample a 100x100 center region for efficiency
-            const sampleW = Math.min(100, canvas.width);
-            const sampleH = Math.min(100, canvas.height);
-            const offsetX = Math.floor((canvas.width - sampleW) / 2);
-            const offsetY = Math.floor((canvas.height - sampleH) / 2);
-            const data = ctx.getImageData(offsetX, offsetY, sampleW, sampleH).data;
+            // Guard: canvas must exist and have dimensions
+            if (!canvas || !(canvas instanceof HTMLCanvasElement)) return false;
+            if (!canvas.width || !canvas.height || canvas.width === 0 || canvas.height === 0) return false;
+
+            let ctx;
+            try { ctx = canvas.getContext('2d'); } catch(e) { return false; }
+            if (!ctx) return false;
+
+            let data;
+            try {
+                // Sample a 100x100 center region for efficiency
+                const sampleW = Math.min(100, canvas.width);
+                const sampleH = Math.min(100, canvas.height);
+                const offsetX = Math.floor((canvas.width - sampleW) / 2);
+                const offsetY = Math.floor((canvas.height - sampleH) / 2);
+                data = ctx.getImageData(offsetX, offsetY, sampleW, sampleH).data;
+            } catch(e) { return false; } // Tainted canvas or security error
+
+            if (!data || data.length === 0) return false;
 
             let sum = 0, sumSq = 0;
             const total = data.length / 4;
             for (let i = 0; i < data.length; i += 4) {
-                // Perceived brightness
                 const brightness = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
                 sum += brightness;
                 sumSq += brightness * brightness;
