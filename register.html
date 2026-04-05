@@ -146,12 +146,14 @@
                         <button class="submit-btn" onclick="window.location.href='index.html'">Return to Gateway</button>
                 </div>
 
-            <!-- REGISTRATION TIMER -->
-            <div id="reg-timer-container"></div>
+            <!-- REGISTRATION TIMER (Skeleton/Loading) -->
+            <div id="reg-timer-container">
+                <div class="skeleton" style="height: 80px; margin-bottom: 2rem;"></div>
+            </div>
 
-            <div id="registration-form-content">
+            <div id="registration-form-content" class="hidden">
                 <h2 class="title" style="margin-bottom: 0.5rem; font-size: 2.2rem; font-weight: 900; color: #ff2a4d; font-family:'Playfair Display', serif;">REGISTRATION PORTAL</h2>
-                <div id="inst-badge" style="display:inline-block; margin-bottom: 2rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.82rem; color: var(--muted);">⛩️ Test University</div>
+                <div id="inst-badge" style="display:inline-block; margin-bottom: 2rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.82rem; color: var(--muted);">⛩️ Loading Institution...</div>
 
                 <form id="register-form">
                     <div class="form-group">
@@ -387,6 +389,9 @@
                 } else {
                     overlay.classList.add('hidden');
                     formContent.classList.remove('hidden');
+                    // Ensure institution badge is correct
+                    const badge = document.getElementById('inst-badge');
+                    if(badge) badge.innerText = "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution");
                 }
 
                 const diff = targetDate - now;
