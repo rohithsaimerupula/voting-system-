@@ -98,6 +98,16 @@
     <!-- Cyber Mesh Particles -->
     <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
 
+    <!-- HARD-CLOSE OVERLAY -->
+    <div id="hard-close-overlay" class="hidden" style="position:fixed; inset:0; background:rgba(2,0,15,0.9); backdrop-filter:blur(15px); z-index:99999; display:flex; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div class="glass-panel" style="max-width:500px; padding:3.5rem 2.5rem; border-color:rgba(255,42,77,0.3); box-shadow:0 0 50px rgba(255,42,77,0.1);">
+            <div style="font-size:4.5rem; margin-bottom:1.5rem; animation: float 3s ease-in-out infinite;">🚫</div>
+            <h2 id="overlay-title" style="font-size:2.2rem; font-weight:900; color:white; margin-bottom:1rem; font-family:'Playfair Display',serif;">Portal Restricted</h2>
+            <p id="overlay-desc" style="color:var(--text-muted); font-size:1.1rem; line-height:1.6; margin-bottom:2.5rem;">The registration period for this institution is not currently active.</p>
+            <button class="submit-btn" onclick="window.location.href='index.html'" style="background:var(--glass-border); border:1px solid rgba(255,255,255,0.2);">Return to Home ➔</button>
+        </div>
+    </div>
+
     <nav>
         <div class="brand" onclick="window.location.href='index.html'">VANGUARD</div>
         <div class="nav-links" style="display:flex; align-items:center;">
@@ -327,17 +337,16 @@
         async function initRegistrationTimer() {
             const container = document.getElementById('reg-timer-container');
             const formContent = document.getElementById('registration-form-content');
+            const overlay = document.getElementById('hard-close-overlay');
+            const overlayTitle = document.getElementById('overlay-title');
+            const overlayDesc = document.getElementById('overlay-desc');
+            
             const regStatus = await StorageManager.getRegistrationStatus();
             
             if (!regStatus || !regStatus.startTime || !regStatus.endTime) {
-                container.innerHTML = `
-                    <div class="reg-timer-banner" style="border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);">
-                        <div class="timer-label">
-                            <h4 style="color: var(--text-dim);">Status</h4>
-                            <p>No registration schedule defined</p>
-                        </div>
-                    </div>
-                `;
+                overlayTitle.innerText = "Portal Closed";
+                overlayDesc.innerText = "The administration has not yet scheduled a registration period for this institution.";
+                overlay.classList.remove('hidden');
                 formContent.classList.add('hidden');
                 return;
             }
@@ -363,21 +372,20 @@
                 }
 
                 if (isClosed) {
-                    container.innerHTML = `
-                        <div class="reg-timer-banner" style="border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05);">
-                            <div class="timer-label" style="text-align:center; width:100%;">
-                                <h4 style="color: #f87171;">Status</h4>
-                                <p style="font-size:1.1rem;">Registration Period has Ended</p>
-                            </div>
-                        </div>
-                    `;
+                    overlayTitle.innerText = "Registration Ended";
+                    overlayDesc.innerText = "The official registration window has closed. You can no longer submit new applications.";
+                    overlay.classList.remove('hidden');
                     formContent.classList.add('hidden');
                     return;
                 }
 
                 if (isUpcoming) {
+                    overlayTitle.innerText = "Registration Upcoming";
+                    overlayDesc.innerText = `Registration is scheduled to open soon. Please return on ${new Date(regStatus.startTime).toLocaleString()}.`;
+                    overlay.classList.remove('hidden');
                     formContent.classList.add('hidden');
                 } else {
+                    overlay.classList.add('hidden');
                     formContent.classList.remove('hidden');
                 }
 

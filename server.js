@@ -226,6 +226,23 @@ app.post('/api/users/add', async (req, res) => {
     try {
         const u = req.body;
         const inst = u.institution || 'Unknown';
+
+        // ── TEMPORAL GUARD: Check Registration Timeline ──
+        if (u.role === 'voter' || u.role === 'contestant') {
+            const configRes = await db.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [`registration_${inst}`] });
+            if (configRes.rows.length > 0) {
+                const reg = JSON.parse(configRes.rows[0].value);
+                const now = Date.now();
+                const start = reg.startTime ? new Date(reg.startTime).getTime() : 0;
+                const end = reg.endTime ? new Date(reg.endTime).getTime() : 0;
+
+                if (start && end) {
+                    if (now < start) return res.status(403).json({ error: "REGISTRATION_NOT_STARTED: Registration has not opened yet." });
+                    if (now > end) return res.status(403).json({ error: "REGISTRATION_CLOSED: The deadline for registration has passed." });
+                }
+            }
+        }
+
         await db.execute({
             sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, inviteCode, campaignPoints, branch, class, managedBy, canVote, year, category)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -602,6 +619,20 @@ app.post('/api/vote', async (req, res) => {
         if (!v.canVote || v.canVote === 0) return res.status(403).json({ error: "ACCESS_DENIED: Admin/Sub-Admin has not given you access yet!" });
         if (v.hasVoted === 1) return res.status(400).json({ error: "You have already voted!" });
         if (v.isBanned === 1) return res.status(403).json({ error: "Voting rights suspended." });
+
+        // ── TEMPORAL GUARD: Check Election Timeline ──
+        const configRes = await db.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [`election_${v.institution}`] });
+        if (configRes.rows.length > 0) {
+            const elec = JSON.parse(configRes.rows[0].value);
+            const now = Date.now();
+            const start = elec.startTime ? new Date(elec.startTime).getTime() : 0;
+            const end = elec.endTime ? new Date(elec.endTime).getTime() : 0;
+
+            if (start && end) {
+                if (now < start) return res.status(403).json({ error: "ELECTION_NOT_STARTED: Polls have not opened yet." });
+                if (now > end) return res.status(403).json({ error: "ELECTION_CLOSED: Polls have closed for this election." });
+            }
+        }
 
         const candidateStr = typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : String(candidateRegNum || "");
 
