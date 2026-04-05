@@ -236,10 +236,11 @@ const StorageManager = {
     // --- LOGIN ---
     async login(regNum, password, skip2FA = false) {
         try {
-            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            const inst = localStorage.getItem('ovs_inst_name');
             let userData;
             try {
-                userData = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`);
+                const apiPath = inst ? `/users/${regNum}?institution=${encodeURIComponent(inst)}` : `/users/${regNum}`;
+                userData = await fetchApi(apiPath);
             } catch (e) {
                 if (e.message === "Not found") return null;
                 throw new Error(`Backend connection failed: ${e.message}. If on Vercel, ensure TURSO DB variables are set.`);
