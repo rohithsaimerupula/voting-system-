@@ -181,7 +181,7 @@
           </button>
           <div style="margin-top:1.5rem; text-align:center;">
               <button type="button" onclick="closeSAModal(); showRecoveryModal('superadmin')"
-                  style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot ID or Password?</button>
+                  style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot Master Password?</button>
           </div>
         </div>
         
@@ -659,22 +659,22 @@
                 title.innerText = "Voter Password Recovery";
                 desc.innerText = "Enter registration number to receive reset code";
                 recIdInput.placeholder = "Enter registration number";
-                recNewPassInput.placeholder = "New Password (6-10 chars)";
+                recNewPassInput.placeholder = "6-10 chars (3 letters, 1 number, 1 special)";
             } else if (displayRole === 'subadmin') {
                 title.innerText = "Sub-Admin Recovery";
                 desc.innerText = "Enter Sub-Admin ID to receive reset code";
                 recIdInput.placeholder = "e.g. SADMIN101";
-                recNewPassInput.placeholder = "New Password (6 chars)";
+                recNewPassInput.placeholder = "Exactly 6 chars (3 letters, 1 number, 1 special)";
             } else if (displayRole === 'superadmin') {
                 title.innerText = "Super-Admin Recovery";
                 desc.innerText = "Enter Super Admin ID to receive reset code";
                 recIdInput.placeholder = "e.g. SADMIN001";
-                recNewPassInput.placeholder = "New Password (10 chars)";
+                recNewPassInput.placeholder = "Exactly 10 chars (3 letters, 1 number, 1 special)";
             } else {
-                title.innerText = "Admin Password Recovery";
+                title.innerText = "Admin Recovery";
                 desc.innerText = "Enter Admin ID to receive reset code";
                 recIdInput.placeholder = "e.g. ADMCSE01";
-                recNewPassInput.placeholder = "New Password (8 chars)";
+                recNewPassInput.placeholder = "Exactly 8 chars (3 letters, 1 number, 1 special)";
             }
 
             modal.style.display = "flex";
@@ -752,7 +752,9 @@
 
         // Password policy validator
         function validatePassword(pwd, minLen, maxLen) {
-            if (pwd.length < minLen || pwd.length > maxLen) return `Password must be ${minLen}-${maxLen} characters.`;
+            if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+                return maxLen === minLen ? `Password must be exactly ${minLen} characters.` : `Password must be ${minLen}-${maxLen} characters.`;
+            }
             const alphaCount = (pwd.match(/[a-zA-Z]/g) || []).length;
             if (alphaCount < 3) return 'Password must contain at least 3 letters.';
             if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number.';
@@ -771,10 +773,16 @@
             if (recoveryTargetRole === 'voter') {
                 const pwdError = validatePassword(newPass, 6, 10);
                 if (pwdError) return alert(pwdError);
+            } else if (recoveryTargetRole === 'admin') {
+                const pwdError = validatePassword(newPass, 8, 8);
+                if (pwdError) return alert("Admin: " + pwdError);
+            } else if (recoveryTargetRole === 'subadmin') {
+                const pwdError = validatePassword(newPass, 6, 6);
+                if (pwdError) return alert("Sub-Admin: " + pwdError);
+            } else if (recoveryTargetRole === 'superadmin') {
+                const pwdError = validatePassword(newPass, 10, 10);
+                if (pwdError) return alert("Super-Admin: " + pwdError);
             }
-            if (recoveryTargetRole === 'admin' && newPass.length !== 8) return alert("Admin password must be 8 characters.");
-            if (recoveryTargetRole === 'subadmin' && newPass.length !== 6) return alert("Sub-Admin password must be 6 characters.");
-            if (recoveryTargetRole === 'superadmin' && newPass.length !== 10) return alert("Super Admin password must be 10 characters.");
 
             btn.innerText = "Resetting...";
             btn.disabled = true;

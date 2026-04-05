@@ -382,7 +382,7 @@
         </div>
         <div class="form-row">
           <div><label>Gateway Access Code</label><input type="text" id="sa-code" placeholder="e.g. KLU2026" maxlength="10" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
-          <div><label>Password</label><input type="password" id="sa-pass" placeholder="Min 10 chars"></div>
+          <div><label>Password <small style="color:var(--muted);text-transform:none">(Exactly 10 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sup@er10ad"></div>
         </div>
         <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
       </div>
@@ -435,7 +435,7 @@
         <input type="text" id="edit-sa-institution" placeholder="KL University">
       </div>
       <div class="modal-field">
-        <label>New Password <small style="text-transform:none">(leave blank to keep current · exactly 10 chars)</small></label>
+        <label>New Password <small style="text-transform:none">(Leave blank to keep current · Exactly 10 chars · 3 letters · 1 special · 1 number)</small></label>
         <input type="password" id="edit-sa-pass" placeholder="Leave blank to keep current" maxlength="10">
       </div>
       <button class="modal-save" onclick="saveEditSA()">💾 Save Changes</button>
@@ -611,7 +611,7 @@
       const dotCount = (name.match(/\./g) || []).length;
       if (dotCount > 1) return showToast('Full name can only contain at most one dot (.)', false);
       
-      const pwdErr = validatePassword(pass, 10, 10, 3, 1, 1);
+      const pwdErr = validatePassword(pass, 10, 10);
       if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
       try {
         await api('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) });
@@ -687,8 +687,8 @@
 
       const updates = { name, email, institution };
       if (newPass && newPass.trim() !== '') {
-        const pwdErr = validatePassword(newPass, 10, 10, 3, 2, 1);
-        if (pwdErr) return showToast('Super Admin password ' + pwdErr, false);
+        const pwdErr = validatePassword(newPass, 10, 10);
+        if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
         updates.password = btoa(newPass);
       }
       try {
@@ -699,15 +699,15 @@
       } catch (e) { showToast(e.message, false); }
     }
 
-    function validatePassword(pwd, minLen, maxLen, minAlpha = 3, minNum = 1, minSpec = 1) {
-      if (pwd.includes(' ')) return 'cannot contain spaces.';
-      if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
-        return maxLen === minLen ? `must be exactly ${minLen} characters.` : `must be ${minLen}-${maxLen} characters.`;
-      }
-      if ((pwd.match(/[a-zA-Z]/g) || []).length < minAlpha) return `must contain at least ${minAlpha} letters.`;
-      if ((pwd.match(/[0-9]/g) || []).length < minNum) return `must contain at least ${minNum} numbers.`;
-      if ((pwd.match(/[^a-zA-Z0-9]/g) || []).length < minSpec) return `must contain at least ${minSpec} special character.`;
-      return null;
+    function validatePassword(pwd, minLen, maxLen) {
+        if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+            return maxLen === minLen ? `password must be exactly ${minLen} characters.` : `password must be ${minLen}-${maxLen} characters.`;
+        }
+        const alphaCount = (pwd.match(/[a-zA-Z]/g) || []).length;
+        if (alphaCount < 3) return 'password must contain at least 3 letters.';
+        if (!/[0-9]/.test(pwd)) return 'password must contain at least 1 number.';
+        if (!/[^a-zA-Z0-9]/.test(pwd)) return 'password must contain at least 1 special character.';
+        return null; // valid
     }
 
     async function deleteSuperAdmin(id) {

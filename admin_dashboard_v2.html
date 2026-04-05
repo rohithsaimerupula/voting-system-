@@ -471,8 +471,8 @@ async function saveEdit() {
   const updates = { name, email, class: cls };
   
   if (role === 'subadmin' && pass && pass.trim() !== '') {
-    const err = validatePassword(pass, 6);
-    if (err) return toast(err, false);
+    const err = validatePassword(pass, 6, 6);
+    if (err) return toast("Sub-Admin: " + err, false);
     updates.password = btoa(pass);
   }
 
@@ -484,11 +484,13 @@ async function saveEdit() {
   } catch(e) { toast(e.message, false); }
 }
 
-function validatePassword(pwd, minLen) {
-  if (pwd.length < minLen) return `Password must be at least ${minLen} characters.`;
-  if ((pwd.match(/[a-zA-Z]/g)||[]).length < 3) return 'Must have 3+ letters.';
-  if (!/[0-9]/.test(pwd)) return 'Must have 1+ number.';
-  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Must have 1+ special character.';
+function validatePassword(pwd, minLen, maxLen) {
+  if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+    return maxLen === minLen ? `Password must be exactly ${minLen} characters.` : `Password must be ${minLen}-${maxLen} characters.`;
+  }
+  if ((pwd.match(/[a-zA-Z]/g)||[]).length < 3) return 'Must have at least 3 letters.';
+  if (!/[0-9]/.test(pwd)) return 'Must have at least 1 number.';
+  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Must have at least 1 special character.';
   return null;
 }
 
@@ -546,8 +548,8 @@ async function createSubAdmin(){
   if(!cls.startsWith(session.branch + '-')) return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
   if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
   if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
-  const pwdErr = validatePassword(pass, 6);
-  if (pwdErr) return toast('Sub-Admin password: ' + pwdErr, false);
+  const pwdErr = validatePassword(pass, 6, 6);
+  if (pwdErr) return toast('Sub-Admin: ' + pwdErr, false);
   try{
     await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:session.branch,class:cls,year:year,institution:session.institution,managedBy:session.regNum,status:'active'})});
     toast(`Sub-Admin ${id} created for ${session.branch} — class ${cls} (${year})`);
