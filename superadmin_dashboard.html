@@ -680,7 +680,7 @@ async function saLoginStep() {
     if (id.length !== 9) { err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
     if (pass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
     if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password must contain at least 3 letters.'; return; }
-    if ((pass.match(/[0-9]/g)||[]).length < 2) { err.textContent = 'Password must contain at least 2 numbers.'; return; }
+    if (!/[0-9]/.test(pass)) { err.textContent = 'Password must contain at least 1 number.'; return; }
     if (!/[^a-zA-Z0-9]/.test(pass)) { err.textContent = 'Password must contain at least 1 special character.'; return; }
     try {
       const user = await apiFetch(`/users/${id}`);

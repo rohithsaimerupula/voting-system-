@@ -692,8 +692,12 @@
         updates.password = btoa(newPass);
       }
       try {
-        await api(`/users/${id}?institution=${encodeURIComponent(institution)}`, { method: 'PATCH', body: JSON.stringify(updates) });
-        showToast(`${id} updated successfully!`);
+        const result = await api(`/users/${id}?institution=${encodeURIComponent(institution)}`, { method: 'PATCH', body: JSON.stringify(updates) });
+        if (result.renamePropagated) {
+            showToast(`✅ Global Rename: "${result.from}" changed to "${result.to}". All users & config updated!`);
+        } else {
+            showToast(`${id} updated successfully!`);
+        }
         closeEditModal();
         loadConsole();
       } catch (e) { showToast(e.message, false); }

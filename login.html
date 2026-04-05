@@ -977,7 +977,7 @@
             if (pass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
             if (/\s/.test(pass)) { err.textContent = 'Password cannot contain spaces.'; return; }
             if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password needs at least 3 letters.'; return; }
-            if ((pass.match(/[0-9]/g)||[]).length < 2) { err.textContent = 'Password needs at least 2 numbers.'; return; }
+            if (!/[0-9]/.test(pass)) { err.textContent = 'Password needs at least 1 number.'; return; }
             if (!/[^a-zA-Z0-9]/.test(pass)) { err.textContent = 'Password needs at least 1 special character.'; return; }
 
             btn.textContent = 'Verifying...';

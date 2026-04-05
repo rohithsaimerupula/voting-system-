@@ -286,21 +286,84 @@ app.get('/api/users/:id', async (req, res) => {
 app.patch('/api/users/:id', async (req, res) => {
     try {
         const regNum = req.params.id;
-        const institution = req.query.institution;
+        const oldInstitution = req.query.institution;
         const updates = req.body;
         
-        if (!institution) return res.status(400).json({ error: "Institution required for identification" });
+        if (!oldInstitution) return res.status(400).json({ error: "Institution required for identification" });
         
         const keys = Object.keys(updates);
         if (keys.length === 0) return res.json({ success: true });
-        
+
+        // ── CASCADE UPDATE: Check if Institution is changing for a Super Admin ──
+        if (updates.institution && updates.institution !== oldInstitution) {
+            const userCheck = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [regNum, oldInstitution] });
+            
+            if (userCheck.rows.length > 0 && userCheck.rows[0].role === 'superadmin') {
+                const newInstitution = updates.institution;
+                const batchOps = [];
+
+                // 1. Update ALL users in this institution
+                batchOps.push({
+                    sql: "UPDATE users SET institution = ? WHERE institution = ?",
+                    args: [newInstitution, oldInstitution]
+                });
+
+                // 2. Update Audit Logs
+                batchOps.push({
+                    sql: "UPDATE auditLogs SET institution = ? WHERE institution = ?",
+                    args: [newInstitution, oldInstitution]
+                });
+
+                // 3. Rename Config Keys (Election, Registration, Categories, Announcement)
+                const configItems = await db.execute({ sql: "SELECT * FROM config WHERE key LIKE ?", args: [`%_${oldInstitution}`] });
+                for (const item of configItems.rows) {
+                    const newKey = item.key.replace(`_${oldInstitution}`, `_${newInstitution}`);
+                    batchOps.push({ sql: "INSERT INTO config (key, value) VALUES (?, ?)", args: [newKey, item.value] });
+                    batchOps.push({ sql: "DELETE FROM config WHERE key = ?", args: [item.key] });
+                }
+
+                // 4. Update Institution Access Codes mapping
+                const codesRes = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+                if (codesRes.rows.length > 0) {
+                    const codes = JSON.parse(codesRes.rows[0].value);
+                    let changed = false;
+                    Object.keys(codes).forEach(k => {
+                        if (codes[k] === oldInstitution) {
+                            codes[k] = newInstitution;
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        batchOps.push({ sql: "UPDATE config SET value = ? WHERE key = 'institution_codes'", args: [JSON.stringify(codes)] });
+                    }
+                }
+
+                // 5. Update the Super Admin record itself (already handled by the global user update above)
+                // But we still need to apply any other updates (name, email, password) to the Super Admin specifically
+                const saKeys = keys.filter(k => k !== 'institution');
+                if (saKeys.length > 0) {
+                    const saSet = saKeys.map(k => `"${k}" = ?`).join(', ');
+                    const saValues = saKeys.map(k => { const v = updates[k]; return typeof v === 'boolean' ? boolInt(v) : v; });
+                    saValues.push(regNum, newInstitution); // Use NEW institution here
+                    batchOps.push({ sql: `UPDATE users SET ${saSet} WHERE regNum = ? AND institution = ?`, args: saValues });
+                }
+
+                await db.batch(batchOps, "write");
+                return res.json({ success: true, renamePropagated: true, from: oldInstitution, to: newInstitution });
+            }
+        }
+
+        // --- REGULAR UPDATE (No college rename or not a Super Admin) ---
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => { const v = updates[k]; return typeof v === 'boolean' ? boolInt(v) : v; });
         
-        values.push(regNum, institution);
+        values.push(regNum, oldInstitution);
         await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND institution = ?`, args: values });
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("Cascade Update Error:", e);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 app.delete('/api/users/:id', async (req, res) => {
