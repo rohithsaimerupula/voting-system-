@@ -145,6 +145,62 @@
     </div>
     
     <div id="auth-err" style="color:var(--red); margin-top:1.5rem; font-size:0.9rem; min-height:1.2rem; font-weight:600;"></div>
+
+    <!-- Forgot Password Link -->
+    <div style="text-align:center; margin-top:1.2rem;">
+      <button type="button" onclick="openSAForgotModal()"
+        style="background:none; border:none; color:rgba(245,158,11,0.7); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline; font-family:'Outfit',sans-serif;">
+        Forgot Master Password?
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SA FORGOT PASSWORD MODAL -->
+<div id="sa-forgot-modal" style="display:none; position:fixed; inset:0; background:rgba(5,10,20,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;">
+  <div style="background:#0f172a; border:1px solid rgba(245,158,11,0.3); border-radius:20px; padding:2.5rem; width:100%; max-width:420px; position:relative; animation:slideUp 0.4s ease;">
+    <button onclick="closeSAForgotModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:#64748b; font-size:1.4rem; cursor:pointer;">✕</button>
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🔑</div>
+      <h3 style="font-size:1.2rem; font-weight:800; color:white; margin-bottom:0.25rem;">Forgot Master Password</h3>
+      <p style="font-size:0.85rem; color:#64748b;">Recover access to your Super Admin account</p>
+    </div>
+    
+    <!-- Step 1: Enter ID -->
+    <div id="sa-forgot-step1">
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; color:#94a3b8; font-size:0.75rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;">Super Admin ID</label>
+        <input type="text" id="sa-forgot-id" placeholder="e.g. SADMIN001" maxlength="9"
+          style="width:100%; height:48px; padding:0 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.3); color:white; font-family:'Outfit',sans-serif; font-size:1rem; outline:none;"
+          oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9)">
+      </div>
+      <button onclick="saForgotSendOtp()" id="sa-forgot-btn1"
+        style="width:100%; height:48px; border-radius:10px; border:1px solid rgba(245,158,11,0.5); background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:700; font-size:1rem; cursor:pointer; font-family:'Outfit',sans-serif;">
+        📧 Send Recovery OTP
+      </button>
+    </div>
+    
+    <!-- Step 2: OTP + New Password -->
+    <div id="sa-forgot-step2" style="display:none;">
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; color:#f59e0b; font-size:0.75rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;">Verification Code <small style="color:#64748b; font-weight:400; text-transform:none;" id="sa-forgot-hint"></small></label>
+        <input type="text" id="sa-forgot-otp" placeholder="000000" maxlength="6"
+          style="width:100%; height:48px; padding:0 1rem; border-radius:10px; border:1px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); color:#f59e0b; font-size:1.4rem; letter-spacing:4px; font-weight:800; text-align:center; font-family:'Outfit',sans-serif; outline:none;"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)">
+      </div>
+      <div style="margin-bottom:1.2rem;">
+        <label style="display:block; color:#94a3b8; font-size:0.75rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:1px;">New Password <small style="color:#64748b; font-weight:400; text-transform:none;">(Exactly 10 chars, 3 letters, 1 number, 1 special)</small></label>
+        <input type="password" id="sa-forgot-newpass" placeholder="Enter new 10-char password" maxlength="10"
+          style="width:100%; height:48px; padding:0 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.3); color:white; font-family:'Outfit',sans-serif; font-size:1rem; outline:none;"
+          oninput="this.value=this.value.replace(/\\s/g,'').slice(0,10)">
+      </div>
+      <button onclick="saForgotReset()" id="sa-forgot-btn2"
+        style="width:100%; height:48px; border-radius:10px; border:1px solid rgba(245,158,11,0.5); background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:700; font-size:1rem; cursor:pointer; font-family:'Outfit',sans-serif;">
+        🔒 Reset Password
+      </button>
+    </div>
+    
+    <div id="sa-forgot-err" style="color:#ef4444; margin-top:1rem; font-size:0.85rem; min-height:1rem; font-weight:600; text-align:center;"></div>
   </div>
 </div>
 
@@ -756,8 +812,106 @@ async function saStep2() {
 function saLogout() { 
   saSession = null; 
   localStorage.removeItem('ovs_currentUser');
-  // Redirect to Staff Login mode
   window.location.href = 'login.html?admin=true'; 
+}
+
+// --- FORGOT MASTER PASSWORD FLOW ---
+let _saForgotOtp = null;
+let _saForgotInst = null;
+let _saForgotRegNum = null;
+
+function openSAForgotModal() {
+  document.getElementById('sa-forgot-modal').style.display = 'flex';
+  document.getElementById('sa-forgot-step1').style.display = 'block';
+  document.getElementById('sa-forgot-step2').style.display = 'none';
+  document.getElementById('sa-forgot-id').value = '';
+  document.getElementById('sa-forgot-otp').value = '';
+  document.getElementById('sa-forgot-newpass').value = '';
+  document.getElementById('sa-forgot-err').textContent = '';
+  document.getElementById('sa-forgot-id').focus();
+}
+
+function closeSAForgotModal() {
+  document.getElementById('sa-forgot-modal').style.display = 'none';
+}
+
+async function saForgotSendOtp() {
+  const btn = document.getElementById('sa-forgot-btn1');
+  const err = document.getElementById('sa-forgot-err');
+  const id = document.getElementById('sa-forgot-id').value.trim();
+  err.textContent = '';
+  if (id.length !== 9) { err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
+
+  btn.textContent = 'Looking up account...';
+  btn.disabled = true;
+  try {
+    const user = await apiFetch(`/users/${id}`);
+    if (!user || user.role !== 'superadmin') throw new Error('No Super Admin account found with that ID.');
+    if (!user.email) throw new Error('This account has no recovery email registered.');
+    _saForgotRegNum = id;
+    _saForgotInst = user.institution;
+
+    // Generate & send OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    _saForgotOtp = otp;
+    btn.textContent = 'Sending OTP...';
+    const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
+    const SERVICE_ID = 'service_emwze5b';
+    const TEMPLATE_ID = 'template_vcrerg5';
+    await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+      name: user.name || 'Super Admin',
+      otp: otp,
+      context: 'Master Password Recovery',
+      to_email: user.email
+    }, PUBLIC_KEY);
+    
+    const masked = user.email.replace(/^(.{2})(.*)(@.*)$/, '$1***$3');
+    document.getElementById('sa-forgot-hint').textContent = '— sent to ' + masked;
+    document.getElementById('sa-forgot-step1').style.display = 'none';
+    document.getElementById('sa-forgot-step2').style.display = 'block';
+    err.style.color = '#22c55e';
+    err.textContent = '✅ OTP sent! Check your email inbox.';
+  } catch(e) {
+    err.style.color = '#ef4444';
+    err.textContent = e.message || 'Failed to send OTP';
+    btn.textContent = '📧 Send Recovery OTP';
+    btn.disabled = false;
+  }
+}
+
+async function saForgotReset() {
+  const btn = document.getElementById('sa-forgot-btn2');
+  const err = document.getElementById('sa-forgot-err');
+  const otp = document.getElementById('sa-forgot-otp').value.trim();
+  const newPass = document.getElementById('sa-forgot-newpass').value;
+  err.style.color = '#ef4444';
+  err.textContent = '';
+  
+  if (otp.length !== 6) { err.textContent = 'Enter the 6-digit code from your email.'; return; }
+  if (otp !== _saForgotOtp) { err.textContent = '❌ Invalid OTP. Please try again.'; return; }
+  
+  // Validate new password
+  if (newPass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
+  if ((newPass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password needs at least 3 letters.'; return; }
+  if (!/[0-9]/.test(newPass)) { err.textContent = 'Password needs at least 1 number.'; return; }
+  if (!/[^a-zA-Z0-9]/.test(newPass)) { err.textContent = 'Password needs at least 1 special character.'; return; }
+  
+  btn.textContent = 'Resetting...';
+  btn.disabled = true;
+  try {
+    await apiFetch(`/users/${_saForgotRegNum}?institution=${encodeURIComponent(_saForgotInst)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ password: btoa(newPass) })
+    });
+    err.style.color = '#22c55e';
+    err.textContent = '✅ Password reset successfully! You can now log in.';
+    _saForgotOtp = null;
+    setTimeout(closeSAForgotModal, 2500);
+  } catch(e) {
+    err.textContent = 'Reset failed: ' + e.message;
+    btn.textContent = '🔒 Reset Password';
+    btn.disabled = false;
+  }
 }
 
 function showPage(id) {

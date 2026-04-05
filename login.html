@@ -705,17 +705,37 @@
             console.log(`[UI] Initiating password reset for ${regNum}...`);
 
             try {
-                // Determine institution
+                const finalId = regNum.toUpperCase();
                 let inst = localStorage.getItem('ovs_inst_name');
-                if (recoveryTargetRole === 'superadmin') inst = 'Default Institution'; // Super Admins are typically in the main tenant
+
+                // Super Admin: look them up by regNum without institution scoping
+                // since their regNum is unique and they may belong to any institution
+                if (recoveryTargetRole === 'superadmin') {
+                    try {
+                        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001/api' : '/api';
+                        const res = await fetch(`${API_BASE}/users/${finalId}`);
+                        if (res.ok) {
+                            const userData = await res.json();
+                            if (userData && userData.role === 'superadmin' && userData.institution) {
+                                inst = userData.institution;
+                            } else {
+                                throw new Error("No Super Admin account found with that ID.");
+                            }
+                        } else {
+                            throw new Error("Super Admin ID not found.");
+                        }
+                    } catch(e) {
+                        alert("Error: " + e.message);
+                        btn.innerText = "Send Code";
+                        btn.disabled = false;
+                        return;
+                    }
+                }
                 
                 if (!inst && recoveryTargetRole !== 'voter') {
                     inst = prompt("Please confirm your Institution Name (exactly as registered):");
                     if (!inst) throw new Error("Institution name required for staff recovery.");
                 }
-
-                // Consistency
-                const finalId = regNum.toUpperCase();
                 
                 const res = await StorageManager.sendResetOtp(finalId, inst);
                 if (res.success) {
