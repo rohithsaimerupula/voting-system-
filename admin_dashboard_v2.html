@@ -246,11 +246,27 @@ const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') +
 let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 let branchStudents = [];
 let allBranchSubAdmins = [];
+let studentMap = {};  // regNum -> student object (safe onclick lookup)
+let saMap = {};       // regNum -> subadmin object
 
 let chartReg = null, chartVote = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (session && session.role === 'admin') {
+        // Re-validate session against server (don't trust stale localStorage)
+        try {
+            const liveUser = await apiFetch(`/users/${session.regNum}?institution=${encodeURIComponent(session.institution)}`);
+            if (!liveUser || liveUser.role !== 'admin' || liveUser.status !== 'active' || liveUser.isBanned == 1) {
+                alert('Session invalid or account suspended. Please login again.');
+                localStorage.removeItem('ovs_currentUser');
+                window.location.href = 'login.html?admin=true';
+                return;
+            }
+            session = liveUser;
+            localStorage.setItem('ovs_currentUser', JSON.stringify(liveUser));
+        } catch(e) {
+            console.warn('[Admin] Session re-validation failed, continuing with cached session:', e.message);
+        }
         document.getElementById('auth-overlay').style.display='none';
         document.getElementById('main-layout').style.display='flex';
         document.getElementById('branch-label').textContent=`Branch: ${session.branch}`;
@@ -315,6 +331,9 @@ async function loadAll(){
       apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
     ]);
     branchStudents=students;
+    // Build lookup maps for safe onclick use (avoids XSS from inline interpolation)
+    studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
+    saMap = {}; subadmins.forEach(s => { saMap[s.regNum] = s; });
     const accepted = students.filter(s=>s.status==='active').length;
     const pending  = students.filter(s=>s.status==='pending').length;
     const canVote  = students.filter(s=>s.canVote==1).length;
@@ -335,17 +354,18 @@ function renderStudents(list){
   const tb=document.getElementById('student-table');
   if(!list.length){tb.innerHTML='<tr><td colspan="11" class="empty">No students in this branch</td></tr>';return;}
   tb.innerHTML=list.map(s=>{
+    const id = s.regNum;
     let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
     if (s.portrait) {
         if (s.portrait.startsWith('data:image')) {
-            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
+            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${id}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
         } else if (s.portrait.startsWith('data:application/pdf')) {
-            portraitHtml = `<div onclick="viewPdf('${s.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
+            portraitHtml = `<div onclick="viewPdf('${id}','portrait')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
         }
     }
     let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
     if (s.webcamReg) {
-        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--cyan); cursor:pointer;" title="Click to View Live Capture">`;
+        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${id}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--cyan); cursor:pointer;" title="Click to View Live Capture">`;
     }
     return `<tr>
     <td>${portraitHtml}</td>
@@ -362,10 +382,10 @@ function renderStudents(list){
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
-      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
-      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudent('${s.regNum}','${s.name}','${s.email||''}','${s.class||''}')">Edit</button>
-      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
-      <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
+      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${id}')">Accept</button>` : ''}
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudentById('${id}')">Edit</button>
+      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${id}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
+      <button class="btn-sm btn-d" onclick="removeStudent('${id}')">Remove</button>
     </td>
   </tr>`;
   }).join('');
@@ -419,7 +439,7 @@ function renderSaTable(list){
   tb.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
     <td style="display:flex;gap:0.4rem;">
-      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editFullSA('${s.regNum}','${s.name}','${s.email||''}','${s.class||''}')">Edit</button>
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editFullSAById('${s.regNum}')">Edit</button>
       <button class="btn-sm btn-d" onclick="removeSA('${s.regNum}')">Remove</button>
     </td>
   </tr>`).join('');
@@ -433,30 +453,68 @@ function applySaFilter() {
 
 function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
-function openEditStudent(id, name, email, cls) {
+// Safe lookup-based edit openers — uses regNum only in onclick, data from Map
+function openEditStudentById(id) {
+  const s = studentMap[id]; if (!s) return;
   document.getElementById('edit-modal-title').textContent = '✏️ Edit Student Details';
   document.getElementById('edit-role').value = 'student';
-  document.getElementById('edit-regnum').value = id;
-  document.getElementById('edit-regnum-display').textContent = id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-email').value = email;
-  document.getElementById('edit-class').value = cls || '';
+  document.getElementById('edit-regnum').value = s.regNum;
+  document.getElementById('edit-regnum-display').textContent = s.regNum;
+  document.getElementById('edit-name').value = s.name || '';
+  document.getElementById('edit-email').value = s.email || '';
+  document.getElementById('edit-class').value = s.class || '';
   document.getElementById('edit-password-group').style.display = 'none';
   document.getElementById('edit-pass').value = '';
   document.getElementById('edit-modal').classList.add('open');
 }
 
-function editFullSA(id, name, email, cls) {
+function openEditStudent(id, name, email, cls) {
+  // Legacy wrapper - kept for backward compatibility
+  openEditStudentById(id);
+}
+
+function editFullSAById(id) {
+  const s = saMap[id]; if (!s) return;
   document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin Details';
   document.getElementById('edit-role').value = 'subadmin';
-  document.getElementById('edit-regnum').value = id;
-  document.getElementById('edit-regnum-display').textContent = id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-email').value = email;
-  document.getElementById('edit-class').value = cls || '';
+  document.getElementById('edit-regnum').value = s.regNum;
+  document.getElementById('edit-regnum-display').textContent = s.regNum;
+  document.getElementById('edit-name').value = s.name || '';
+  document.getElementById('edit-email').value = s.email || '';
+  document.getElementById('edit-class').value = s.class || '';
   document.getElementById('edit-password-group').style.display = 'block';
   document.getElementById('edit-pass').value = '';
   document.getElementById('edit-modal').classList.add('open');
+}
+
+function editFullSA(id, name, email, cls) {
+  // Legacy wrapper
+  editFullSAById(id);
+}
+
+function showPortrait(regNum, type) {
+  const s = studentMap[regNum];
+  if (!s) return;
+  const src = type === 'webcam' ? s.webcamReg : s.portrait;
+  if (!src) return;
+  if (src.startsWith('data:application/pdf')) { viewPdf(regNum, type); return; }
+  document.getElementById('portrait-preview').src = src;
+  document.getElementById('portrait-modal').style.display = 'flex';
+}
+
+function viewPdf(regNum, type) {
+  const s = studentMap[regNum];
+  if (!s) return;
+  const src = type === 'webcam' ? s.webcamReg : s.portrait;
+  if (!src) return;
+  const newWin = window.open('', '_blank');
+  if (newWin) {
+    newWin.document.title = 'ID Proof PDF';
+    newWin.document.body.style.margin = '0';
+    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
+  } else {
+    toast('Popup blocked! Please allow popups to view PDF.', false);
+  }
 }
 
 async function saveEdit() {

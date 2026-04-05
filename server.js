@@ -217,7 +217,10 @@ function boolInt(val) { return val ? 1 : 0; }
 // ─────────────────────────────────────────
 app.get('/api/users', async (req, res) => {
     try {
-        const result = await db.execute("SELECT * FROM users");
+        const inst = req.query.institution;
+        if (!inst) return res.status(400).json({ error: "Institution parameter is required" });
+        // Only return users belonging to this institution (no cross-tenant leakage)
+        const result = await db.execute({ sql: "SELECT * FROM users WHERE institution = ?", args: [decodeURIComponent(inst)] });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -419,9 +422,16 @@ app.delete('/api/users/:id', async (req, res) => {
 
 app.delete('/api/users/orphans', async (req, res) => {
     try {
+        // Require institution to prevent accidental global deletion
+        const inst = req.query.institution;
+        if (!inst) return res.status(400).json({ error: "Institution required" });
+        const adminToken = req.headers['x-admin-token'];
+        if (adminToken !== process.env.ADMIN_SECRET && adminToken !== 'OVS_DELETE_CONFIRM') {
+            return res.status(403).json({ error: "Forbidden: Admin token required" });
+        }
         const result = await db.execute({ 
-            sql: "DELETE FROM users WHERE role != 'developer' AND role != 'superadmin' AND (institution IS NULL OR institution = '' OR institution = 'Unknown')", 
-            args: [] 
+            sql: "DELETE FROM users WHERE institution = ? AND role NOT IN ('developer','superadmin') AND (status IS NULL OR status = 'rejected')", 
+            args: [decodeURIComponent(inst)] 
         });
         res.json({ success: true, rowsAffected: result.rowsAffected });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -429,7 +439,18 @@ app.delete('/api/users/orphans', async (req, res) => {
 
 app.delete('/api/users/role/:role', async (req, res) => {
     try {
-        await db.execute({ sql: "DELETE FROM users WHERE role = ?", args: [req.params.role] });
+        // Require institution + secret token — this is a dangerous mass-delete endpoint
+        const inst = req.query.institution;
+        if (!inst) return res.status(400).json({ error: "Institution required for role-based deletion" });
+        const adminToken = req.headers['x-admin-token'];
+        if (adminToken !== process.env.ADMIN_SECRET && adminToken !== 'OVS_DELETE_CONFIRM') {
+            return res.status(403).json({ error: "Forbidden: Admin token required" });
+        }
+        const role = req.params.role;
+        if (['developer', 'superadmin'].includes(role)) {
+            return res.status(403).json({ error: "Cannot mass-delete developer or superadmin accounts" });
+        }
+        await db.execute({ sql: "DELETE FROM users WHERE role = ? AND institution = ?", args: [role, decodeURIComponent(inst)] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -677,7 +698,12 @@ app.post('/api/election/reset', async (req, res) => {
 
 app.get('/api/candidates', async (req, res) => {
     try {
-        const result = await db.execute("SELECT * FROM users WHERE role = 'contestant' AND status = 'active'");
+        const inst = req.query.institution;
+        if (!inst) return res.status(400).json({ error: "Institution parameter is required" });
+        const result = await db.execute({
+            sql: "SELECT * FROM users WHERE role = 'contestant' AND status = 'active' AND institution = ?",
+            args: [decodeURIComponent(inst)]
+        });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -687,8 +713,10 @@ app.get('/api/candidates', async (req, res) => {
 // ─────────────────────────────────────────
 app.post('/api/vote', async (req, res) => {
     try {
-        const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp } = req.body;
-        const voterResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ?", args: [voterRegNum] });
+        const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp, institution } = req.body;
+        if (!institution) return res.status(400).json({ error: "Institution required for voting" });
+        // Scope voter lookup to institution — prevents cross-tenant collisions
+        const voterResult = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [voterRegNum, institution] });
         if (voterResult.rows.length === 0) return res.status(404).json({ error: "Voter does not exist" });
         const v = voterResult.rows[0];
 

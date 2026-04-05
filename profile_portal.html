@@ -15,6 +15,13 @@
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function() {
+            if (typeof emailjs !== 'undefined') {
+                emailjs.init("Iv4IKpLnL_2v-p5Ne");
+            }
+        })();
+    </script>
     <script src="storage.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
 </head>
@@ -158,7 +165,7 @@
         // Portal Login
         document.getElementById('portal-login-form').onsubmit = async (e) => {
             e.preventDefault();
-            const id = document.getElementById('login-id').value;
+            const id = document.getElementById('login-id').value.trim().toUpperCase();
             const pass = document.getElementById('login-pass').value;
             const btn = document.getElementById('login-btn');
             const err = document.getElementById('login-error');
@@ -170,34 +177,38 @@
             try {
                 let user;
                 if (currentLoginMode === 'voter') {
-                    // Voter: Auth with ID and Password
+                    // Voter: Auth with ID and Password via StorageManager
                     user = await StorageManager.login(id, pass, true);
                 } else {
-                    // Candidate: Auth with ID ONLY (no password)
-                    // We check if account exists and is approved, but no password check for candidate login to portal
-                    const doc = await db.collection('users').doc(id).get();
-                    if (doc.exists && doc.data().role === 'contestant') {
-                        user = doc.data();
-                        if (user.status === 'pending') throw new Error("Account Pending Approval.");
-                    } else {
-                        throw new Error("Candidate ID not found.");
+                    // Candidate: Auth with regNum only — look up by ID and institution, no password needed
+                    const inst = localStorage.getItem('ovs_inst_name') || '';
+                    try {
+                        const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001/api' : '/api';
+                        const res = await fetch(`${API}/users/${id}?institution=${encodeURIComponent(inst)}`);
+                        if (!res.ok) throw new Error('Candidate ID not found.');
+                        const data = await res.json();
+                        if (data.role !== 'contestant') throw new Error('This ID is not a candidate account.');
+                        if (data.status === 'pending') throw new Error('Account pending approval. Please wait for admin activation.');
+                        if (data.isBanned === 1 || data.isBanned === true) throw new Error('This account has been banned.');
+                        user = data;
+                    } catch(fetchErr) {
+                        throw new Error(fetchErr.message || 'Candidate lookup failed.');
                     }
                 }
 
-                if (user && user.role !== 'admin') {
-                    sessionUser = user;
-                    showUpdateForm();
-                } else if (user && user.role === 'admin') {
-                    throw new Error("Admins should use the Admin Dashboard.");
-                } else {
-                    throw new Error("Invalid credentials.");
+                if (!user) throw new Error('Invalid credentials.');
+                if (user.role === 'admin' || user.role === 'subadmin' || user.role === 'superadmin') {
+                    throw new Error('Staff accounts should use the Admin Dashboard.');
                 }
+
+                sessionUser = user;
+                showUpdateForm();
             } catch (e) {
                 err.innerText = e.message;
                 err.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Enter Portal";
+                btn.innerText = 'Enter Portal';
             }
         };
 
@@ -273,7 +284,8 @@
                         return alert(pwdError);
                     }
                 }
-                pendingUpdates.password = newPass;
+                // Always hash (btoa) password before storing — consistent with login system
+                pendingUpdates.password = btoa(newPass);
             }
 
             if (sessionUser.role === 'contestant') {
@@ -313,7 +325,12 @@
             btn.innerText = "Saving Changes...";
 
             try {
-                await StorageManager.updateUserDetails(sessionUser.regNum, pendingUpdates);
+                // Pass institution so PATCH is scoped correctly to this tenant
+                const updatesWithInst = {
+                    ...pendingUpdates,
+                    institution: sessionUser.institution || localStorage.getItem('ovs_inst_name') || 'Unknown'
+                };
+                await StorageManager.updateUserDetails(sessionUser.regNum, updatesWithInst);
                 msg.innerText = "Profile updated successfully! ✅";
                 msg.style.background = "rgba(16, 185, 129, 0.2)";
                 msg.style.color = "#10b981";

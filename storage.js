@@ -441,7 +441,8 @@ const StorageManager = {
     },
 
     async getCandidates() {
-        return await fetchApi('/candidates');
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        return await fetchApi(`/candidates?institution=${encodeURIComponent(inst)}`);
     },
 
     async generateVoteHash(voterRegNum, candidateRegNum) {
@@ -460,6 +461,7 @@ const StorageManager = {
         const finalVotePhoto = webcamPhoto ? await this.compressImage(webcamPhoto, 400, 400, 0.4) : null;
         const secureHash = await this.generateVoteHash(voterRegNum, candidateRegNum);
         const fp = await this.checkAndLogFingerprint('vote', voterRegNum);
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
 
         await fetchApi('/vote', {
             method: 'POST',
@@ -469,11 +471,11 @@ const StorageManager = {
                 votePhoto: finalVotePhoto,
                 secureHash,
                 fp,
+                institution: inst,
                 timestamp: new Date().toISOString()
             })
         });
 
-        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         let voterData = await fetchApi(`/users/${voterRegNum}?institution=${encodeURIComponent(inst)}`);
         this.saveSession({ ...voterData, hasVoted: true, votedFor: candidateRegNum, voteReceiptHash: secureHash, voteStatus: 'pending' });
         this.logAudit("Vote Cast (Pending)", voterRegNum, `Receipt: ${secureHash}`);
@@ -536,14 +538,12 @@ const StorageManager = {
 
     listenToStats(callback) {
         let lastDataStr = "";
+        const activeInst = localStorage.getItem('ovs_inst_name');
         const poll = async () => {
             try {
-                const allUsers = await fetchApi('/users');
-                // Filter strictly to active institution only
-                const activeInst = localStorage.getItem('ovs_inst_name');
-                const users = activeInst
-                    ? allUsers.filter(u => u.institution === activeInst || u.role === 'superadmin' && u.institution === activeInst)
-                    : allUsers;
+                if (!activeInst) return;
+                // Now scoped: /api/users requires institution
+                const users = await fetchApi(`/users?institution=${encodeURIComponent(activeInst)}`);
                 const stats = this._processStatsSnapshot(users);
                 const newDataStr = JSON.stringify(stats);
                 if (newDataStr !== lastDataStr) {

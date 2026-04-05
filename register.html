@@ -779,7 +779,18 @@
             checkSubmitStatus();
         }
 
+        // Track last OTP send time for rate-limiting
+        let lastOtpSentAt = 0;
+        let otpCooldownTimer = null;
+
         async function sendOtp() {
+            const now = Date.now();
+            const COOLDOWN_MS = 60000; // 60 seconds
+            if (now - lastOtpSentAt < COOLDOWN_MS && lastOtpSentAt > 0) {
+                const remaining = Math.ceil((COOLDOWN_MS - (now - lastOtpSentAt)) / 1000);
+                return showError(`⏳ Please wait ${remaining} seconds before requesting another OTP.`);
+            }
+
             const email = document.getElementById('email').value;
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailRegex.test(email)) {
@@ -799,10 +810,9 @@
                     throw new Error("Email service not loaded. Please refresh the page.");
                 }
                 await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
+                lastOtpSentAt = Date.now();
                 // Only show OTP group AFTER confirmed sent
                 document.getElementById('otp-group').classList.remove('hidden');
-                btn.innerText = "Resend";
-                btn.disabled = false;
                 // Show success toast
                 const errCont = document.getElementById('error-container');
                 errCont.style.background = 'rgba(34,197,94,0.12)';
@@ -812,11 +822,27 @@
                 errCont.classList.remove('hidden');
                 setTimeout(() => {
                     errCont.classList.add('hidden');
-                    // Reset colors for next error
                     errCont.style.background = '';
                     errCont.style.borderColor = '';
                     document.getElementById('error-text').style.color = '';
                 }, 6000);
+
+                // Start 60-second cooldown countdown on button
+                if (otpCooldownTimer) clearInterval(otpCooldownTimer);
+                let countdown = 60;
+                btn.innerText = `Resend (${countdown}s)`;
+                btn.disabled = true;
+                otpCooldownTimer = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(otpCooldownTimer);
+                        otpCooldownTimer = null;
+                        btn.innerText = "Resend";
+                        btn.disabled = false;
+                    } else {
+                        btn.innerText = `Resend (${countdown}s)`;
+                    }
+                }, 1000);
             } catch (err) {
                 console.error('[OVS OTP] Email send failed:', err);
                 btn.disabled = false;
