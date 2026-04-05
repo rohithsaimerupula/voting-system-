@@ -615,7 +615,13 @@
                 }
 
                 const base64 = await convertToBase64(file);
-                const img = await faceapi.fetchImage(base64);
+                // Use HTMLImageElement directly — faceapi.fetchImage() fails with base64 data URLs
+                const img = await new Promise((resolve, reject) => {
+                    const el = new Image();
+                    el.onload = () => resolve(el);
+                    el.onerror = () => reject(new Error('Failed to load uploaded image for face detection.'));
+                    el.src = base64;
+                });
                 
                 // Detect face on ID card
                 const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
@@ -800,7 +806,13 @@
             // --- Real-time AI check ---
             if (faceModelsLoaded) {
                 try {
-                    const detectImg = await faceapi.fetchImage(webcamPhoto);
+                    // Use HTMLImageElement directly — faceapi.fetchImage() fails with base64 data URLs
+                    const detectImg = await new Promise((resolve, reject) => {
+                        const el = new Image();
+                        el.onload = () => resolve(el);
+                        el.onerror = () => reject(new Error('Failed to load webcam capture for face detection.'));
+                        el.src = webcamPhoto;
+                    });
                     const detection = await faceapi.detectSingleFace(detectImg).withFaceLandmarks().withFaceDescriptor();
                     if (detection) {
                         liveFaceDescriptor = detection.descriptor;
