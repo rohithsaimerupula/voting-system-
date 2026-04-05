@@ -91,6 +91,17 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        // Initialize EmailJS immediately after loading
+        (function() {
+            if (typeof emailjs !== 'undefined') {
+                emailjs.init("Iv4IKpLnL_2v-p5Ne");
+                console.log("[OVS] EmailJS initialized.");
+            } else {
+                console.error("[OVS] EmailJS failed to load from CDN.");
+            }
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
 
@@ -717,39 +728,53 @@
             checkSubmitStatus();
         }
 
-        function sendOtp() {
+        async function sendOtp() {
             const email = document.getElementById('email').value;
-            // Relaxed regex to allow institutional emails (e.g., @viit.edu.in)
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailRegex.test(email)) {
                 return showError("Please enter a valid email address.");
             }
 
-            // SIMULATED BACKEND SEND
-            // SIMULATED BACKEND SEND -> REAL EMAIL SEND
             generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            // console.log("SERVER: OTP for " + email + " is " + generatedOtp);
-
-            // Call StorageManager Email
             const name = document.getElementById('name').value || "New User";
 
             const btn = document.getElementById('send-otp-btn');
             btn.disabled = true;
             btn.innerText = "Sending...";
-
-            async function send() {
-                const sent = await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
-                if (sent) {
-                    alert("OTP Sent successfully! Check your inbox.");
-                }
-                btn.disabled = false;
-                btn.innerText = "Resend";
-            }
-            send();
-
-            document.getElementById('otp-group').classList.remove('hidden');
-            document.getElementById('send-otp-btn').innerText = "Resend";
             document.getElementById('error-container').classList.add('hidden');
+
+            try {
+                if (typeof emailjs === 'undefined') {
+                    throw new Error("Email service not loaded. Please refresh the page.");
+                }
+                await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
+                // Only show OTP group AFTER confirmed sent
+                document.getElementById('otp-group').classList.remove('hidden');
+                btn.innerText = "Resend";
+                btn.disabled = false;
+                // Show success toast
+                const errCont = document.getElementById('error-container');
+                errCont.style.background = 'rgba(34,197,94,0.12)';
+                errCont.style.borderColor = '#22c55e';
+                document.getElementById('error-text').style.color = '#22c55e';
+                document.getElementById('error-text').innerText = `✅ OTP sent to ${email}. Check your inbox (and spam folder).`;
+                errCont.classList.remove('hidden');
+                setTimeout(() => {
+                    errCont.classList.add('hidden');
+                    // Reset colors for next error
+                    errCont.style.background = '';
+                    errCont.style.borderColor = '';
+                    document.getElementById('error-text').style.color = '';
+                }, 6000);
+            } catch (err) {
+                console.error('[OVS OTP] Email send failed:', err);
+                btn.disabled = false;
+                btn.innerText = "Retry";
+                // Still show OTP group so user can use fallback (dev mode)
+                document.getElementById('otp-group').classList.remove('hidden');
+                showError(`⚠️ Email delivery failed: ${err.message || 'Unknown error'}. Check console for details. If testing, OTP is in browser console.`);
+                console.warn('[OVS OTP] FALLBACK: Generated OTP for manual entry:', generatedOtp);
+            }
         }
 
         function verifyOtp() {
