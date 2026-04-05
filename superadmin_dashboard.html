@@ -290,7 +290,7 @@
         <button class="btn btn-green" onclick="grantAllInstitutionVote()" style="min-width:140px;margin:0;padding:0.6rem 1rem;font-size:0.85rem;border-radius:10px;font-weight:700;">Grant All Vote</button>
       </div>
       <div class="card" style="padding:0.5rem">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Category</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Category</th><th>AI</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -862,7 +862,7 @@ function renderStudents(list) {
       ? `<span class="badge" style="background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.4);font-size:0.72rem;padding:0.3rem 0.7rem;">🏷️ ${s.category||'General'}</span>`
       : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">–</span>'
     }</td>
-    <td>${s.canVote==1 ? '<span class="badge badge-active">✅ Yes</span>' : '<span class="badge badge-pending">❌ No</span>'}</td>
+    <td>${s.webcamReg ? '<span class="badge" style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); font-size:0.65rem;" title="AI Face Verified">🤖 ✅</span>' : '<span class="badge" style="font-size:0.65rem;" title="Manual Registration">👤</span>'}</td>
     <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.role==='contestant'?'Candidate':'Voter'} · ${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">

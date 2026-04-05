@@ -242,9 +242,35 @@
 
                     <!-- Portrait Upload (File) -->
                     <div class="form-group">
-                        <label>Upload ID Proof / Portrait (Image Only)</label>
-                        <input type="file" id="portrait" accept=".png, .jpg, .jpeg">
-                        <small style="color: var(--text-muted);">Used for AI ID verification. Images Only (.png, .jpg).</small>
+                        <label>Upload ID Card (Vignan IIT Format)</label>
+                        <input type="file" id="portrait" accept=".png, .jpg, .jpeg" onchange="handleIdUpload(this)">
+                        <small style="color: var(--text-muted);">Scan ID for AI identity verification. Images Only (.png, .jpg).</small>
+                        
+                        <!-- ID Scan Preview -->
+                        <div id="id-scan-indicator" class="hidden" style="margin-top:1rem; padding:0.8rem; background:rgba(6,182,212,0.05); border:1px solid rgba(6,182,212,0.2); border-radius:12px; display:flex; align-items:center; gap:1rem;">
+                            <div id="id-face-preview-container" style="width:48px; height:48px; background:rgba(0,0,0,0.3); border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); position:relative;">
+                                <img id="id-face-preview" class="hidden" style="width:100%; height:100%; object-fit:cover;">
+                                <div id="id-scan-spinner" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4);">
+                                    <div style="width:20px; height:20px; border:2px solid rgba(255,255,255,0.2); border-top-color:#06b6d4; border-radius:50%; animation:spin 1s linear infinite;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <p id="id-scan-status" style="font-size:0.85rem; font-weight:700; color:var(--text); margin-bottom:0.1rem;">Scanning ID Card...</p>
+                                <p id="id-scan-msg" style="font-size:0.75rem; color:var(--text-muted);">AI is searching for your face on the card</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Face Verification Result (NEW) -->
+                    <div id="ai-status-card" class="hidden" style="margin-bottom:2rem; padding:1.2rem; background:linear-gradient(135deg, rgba(6,182,212,0.1), rgba(139,92,246,0.05)); border:1px solid rgba(6,182,212,0.3); border-radius:16px; animation:popIn 0.4s ease;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                            <h4 style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:#06b6d4;">Identity Trust Score</h4>
+                            <div id="ai-badge" style="padding:0.25rem 0.6rem; border-radius:6px; font-size:0.7rem; font-weight:800; text-transform:uppercase;">Scanning...</div>
+                        </div>
+                        <div style="height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-bottom:0.8rem;">
+                            <div id="ai-progress" style="width:0%; height:100%; background:#06b6d4; transition:width 0.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                        </div>
+                        <p id="ai-msg" style="font-size:0.85rem; color:var(--text-muted); line-height:1.4;">Capture your live face photo to compare it with your ID card portrait.</p>
                     </div>
 
                     <!-- Webcam Capture (Registration) -->
@@ -321,6 +347,10 @@
         
         let faceModelsLoaded = false;
         let aiVerified = false;
+        let aiConfidence = 0;
+        let idFaceDescriptor = null;
+        let liveFaceDescriptor = null;
+        let idFaceImg = null;
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', async () => {
@@ -518,30 +548,145 @@
         }
 
         // Initialize Face API Models
-        // Guard: ensure faceapi is loaded before attempting model load
-        function loadFaceModels() {
+        async function loadFaceModels() {
             if (typeof faceapi === 'undefined') {
                 console.warn("[OVS AI] face-api.js not yet available, retrying in 500ms...");
                 setTimeout(loadFaceModels, 500);
                 return;
             }
-            Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
-                faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights'),
-                faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights')
-            ]).then(() => {
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
                 console.log("[OVS AI] ✅ Face Recognition Models Loaded successfully.");
                 faceModelsLoaded = true;
-                // Show AI ready indicator
                 const badge = document.getElementById('inst-badge');
-                if (badge) badge.title = 'AI Face Verification: Ready';
-            }).catch(err => {
+                if (badge) {
+                    badge.title = 'AI Face Verification: Ready';
+                    badge.style.borderColor = 'rgba(6,182,212,0.4)';
+                    badge.style.color = '#06b6d4';
+                }
+            } catch (err) {
                 console.error("[OVS AI] ❌ Error loading models:", err);
-            });
+            }
         }
         loadFaceModels();
 
+        // --- AI FACE VERIFICATION LOGIC ---
+        async function handleIdUpload(input) {
+            if (!input.files.length) return;
+            const file = input.files[0];
+            const indicator = document.getElementById('id-scan-indicator');
+            const preview = document.getElementById('id-face-preview');
+            const spinner = document.getElementById('id-scan-spinner');
+            const statusText = document.getElementById('id-scan-status');
+            const msgText = document.getElementById('id-scan-msg');
 
+            indicator.classList.remove('hidden');
+            spinner.classList.remove('hidden');
+            preview.classList.add('hidden');
+            statusText.innerText = "Scanning ID Card...";
+            statusText.style.color = "var(--text)";
+            msgText.innerText = "Extracting your face from the card portrait";
+            
+            idFaceDescriptor = null;
+            idFaceImg = null;
+
+            try {
+                if (!faceModelsLoaded) {
+                    msgText.innerText = "Waiting for AI models to initialize...";
+                    let waitCount = 0;
+                    while(!faceModelsLoaded && waitCount < 20) {
+                        await new Promise(r => setTimeout(r, 500));
+                        waitCount++;
+                    }
+                    if(!faceModelsLoaded) throw new Error("AI engine failed to initialize. Please refresh.");
+                }
+
+                const base64 = await convertToBase64(file);
+                const img = await faceapi.fetchImage(base64);
+                
+                // Detect face on ID card
+                const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+                
+                if (!detection) {
+                    statusText.innerText = "ID Scan Failed";
+                    statusText.style.color = "#ff2a4d";
+                    msgText.innerText = "No face detected on this ID card. Try a clearer photo.";
+                    spinner.classList.add('hidden');
+                    return;
+                }
+
+                idFaceDescriptor = detection.descriptor;
+                idFaceImg = base64; // Store original for final submit if needed
+
+                // UI Success state
+                statusText.innerText = "ID Scanned ✅";
+                statusText.style.color = "#22c55e";
+                msgText.innerText = "Portrait extracted successfully.";
+                spinner.classList.add('hidden');
+                
+                // Show a small crop of detected face in preview area
+                const regions = detection.detection.box;
+                preview.src = base64;
+                preview.classList.remove('hidden');
+                
+                // Trigger comparison if live capture already exists
+                if (liveFaceDescriptor) runFaceComparison();
+            } catch (err) {
+                console.error("[OVS AI] ID Scan Error:", err);
+                statusText.innerText = "Scan Error";
+                msgText.innerText = "Could not process image: " + err.message;
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function runFaceComparison() {
+            if (!idFaceDescriptor || !liveFaceDescriptor) return;
+            
+            const card = document.getElementById('ai-status-card');
+            const progress = document.getElementById('ai-progress');
+            const badge = document.getElementById('ai-badge');
+            const msg = document.getElementById('ai-msg');
+            
+            card.classList.remove('hidden');
+            badge.innerText = "Verifying...";
+            badge.style.background = "rgba(255,255,255,0.05)";
+            badge.style.color = "var(--text-muted)";
+
+            // Similarity calculation
+            const distance = faceapi.euclideanDistance(idFaceDescriptor, liveFaceDescriptor);
+            const score = Math.max(0, Math.min(100, Math.round((1 - (distance / 0.7)) * 100)));
+            aiConfidence = score;
+            
+            progress.style.width = score + "%";
+            
+            if (score >= 60) {
+                aiVerified = true;
+                progress.style.background = "#22c55e";
+                badge.innerText = "Verified ✅";
+                badge.style.background = "rgba(34,197,94,0.15)";
+                badge.style.color = "#22c55e";
+                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`;
+            } else if (score >= 40) {
+                aiVerified = false;
+                progress.style.background = "#f59e0b";
+                badge.innerText = "Partial Match ⏳";
+                badge.style.background = "rgba(245,158,11,0.15)";
+                badge.style.color = "#f59e0b";
+                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Confidence is low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`;
+            } else {
+                aiVerified = false;
+                progress.style.background = "#ff2a4d";
+                badge.innerText = "Mismatch 🚫";
+                badge.style.background = "rgba(239,68,68,0.15)";
+                badge.style.color = "#ff2a4d";
+                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>The photos do not appear to match. You may still proceed, but an Admin will manually verify your identity before approval.`;
+            }
+        }
 
         // --- OTP LOGIC ---
         function resetOtpState() {
@@ -620,7 +765,7 @@
             }
         }
 
-        function captureWebcam() {
+        async function captureWebcam() {
             const video = document.getElementById('webcam-video');
             const canvas = document.getElementById('webcam-canvas');
             const context = canvas.getContext('2d');
@@ -644,15 +789,33 @@
             document.getElementById('capture-btn').classList.add('hidden');
             document.getElementById('retake-btn').classList.remove('hidden');
 
+            // --- Real-time AI check ---
+            if (faceModelsLoaded) {
+                try {
+                    const detectImg = await faceapi.fetchImage(webcamPhoto);
+                    const detection = await faceapi.detectSingleFace(detectImg).withFaceLandmarks().withFaceDescriptor();
+                    if (detection) {
+                        liveFaceDescriptor = detection.descriptor;
+                        if (idFaceDescriptor) runFaceComparison();
+                    } else {
+                        console.warn("[OVS AI] No face detected in webcam capture.");
+                        liveFaceDescriptor = null;
+                        document.getElementById('ai-status-card').classList.add('hidden');
+                    }
+                } catch(e) { console.error("[OVS AI] Webcam scan failed:", e); }
+            }
+
             checkSubmitStatus();
         }
 
         function retakeWebcam() {
             webcamPhoto = null;
+            liveFaceDescriptor = null;
             document.getElementById('webcam-preview').classList.add('hidden');
             document.getElementById('webcam-video').classList.remove('hidden');
             document.getElementById('retake-btn').classList.add('hidden');
             document.getElementById('capture-btn').classList.remove('hidden');
+            document.getElementById('ai-status-card').classList.add('hidden');
             checkSubmitStatus();
         }
 
@@ -847,38 +1010,9 @@
                 }
             }
 
-            btn.innerText = "Analyzing Faces (AI)...";
-
-            if (faceModelsLoaded && portraitBase64 && webcamPhoto) {
-                try {
-                    // Small delay to allow UI to update
-                    await new Promise(r => setTimeout(r, 100));
-                    
-                    const img1 = await faceapi.fetchImage(portraitBase64);
-                    const img2 = await faceapi.fetchImage(webcamPhoto);
-                    
-                    const desc1 = await faceapi.detectSingleFace(img1).withFaceLandmarks().withFaceDescriptor();
-                    const desc2 = await faceapi.detectSingleFace(img2).withFaceLandmarks().withFaceDescriptor();
-                    
-                    if (desc1 && desc2) {
-                        const distance = faceapi.euclideanDistance(desc1.descriptor, desc2.descriptor);
-                        const matchPct = Math.round((1 - distance) * 100);
-                        console.log(`[OVS AI] Face Match Distance: ${distance.toFixed(4)} | Match: ~${matchPct}%`);
-                        // Accept if distance < 0.65 (~50%+ similarity)
-                        if (distance < 0.65) {
-                            aiVerified = true;
-                            console.log(`[OVS AI] ✅ Face ACCEPTED (${matchPct}% match)`);
-                        } else {
-                            console.warn(`[OVS AI] ❌ Faces DO NOT match (${matchPct}% match, below 50% threshold).`);
-                        }
-
-                    } else {
-                        console.warn("[OVS AI] Face not detected in one or both images.");
-                    }
-                } catch(e) {
-                    console.error("[OVS AI] Verification Error:", e);
-                }
-            }
+            btn.innerText = "Finalizing Verification...";
+            // Note: aiVerified is already set real-time, but we double-check or could re-run here.
+            // For now, we trust the real-time result to keep submission fast.
 
             btn.innerText = "Uploading...";
 

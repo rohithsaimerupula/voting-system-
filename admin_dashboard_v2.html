@@ -351,7 +351,7 @@ function renderStudents(list){
     </td>
     <td>${s.year||'-'}</td>
     <td>${s.class||'-'}</td>
-    <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
+    <td>${s.webcamReg ? '<span class="badge ba" style="background:rgba(6,182,212,0.15); color:#06b6d4; border-color:rgba(6,182,212,0.3);" title="AI Face Verified">🤖 ✅</span>' : '<span class="badge" title="Manual Registration">👤</span>'}</td>
     <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
     <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
