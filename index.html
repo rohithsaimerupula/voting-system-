@@ -655,14 +655,7 @@
                     labelText = "Registration Ends In";
                     statusText = "Enroll now to participate";
                 } else {
-                    container.innerHTML = `
-                        <div class="reg-timer-banner" style="border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);">
-                            <div class="timer-label">
-                                <h4 style="color: var(--text-dim);">Status</h4>
-                                <p>Registration is now Closed</p>
-                            </div>
-                        </div>
-                    `;
+                    container.innerHTML = "";
                     return;
                 }
 
