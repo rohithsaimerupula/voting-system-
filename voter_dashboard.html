@@ -538,22 +538,7 @@
 
             candidatesGrid.innerHTML = '';
             
-            // Build Leaderboard
-            const lbContainer = document.getElementById('leaderboard-list');
-            lbContainer.innerHTML = '';
-            const sorted = [...candidates].sort((a,b)=>(b.campaignPoints||0)-(a.campaignPoints||0)).slice(0,3);
-            if (sorted.length > 0 && sorted[0].campaignPoints > 0) {
-                document.getElementById('leaderboard-container').style.display = 'block';
-                sorted.forEach((c, i) => {
-                    if(!c.campaignPoints) return;
-                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
-                    lbContainer.innerHTML += `<div style="background:rgba(0,0,0,0.4); padding:10px 20px; border-radius:8px; border:1px solid var(--glass-border);">
-                        <span style="font-size:1.5rem; margin-right:10px;">${medal}</span>
-                        <strong style="color:white;">${c.name}</strong>
-                        <span style="color:var(--neon-cyan); margin-left:10px;">${c.campaignPoints} pts</span>
-                    </div>`;
-                });
-            }
+
 
             // Fetch configured Categories
             definedCategories = [];

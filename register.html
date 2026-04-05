@@ -311,12 +311,6 @@
                             style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
                     </div>
 
-                    <div class="form-group hidden" id="invite-group">
-                        <label>Invite Code (Optional)</label>
-                        <input type="text" id="invite-code" placeholder="Candidate's Reg Number" autocomplete="off" maxlength="20">
-                        <small style="color: var(--text-muted);">Support a candidate and give them Campaign Points!</small>
-                    </div>
-
                     <div class="form-group" id="password-group">
                         <label>Password</label>
                         <input type="password" id="password" required placeholder="e.g. abc@123" maxlength="10">
@@ -903,9 +897,6 @@
 
                 document.getElementById('manifesto-group').classList.remove('hidden');
                 document.getElementById('manifesto').required = true;
-                
-                document.getElementById('invite-group').classList.add('hidden');
-                document.getElementById('invite-code').required = false;
             } else {
                 symbolGroup.classList.add('hidden');
                 document.getElementById('symbol').required = false;
@@ -918,8 +909,6 @@
 
                 document.getElementById('manifesto-group').classList.add('hidden');
                 document.getElementById('manifesto').required = false;
-                
-                document.getElementById('invite-group').classList.remove('hidden');
             }
         }
 
@@ -1016,8 +1005,6 @@
 
             btn.innerText = "Uploading...";
 
-            const inviteCodeVal = role === 'voter' ? document.getElementById('invite-code').value.trim() : null;
-
             const user = {
                 role, name, regNum, institution: localStorage.getItem('ovs_inst_name') || 'Unknown',
                 year: document.getElementById('year').value,
@@ -1025,7 +1012,7 @@
                 section, class: document.getElementById('branch').value + '-' + section,
                 password: role === 'voter' ? password : null,
                 symbol: role === 'contestant' ? symbol : null,
-                manifesto: manifestoVal, inviteCode: inviteCodeVal,
+                manifesto: manifestoVal,
                 portrait: portraitBase64, hasVoted: false, email,
                 webcamReg: webcamPhoto, aiVerified,
                 status: aiVerified ? 'active' : 'pending',

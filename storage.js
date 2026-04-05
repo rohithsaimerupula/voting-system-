@@ -205,19 +205,7 @@ const StorageManager = {
                 throw new Error("Registration Number already exists at this institution.");
             }
 
-            if (user.role === 'voter' && user.inviteCode) {
-                // If invite code used, find candidate
-                const candidates = await this.getCandidates();
-                const cand = candidates.find(c => c.inviteCode === user.inviteCode);
-                if (cand) {
-                    await fetchApi(`/users/${cand.regNum}?institution=${encodeURIComponent(user.institution)}`, {
-                        method: 'PATCH',
-                        body: JSON.stringify({ campaignPoints: (cand.campaignPoints || 0) + 1 })
-                    });
-                }
-            }
 
-            if (user.role === 'contestant') user.campaignPoints = 0;
 
             const fp = await this.checkAndLogFingerprint('register', user.regNum);
             user.deviceFingerprint = fp;
