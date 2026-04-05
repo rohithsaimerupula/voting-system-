@@ -1047,10 +1047,34 @@
             const msgContainer = document.getElementById('msg-container');
             const btn = document.getElementById('final-submit-btn');
 
+            // ── LIVE GATE: Re-check registration status at submit time ──
+            btn.disabled = true;
+            btn.innerText = "Verifying status...";
+            try {
+                const liveStatus = await StorageManager.getRegistrationStatus();
+                const now = Date.now();
+                if (!liveStatus || liveStatus.isActive === false) {
+                    return showError("❌ Registration has been stopped by the administrator. Your submission was not accepted.");
+                }
+                if (liveStatus.endTime && now > new Date(liveStatus.endTime).getTime()) {
+                    return showError("❌ Registration deadline has passed. No more submissions are accepted.");
+                }
+                if (liveStatus.startTime && now < new Date(liveStatus.startTime).getTime()) {
+                    return showError("❌ Registration has not opened yet.");
+                }
+            } catch(gateErr) {
+                console.warn("[OVS] Status gate check failed:", gateErr);
+                // Proceed on network error (leniency) — server will validate on save
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Complete Registration";
+            }
+
             // NEW CHECKS
             if (!otpVerified || !webcamPhoto) {
                 return showError("Please complete OTP verification and Face Capture.");
             }
+
 
             // STRICT CHECKS
             const name = nameInput.value;
