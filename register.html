@@ -800,6 +800,19 @@
 
             webcamPhoto = canvas.toDataURL('image/jpeg');
 
+            // Blank photo detection
+            if (isImageBlank(canvas)) {
+                webcamPhoto = null;
+                showError('Webcam capture appears blank or dark. Please check your camera, ensure it is not covered, and try again.');
+                // Reset webcam state
+                document.getElementById('webcam-preview').classList.add('hidden');
+                document.getElementById('webcam-video').classList.remove('hidden');
+                document.getElementById('capture-btn').classList.remove('hidden');
+                document.getElementById('retake-btn').classList.add('hidden');
+                checkSubmitStatus();
+                return;
+            }
+
             // Show Preview
             const img = document.getElementById('webcam-preview');
             img.src = webcamPhoto;
@@ -1161,8 +1174,10 @@
                         ctx.drawImage(img, 0, 0, width, height);
                         // Compress to JPEG 0.8 quality for better AI detection
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                        if (dataUrl.length > 2000000) { // Safety check ~1.5MB base64 (allows >1MB images)
+                        if (dataUrl.length > 2000000) {
                             reject(new Error("Image too complex, please use a simpler or smaller image."));
+                        } else if (isImageBlank(canvas)) {
+                            reject(new Error("ID card image appears to be blank or empty. Please upload a clear photo of your student ID card."));
                         } else {
                             resolve(dataUrl);
                         }
@@ -1171,6 +1186,34 @@
                 };
                 reader.onerror = () => reject(new Error("Failed to read file. Please try a different image."));
             });
+        }
+
+        /**
+         * Detects blank/empty images by analyzing pixel brightness variance.
+         * Returns true if the image appears blank (all white, black, or solid color).
+         */
+        function isImageBlank(canvas) {
+            const ctx = canvas.getContext('2d');
+            // Sample a 100x100 center region for efficiency
+            const sampleW = Math.min(100, canvas.width);
+            const sampleH = Math.min(100, canvas.height);
+            const offsetX = Math.floor((canvas.width - sampleW) / 2);
+            const offsetY = Math.floor((canvas.height - sampleH) / 2);
+            const data = ctx.getImageData(offsetX, offsetY, sampleW, sampleH).data;
+
+            let sum = 0, sumSq = 0;
+            const total = data.length / 4;
+            for (let i = 0; i < data.length; i += 4) {
+                // Perceived brightness
+                const brightness = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                sum += brightness;
+                sumSq += brightness * brightness;
+            }
+            const mean = sum / total;
+            const variance = (sumSq / total) - (mean * mean);
+            const stdDev = Math.sqrt(variance);
+            // StdDev < 15 means image is nearly uniform (blank)
+            return stdDev < 15;
         }
         // Initialize tsParticles Cyber Mesh Effect
         tsParticles.load("tsparticles", {
