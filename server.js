@@ -236,9 +236,22 @@ app.post('/api/users/add', async (req, res) => {
                 const start = reg.startTime ? new Date(reg.startTime).getTime() : 0;
                 const end = reg.endTime ? new Date(reg.endTime).getTime() : 0;
 
-                if (start && end) {
-                    if (now < start) return res.status(403).json({ error: "REGISTRATION_NOT_STARTED: Registration has not opened yet." });
-                    if (now > end) return res.status(403).json({ error: "REGISTRATION_CLOSED: The deadline for registration has passed." });
+                if (reg.isActive) {
+                    // If manually active, we generally allow it, but still check end time to be safe
+                    if (end && now > (end + 60000)) { // 1 min grace for end time
+                        return res.status(403).json({ error: "REGISTRATION_CLOSED: The deadline for registration has passed." });
+                    }
+                    // We don't strictly block if (now < start) if isActive is true, 
+                    // because the admin just manually started it and clocks might drift.
+                } else {
+                    // Not active: either upcoming or finished
+                    if (reg.isCompleted) {
+                        return res.status(403).json({ error: "REGISTRATION_FINISHED: Registration for this institution has concluded." });
+                    }
+                    if (start && now < start) {
+                        return res.status(403).json({ error: "REGISTRATION_NOT_STARTED: Registration has not opened yet." });
+                    }
+                    return res.status(403).json({ error: "REGISTRATION_CLOSED: Registration is currently inactive." });
                 }
             }
         }
@@ -691,9 +704,22 @@ app.post('/api/vote', async (req, res) => {
             const start = elec.startTime ? new Date(elec.startTime).getTime() : 0;
             const end = elec.endTime ? new Date(elec.endTime).getTime() : 0;
 
-            if (start && end) {
-                if (now < start) return res.status(403).json({ error: "ELECTION_NOT_STARTED: Polls have not opened yet." });
-                if (now > end) return res.status(403).json({ error: "ELECTION_CLOSED: Polls have closed for this election." });
+            if (elec.isActive) {
+                // If manually active, we generally allow it, but still check end time to be safe
+                if (end && now > (end + 60000)) { // 1 min grace for end time
+                    return res.status(403).json({ error: "ELECTION_CLOSED: Polls have closed for this election." });
+                }
+                // We don't strictly block if (now < start) if isActive is true, 
+                // because the admin just manually started it and clocks might drift.
+            } else {
+                // Not active: either upcoming or finished
+                if (elec.isCompleted) {
+                    return res.status(403).json({ error: "ELECTION_FINISHED: This election has concluded." });
+                }
+                if (start && now < start) {
+                    return res.status(403).json({ error: "ELECTION_NOT_STARTED: Polls have not opened yet." });
+                }
+                return res.status(403).json({ error: "ELECTION_CLOSED: Polls are currently inactive." });
             }
         }
 
