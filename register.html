@@ -453,7 +453,7 @@
             };
 
             updateTimer();
-            setInterval(updateTimer, 1000);
+            window.regTimerInterval = setInterval(updateTimer, 1000);
         }
 
         async function loadCategories(inst) {
@@ -1057,6 +1057,9 @@
                 `;
             }
 
+            // Stop the background timer so it doesn't unhide the form
+            if (window.regTimerInterval) clearInterval(window.regTimerInterval);
+            
             // Hide form, show success
             document.getElementById('reg-timer-container').classList.add('hidden');
             document.getElementById('registration-form-content').classList.add('hidden');
