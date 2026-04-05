@@ -149,7 +149,7 @@
         <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
       </div>
       <div class="card" style="padding:0.5rem; overflow-x:auto;">
-        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Year</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Role</th><th>Year</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -327,7 +327,7 @@ async function loadAll(){
 
 function renderStudents(list){
   const tb=document.getElementById('student-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="9" class="empty">No students in this branch</td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="11" class="empty">No students in this branch</td></tr>';return;}
   tb.innerHTML=list.map(s=>{
     let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
     if (s.portrait) {
@@ -349,6 +349,7 @@ function renderStudents(list){
         <div style="font-weight: 500;">${s.name}</div>
         <div style="font-size: 0.8rem; color: var(--cyan); margin-top: 2px;">${s.email || 'No email provided'}</div>
     </td>
+    <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${s.role === 'contestant' ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${s.role === 'contestant' ? 'Candidate' : 'Voter'}</span></td>
     <td>${s.year||'-'}</td>
     <td>${s.class||'-'}</td>
     <td>${s.webcamReg ? '<span class="badge ba" style="background:rgba(6,182,212,0.15); color:#06b6d4; border-color:rgba(6,182,212,0.3);" title="AI Face Verified">🤖 ✅</span>' : '<span class="badge" title="Manual Registration">👤</span>'}</td>
