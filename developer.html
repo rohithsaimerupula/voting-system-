@@ -666,7 +666,7 @@
       let breakdown = `Total Verified Records: ${window.allUsersCache.length}\n\nBreakdown by Role:\n`;
       for(let r in roles) breakdown += `- ${r}: ${roles[r]}\n`;
       
-      const adminCount = window.allUsersCache.filter(u => u.role === 'admin').length;
+      const adminCount = window.allUsersCache.filter(u => u && u.role === 'admin').length;
       if (adminCount > 0) breakdown += `\nThere are ${adminCount} Admins. Developers typically do not manage Admins directly here.`;
 
       alert(breakdown + '\n\n(Tip: Users stored here include voters, admins, sub-admins, and super-admins across the database.)');

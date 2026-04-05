@@ -1012,7 +1012,7 @@
             try {
                 const user = await StorageManager.login(id, pass, true);
                 if (!user) throw new Error('Invalid credentials.');
-                if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
+                if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
 
                 // Generate OTP and send via EmailJS
                 const otp = Math.floor(100000 + Math.random() * 900000).toString();

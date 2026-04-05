@@ -223,7 +223,7 @@
             document.getElementById('section').value = sessionUser.section || '';
             document.getElementById('email').value = sessionUser.email || '';
 
-            if (sessionUser.role === 'contestant') {
+            if (sessionUser && sessionUser.role === 'contestant') {
                 document.getElementById('candidate-fields').classList.remove('hidden');
                 document.getElementById('symbol').value = sessionUser.symbol || '';
                 document.getElementById('manifesto').value = sessionUser.manifesto || '';
@@ -276,7 +276,7 @@
 
             const newPass = document.getElementById('new-password').value.trim();
             if (newPass) {
-                if (sessionUser.role === 'voter') {
+                if (sessionUser && sessionUser.role === 'voter') {
                     const pwdError = validatePassword(newPass, 6, 10);
                     if (pwdError) {
                         btn.disabled = false;
@@ -288,7 +288,7 @@
                 pendingUpdates.password = btoa(newPass);
             }
 
-            if (sessionUser.role === 'contestant') {
+            if (sessionUser && sessionUser.role === 'contestant') {
                 pendingUpdates.symbol = document.getElementById('symbol').value;
                 pendingUpdates.manifesto = document.getElementById('manifesto').value;
             }

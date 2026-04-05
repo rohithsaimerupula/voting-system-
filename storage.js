@@ -295,7 +295,7 @@ const StorageManager = {
             if (userData.isBanned === 0) userData.isBanned = false;
             
             this.saveSession(userData);
-            this.logAudit(`${userData.role.toUpperCase()} Login Success`, regNum);
+            this.logAudit(`${(userData.role || "unknown").toUpperCase()} Login Success`, regNum);
             return userData;
         } catch (error) {
             console.error("Login Error: ", error);

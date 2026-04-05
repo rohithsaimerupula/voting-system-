@@ -311,7 +311,7 @@ async function adminLogin(){
         throw new Error('Invalid credentials');
     }
     
-    if(user.role !== 'admin') {
+    if(!user || user.role !== 'admin') {
         StorageManager.logout();
         throw new Error('Not an Admin account. Use the correct login portal.');
     }
