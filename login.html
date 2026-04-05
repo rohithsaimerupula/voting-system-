@@ -177,10 +177,12 @@
                 style="width:100%;height:48px;padding-left:2.8rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);color:white;font-family:'Outfit',sans-serif;font-size:1rem;outline:none;">
             </div>
           </div>
-          <button id="sa-modal-btn" onclick="saModalLogin()" 
-            style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:0.5rem;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;">
             Send OTP & Continue <span>→</span>
           </button>
+          <div style="margin-top:1.5rem; text-align:center;">
+              <button type="button" onclick="closeSAModal(); showRecoveryModal('superadmin')"
+                  style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot ID or Password?</button>
+          </div>
         </div>
         
         <!-- Step 2: OTP -->
@@ -380,7 +382,12 @@
                     checkElectionCountdown(); // Load countdown if active
                 }
             } else {
-                if (fpContainer) fpContainer.style.display = 'none';
+                if (fpContainer) {
+                    fpContainer.style.display = 'block';
+                    // Center the link for staff mode since it's above the button
+                    fpContainer.style.textAlign = 'center';
+                    fpContainer.style.marginBottom = '1rem';
+                }
                 // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
                 navRight.innerHTML = `<a href="index.html" class="btn-outline">🏠 Home</a>`;
                 tabsContainer.style.display = 'flex';
@@ -634,8 +641,8 @@
             if (isVoter && this.value.length > 10) this.value = this.value.slice(0, 10);
         });
 
-        function showRecoveryModal() {
-            console.log("[UI] Recovery Modal Triggered. isVoter:", isVoter);
+        function showRecoveryModal(forcedRole = null) {
+            console.log("[UI] Recovery Modal Triggered. isVoter:", isVoter, "forcedRole:", forcedRole);
             const title = document.getElementById('rec-title');
             const desc = document.getElementById('rec-desc');
             const modal = document.getElementById('recovery-modal');
@@ -645,8 +652,31 @@
                 return alert("UI Error: Modal not found.");
             }
 
-            title.innerText = isVoter ? "Voter Password Recovery" : "Admin Password Recovery";
-            desc.innerText = isVoter ? "Enter registration number to receive reset code" : "Enter Admin ID to receive reset code";
+            // Determine effective role for labelling
+            let displayRole = isVoter ? 'voter' : (isSubAdmin ? 'subadmin' : 'admin');
+            if (forcedRole) displayRole = forcedRole;
+
+            if (displayRole === 'voter') {
+                title.innerText = "Voter Password Recovery";
+                desc.innerText = "Enter registration number to receive reset code";
+                recIdInput.placeholder = "Enter registration number";
+                recNewPassInput.placeholder = "Enter 10-digit PIN";
+            } else if (displayRole === 'subadmin') {
+                title.innerText = "Sub-Admin Recovery";
+                desc.innerText = "Enter Sub-Admin ID to receive reset code";
+                recIdInput.placeholder = "e.g. SADMIN101";
+                recNewPassInput.placeholder = "New Password (6 chars)";
+            } else if (displayRole === 'superadmin') {
+                title.innerText = "Super-Admin Recovery";
+                desc.innerText = "Enter Super Admin ID to receive reset code";
+                recIdInput.placeholder = "e.g. SADMIN001";
+                recNewPassInput.placeholder = "New Password (10 chars)";
+            } else {
+                title.innerText = "Admin Password Recovery";
+                desc.innerText = "Enter Admin ID to receive reset code";
+                recIdInput.placeholder = "e.g. ADMCSE01";
+                recNewPassInput.placeholder = "New Password (8 chars)";
+            }
 
             modal.style.display = "flex";
             console.log("[UI] Modal display set to flex.");
@@ -656,10 +686,11 @@
             recNewPassInput.value = '';
             document.getElementById('rec-otp').value = '';
             
-            // Set placeholder based on current tab
-            recIdInput.placeholder = isVoter ? "Enter registration number" : "Enter Admin ID";
-            recNewPassInput.placeholder = isVoter ? "Enter 10-digit PIN" : "New Password";
+            // Special handling for institution scoping in recovery
+            recoveryTargetRole = displayRole;
         }
+
+        let recoveryTargetRole = 'voter';
 
         function closeRecoveryModal() {
             document.getElementById('recovery-modal').style.display = "none";
@@ -675,13 +706,23 @@
             console.log(`[UI] Initiating password reset for ${regNum}...`);
 
             try {
-                // Consistency: Voters are usually all-caps in DB. Admins rely on exact match.
-                const finalId = isVoter ? regNum.toUpperCase() : regNum;
+                // Determine institution
+                let inst = localStorage.getItem('ovs_inst_name');
+                if (recoveryTargetRole === 'superadmin') inst = 'Default Institution'; // Super Admins are typically in the main tenant
                 
-                const res = await StorageManager.sendResetOtp(finalId);
+                if (!inst && recoveryTargetRole !== 'voter') {
+                    inst = prompt("Please confirm your Institution Name (exactly as registered):");
+                    if (!inst) throw new Error("Institution name required for staff recovery.");
+                }
+
+                // Consistency
+                const finalId = regNum.toUpperCase();
+                
+                const res = await StorageManager.sendResetOtp(finalId, inst);
                 if (res.success) {
                     recoveryRegNum = finalId;
                     recoveryOtp = res.otp;
+                    recoveryInstitution = inst;
 
                     document.getElementById('rec-step-1').classList.add('hidden');
                     document.getElementById('rec-step-2').classList.remove('hidden');
@@ -690,12 +731,13 @@
                     hintEl.innerText = `Enter code sent to ${res.maskedEmail}`;
                     
                     if (res.warning) {
-                        const warn = document.createElement('div');
+                        const warn = document.getElementById('rec-email-warn') || document.createElement('div');
+                        warn.id = 'rec-email-warn';
                         warn.style.color = 'var(--warning)';
                         warn.style.fontSize = '0.8rem';
                         warn.style.marginTop = '0.5rem';
                         warn.innerText = "⚠️ " + res.warning;
-                        hintEl.parentNode.insertBefore(warn, hintEl.nextSibling);
+                        if (!document.getElementById('rec-email-warn')) hintEl.parentNode.insertBefore(warn, hintEl.nextSibling);
                     }
                 } else {
                     alert("Failure: " + (res.error || "User not found."));
@@ -707,6 +749,8 @@
             btn.disabled = false;
         }
 
+        let recoveryInstitution = null;
+
         async function resetPasswordConfirm() {
             const otpIn = document.getElementById('rec-otp').value.trim();
             const newPass = recNewPassInput.value;
@@ -714,14 +758,17 @@
 
             if (otpIn !== recoveryOtp) return alert("Invalid Code");
             
-            if (isVoter && newPass.length !== 10) return alert("Voter password (PIN) must be exactly 10 digits.");
-            if (!isVoter && newPass.length < 4) return alert("Admin password too short.");
+            // Role-based validation
+            if (recoveryTargetRole === 'voter' && newPass.length !== 10) return alert("Voter PIN must be 10 digits.");
+            if (recoveryTargetRole === 'admin' && newPass.length !== 8) return alert("Admin password must be 8 characters.");
+            if (recoveryTargetRole === 'subadmin' && newPass.length !== 6) return alert("Sub-Admin password must be 6 characters.");
+            if (recoveryTargetRole === 'superadmin' && newPass.length !== 10) return alert("Super Admin password must be 10 characters.");
 
             btn.innerText = "Resetting...";
             btn.disabled = true;
 
             try {
-                await StorageManager.resetPassword(recoveryRegNum, newPass);
+                await StorageManager.resetPassword(recoveryRegNum, newPass, recoveryInstitution);
                 alert("Password Reset Successfully! Please login.");
                 closeRecoveryModal();
             } catch (e) {

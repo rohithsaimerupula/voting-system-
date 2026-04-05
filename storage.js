@@ -292,12 +292,8 @@ const StorageManager = {
         }
     },
 
-    async resetPassword(regNum, newPassword) {
-        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
-        let doc;
-        try { doc = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`); } catch(e) { throw new Error("User not found"); }
-        if (!doc) throw new Error("User not found");
-
+    async resetPassword(regNum, newPassword, institution) {
+        const inst = institution || localStorage.getItem('ovs_inst_name') || 'Unknown';
         const hashedPwd = await this.hashPassword(newPassword);
         await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, {
             method: 'PATCH',
@@ -325,16 +321,16 @@ const StorageManager = {
         return true;
     },
 
-    async sendResetOtp(regNum) {
-        console.log(`[StorageManager] Attempting password reset for: ${regNum}`);
+    async sendResetOtp(regNum, institution) {
+        console.log(`[StorageManager] Attempting password reset for: ${regNum} @ ${institution}`);
         try {
-            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            const inst = institution || localStorage.getItem('ovs_inst_name') || 'Unknown';
             let userData;
             try { userData = await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`); } catch(e) { }
             
             if (!userData) {
-                console.warn(`[StorageManager] Reset failed: User ID ${regNum} not found.`);
-                return { success: false, error: `ID "${regNum}" is not registered.` };
+                console.warn(`[StorageManager] Reset failed: User ID ${regNum} not found in institution ${inst}.`);
+                return { success: false, error: `ID "${regNum}" is not registered in this institution.` };
             }
 
             if (!userData.email) {
