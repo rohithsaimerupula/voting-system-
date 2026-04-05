@@ -1008,7 +1008,8 @@
                     } catch (err) {
                         btn.disabled = false;
                         btn.innerText = "Complete Registration";
-                        return showError("Image processing failed: " + err.message);
+                        const msg = (err && err.message) ? err.message : "Unknown error. Please try a different image.";
+                        return showError("Image processing failed: " + msg);
                     }
                 }
             }
@@ -1133,7 +1134,7 @@
                     };
                     img.onerror = (err) => reject(new Error("Image load failed"));
                 };
-                reader.onerror = error => reject(error);
+                reader.onerror = () => reject(new Error("Failed to read file. Please try a different image."));
             });
         }
         // Initialize tsParticles Cyber Mesh Effect
