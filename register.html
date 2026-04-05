@@ -1058,8 +1058,10 @@
             }
 
             // Hide form, show success
+            document.getElementById('reg-timer-container').classList.add('hidden');
             document.getElementById('registration-form-content').classList.add('hidden');
             document.getElementById('success-screen').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
         } catch (err) {
             console.error("[Registration Error]", err);
