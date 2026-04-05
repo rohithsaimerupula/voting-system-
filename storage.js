@@ -400,6 +400,22 @@ const StorageManager = {
         }
     },
 
+    async getRegistrationStatus() {
+        try {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            return await fetchApi(`/config/registration_${inst}`);
+        } catch (e) {
+            return { isActive: false, isCompleted: false, startTime: null, endTime: null };
+        }
+    },
+
+    async getInstitutionConfig(key) {
+        try {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            return await fetchApi(`/config/${key}_${inst}`);
+        } catch (e) { return null; }
+    },
+
     async setElectionTimes(startTime, endTime) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/config/election_${inst}`, {

@@ -299,6 +299,76 @@
             .gateway-card { padding: 2.5rem 1.5rem; }
             .features-strip { gap: 1.2rem; }
         }
+
+        /* ─── REGISTRATION TIMER ─── */
+        .reg-timer-banner {
+            margin-top: 2rem;
+            padding: 1.2rem 2.5rem;
+            background: rgba(255, 42, 77, 0.05);
+            border: 1px solid rgba(255, 42, 77, 0.2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 0.8s ease 0.3s both;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .timer-label {
+            text-align: left;
+        }
+
+        .timer-label h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #ff2a4d;
+            margin-bottom: 0.25rem;
+            font-weight: 800;
+        }
+
+        .timer-label p {
+            font-size: 0.95rem;
+            color: white;
+            font-weight: 600;
+        }
+
+        .timer-display {
+            display: flex;
+            gap: 1.2rem;
+        }
+
+        .time-block {
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .time-value {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: white;
+            font-family: var(--font-heading);
+            line-height: 1;
+        }
+
+        .time-unit {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .reg-timer-banner {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1.5rem;
+                text-align: center;
+            }
+            .timer-label { text-align: center; }
+        }
     </style>
 </head>
 
@@ -352,6 +422,9 @@
             Next-generation voting technology, purpose-built for your institution.
             Every vote is protected, every voice is counted.
         </p>
+
+        <!-- Registration Timer Placeholder -->
+        <div id="reg-timer-container"></div>
 
         <!-- Role Cards -->
         <div class="path-cards">
@@ -479,6 +552,80 @@
 
             document.getElementById('inst-label').textContent = '— ' + instName;
             document.getElementById('reset-gateway-btn').style.display = 'inline-block';
+            
+            // Start Registration Countdown
+            initRegistrationTimer();
+        }
+
+        async function initRegistrationTimer() {
+            const container = document.getElementById('reg-timer-container');
+            const regStatus = await StorageManager.getRegistrationStatus();
+            
+            if (!regStatus || !regStatus.startTime || !regStatus.endTime) return;
+
+            const updateTimer = () => {
+                const now = new Date().getTime();
+                const start = new Date(regStatus.startTime).getTime();
+                const end = new Date(regStatus.endTime).getTime();
+                
+                let targetDate, labelText, statusText;
+                
+                if (now < start) {
+                    targetDate = start;
+                    labelText = "Registration Starts In";
+                    statusText = "Prepare your documents";
+                } else if (now < end) {
+                    targetDate = end;
+                    labelText = "Registration Ends In";
+                    statusText = "Enroll now to participate";
+                } else {
+                    container.innerHTML = `
+                        <div class="reg-timer-banner" style="border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);">
+                            <div class="timer-label">
+                                <h4 style="color: var(--text-dim);">Status</h4>
+                                <p>Registration is now Closed</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const diff = targetDate - now;
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                container.innerHTML = `
+                    <div class="reg-timer-banner">
+                        <div class="timer-label">
+                            <h4>${labelText}</h4>
+                            <p>${statusText}</p>
+                        </div>
+                        <div class="timer-display">
+                            <div class="time-block">
+                                <div class="time-value">${days}</div>
+                                <div class="time-unit">Days</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${hours}</div>
+                                <div class="time-unit">Hrs</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${mins}</div>
+                                <div class="time-unit">Mins</div>
+                            </div>
+                            <div class="time-block">
+                                <div class="time-value">${secs}</div>
+                                <div class="time-unit">Secs</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
         }
 
         // Navbar scroll effect
