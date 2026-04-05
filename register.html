@@ -377,26 +377,53 @@
             const overlay = document.getElementById('hard-close-overlay');
             const overlayTitle = document.getElementById('overlay-title');
             const overlayDesc = document.getElementById('overlay-desc');
-            
-            const regStatus = await StorageManager.getRegistrationStatus();
-            
-            if (!regStatus || !regStatus.startTime || !regStatus.endTime) {
-                overlayTitle.innerText = "Portal Closed";
-                overlayDesc.innerText = "The administration has not yet scheduled a registration period for this institution.";
-                overlay.classList.remove('hidden');
-                formContent.classList.add('hidden');
-                return;
-            }
 
             let currentStatus = null;
 
-            const updateTimer = () => {
+            // Core check function — re-fetches live status from server
+            async function checkAndUpdate() {
+                let regStatus;
+                try {
+                    regStatus = await StorageManager.getRegistrationStatus();
+                } catch(e) {
+                    console.warn('[OVS] Registration status fetch failed:', e);
+                    return; // Don't change UI on network error
+                }
+
+                // Admin manually stopped registration (isActive=false)
+                if (!regStatus || regStatus.isActive === false) {
+                    if (currentStatus !== 'admin-closed') {
+                        overlayTitle.innerText = "Registration Stopped";
+                        overlayDesc.innerText = "The administrator has stopped the registration portal. Please try again later or contact your institution.";
+                        overlay.classList.remove('hidden');
+                        formContent.classList.add('hidden');
+                        currentStatus = 'admin-closed';
+                        // Stop webcam if running
+                        if (typeof webcamStream !== 'undefined' && webcamStream) {
+                            webcamStream.getTracks().forEach(t => t.stop());
+                        }
+                    }
+                    return;
+                }
+
+                // No schedule set at all
+                if (!regStatus.startTime || !regStatus.endTime) {
+                    if (currentStatus !== 'no-schedule') {
+                        overlayTitle.innerText = "Portal Closed";
+                        overlayDesc.innerText = "The administration has not yet scheduled a registration period for this institution.";
+                        overlay.classList.remove('hidden');
+                        formContent.classList.add('hidden');
+                        currentStatus = 'no-schedule';
+                    }
+                    return;
+                }
+
                 const now = new Date().getTime();
                 const start = new Date(regStatus.startTime).getTime();
                 const end = new Date(regStatus.endTime).getTime();
-                
+
                 let targetDate, labelText, statusText, isClosed = false, isUpcoming = false, statusKey;
-                
+
                 if (now < start) {
                     targetDate = start;
                     labelText = "Registration Starts In";
@@ -414,27 +441,33 @@
                 }
 
                 if (isClosed) {
-                    overlayTitle.innerText = "Registration is not started";
-                    overlayDesc.innerText = "The registration portal is currently not active. Please check the schedule for your institution.";
-                    overlay.classList.remove('hidden');
-                    formContent.classList.add('hidden');
-                    currentStatus = 'closed';
+                    if (currentStatus !== 'closed') {
+                        overlayTitle.innerText = "Registration Closed";
+                        overlayDesc.innerText = "The registration period has ended. No new registrations are being accepted.";
+                        overlay.classList.remove('hidden');
+                        formContent.classList.add('hidden');
+                        currentStatus = 'closed';
+                    }
                     return;
                 }
 
                 if (isUpcoming) {
-                    overlayTitle.innerText = "Registration Upcoming";
-                    overlayDesc.innerText = `Registration is scheduled to open soon. Please return on ${new Date(regStatus.startTime).toLocaleString()}.`;
-                    overlay.classList.remove('hidden');
-                    formContent.classList.add('hidden');
+                    if (currentStatus !== 'upcoming') {
+                        overlayTitle.innerText = "Registration Upcoming";
+                        overlayDesc.innerText = `Registration is scheduled to open soon. Please return on ${new Date(regStatus.startTime).toLocaleString()}.`;
+                        overlay.classList.remove('hidden');
+                        formContent.classList.add('hidden');
+                        currentStatus = 'upcoming';
+                    }
                 } else {
+                    // LIVE — show form
                     overlay.classList.add('hidden');
                     formContent.classList.remove('hidden');
-                    // Ensure institution badge is correct
                     const badge = document.getElementById('inst-badge');
-                    if(badge) badge.innerText = "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution");
+                    if (badge) badge.innerText = "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution");
                 }
 
+                // Update countdown display
                 if (currentStatus !== statusKey) {
                     container.innerHTML = `
                         <div class="reg-timer-banner">
@@ -443,22 +476,10 @@
                                 <p>${statusText}</p>
                             </div>
                             <div class="timer-display">
-                                <div class="time-block">
-                                    <div id="reg-days" class="time-value">0</div>
-                                    <div class="time-unit">D</div>
-                                </div>
-                                <div class="time-block">
-                                    <div id="reg-hours" class="time-value">0</div>
-                                    <div class="time-unit">H</div>
-                                </div>
-                                <div class="time-block">
-                                    <div id="reg-mins" class="time-value">0</div>
-                                    <div class="time-unit">M</div>
-                                </div>
-                                <div class="time-block">
-                                    <div id="reg-secs" class="time-value">0</div>
-                                    <div class="time-unit">S</div>
-                                </div>
+                                <div class="time-block"><div id="reg-days" class="time-value">0</div><div class="time-unit">D</div></div>
+                                <div class="time-block"><div id="reg-hours" class="time-value">0</div><div class="time-unit">H</div></div>
+                                <div class="time-block"><div id="reg-mins" class="time-value">0</div><div class="time-unit">M</div></div>
+                                <div class="time-block"><div id="reg-secs" class="time-value">0</div><div class="time-unit">S</div></div>
                             </div>
                         </div>
                     `;
@@ -466,20 +487,50 @@
                 }
 
                 const diff = targetDate - now;
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+                const days  = Math.floor(diff / (1000*60*60*24));
+                const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+                const mins  = Math.floor((diff % (1000*60*60)) / (1000*60));
+                const secs  = Math.floor((diff % (1000*60)) / 1000);
+                const dEl = document.getElementById('reg-days');
+                if (dEl) {
+                    dEl.textContent = days;
+                    document.getElementById('reg-hours').textContent = hours;
+                    document.getElementById('reg-mins').textContent = mins;
+                    document.getElementById('reg-secs').textContent = secs;
+                }
+            }
 
-                document.getElementById('reg-days').textContent = days;
-                document.getElementById('reg-hours').textContent = hours;
-                document.getElementById('reg-mins').textContent = mins;
-                document.getElementById('reg-secs').textContent = secs;
-            };
+            // Run immediately, then every second for countdown display
+            await checkAndUpdate();
+            window.regTimerInterval = setInterval(async () => {
+                // Update countdown every second
+                const dEl = document.getElementById('reg-days');
+                if (dEl) {
+                    // Just tick down without re-fetching (handled by pollInterval below)
+                    const curDays = parseInt(dEl.textContent) || 0;
+                    const hEl = document.getElementById('reg-hours');
+                    const mEl = document.getElementById('reg-mins');
+                    const sEl = document.getElementById('reg-secs');
+                    if (!hEl || !mEl || !sEl) return;
+                    let secs = parseInt(sEl.textContent) - 1;
+                    let mins = parseInt(mEl.textContent);
+                    let hours = parseInt(hEl.textContent);
+                    let days = curDays;
+                    if (secs < 0) { secs = 59; mins--; }
+                    if (mins < 0) { mins = 59; hours--; }
+                    if (hours < 0) { hours = 23; days--; }
+                    if (days < 0) days = 0;
+                    dEl.textContent = days;
+                    hEl.textContent = hours;
+                    mEl.textContent = mins;
+                    sEl.textContent = secs;
+                }
+            }, 1000);
 
-            updateTimer();
-            window.regTimerInterval = setInterval(updateTimer, 1000);
+            // Re-fetch live status from server every 15 seconds to catch admin changes
+            window.regPollInterval = setInterval(checkAndUpdate, 15000);
         }
+
 
         async function loadCategories(inst) {
             try {
