@@ -458,17 +458,20 @@
     // --- SESSION RECOVERY ---
     (async function() {
         const stored = localStorage.getItem('ovs_currentUser');
-        if (stored) {
+        if (stored && stored !== 'null') {
             try {
                 const user = JSON.parse(stored);
-                if (user.role === 'developer') {
+                if (user && user.role === 'developer') {
                     devSession = user;
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('console-screen').style.display = 'block';
-                    document.getElementById('dev-name-label').textContent = user.name;
+                    document.getElementById('dev-name-label').textContent = user.name || 'Developer';
                     loadConsole();
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("Session Recovery Failed:", e);
+                localStorage.removeItem('ovs_currentUser');
+            }
         }
     })();
 
@@ -499,10 +502,14 @@
       btn.innerText = 'Initializing Root Access...';
 
       try {
+        // Root Operators are cross-tenant; clear any local college context first
+        localStorage.removeItem('ovs_inst_name');
+        
         const user = await StorageManager.login(id, pass);
-        if (user.role !== 'developer') {
+        
+        if (!user || user.role !== 'developer') {
             StorageManager.logout();
-            throw new Error('Unauthorized Access Level.');
+            throw new Error('Unauthorized Access Level or Invalid Root Identifier.');
         }
 
         devSession = user;
@@ -651,7 +658,9 @@
     function showTotalUsersDetails() {
       if(!window.allUsersCache) return;
       const roles = window.allUsersCache.reduce((acc, u) => { 
-          acc[u.role] = (acc[u.role] || 0) + 1; 
+          if (u && u.role) {
+              acc[u.role] = (acc[u.role] || 0) + 1; 
+          }
           return acc; 
       }, {});
       let breakdown = `Total Verified Records: ${window.allUsersCache.length}\n\nBreakdown by Role:\n`;

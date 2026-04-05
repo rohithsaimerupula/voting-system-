@@ -248,7 +248,7 @@ const StorageManager = {
             if (!userData) return null;
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
-            const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role);
+            const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role || "");
             if (userData.status === 'pending' && isStaffRole) throw new Error("Your account is pending approval.");
 
             const activeInst = localStorage.getItem('ovs_inst_name');
