@@ -221,16 +221,26 @@
                 document.getElementById('candidate-fields').classList.add('hidden');
                 const pGroup = document.getElementById('password-group');
                 pGroup.classList.remove('hidden');
-                document.getElementById('password-label').innerText = "New 10-digit PIN";
-                document.getElementById('new-password').placeholder = "Enter 10 numbers";
-                document.getElementById('password-hint').innerText = "Only change if you want to update your login PIN.";
+                document.getElementById('password-label').innerText = "New Password";
+                document.getElementById('new-password').placeholder = "Enter new password";
+                document.getElementById('password-hint').innerText = "6-10 chars · 3+ letters · 1+ special char · 1+ number. Leave blank to keep current.";
             }
+        }
+
+        // Password policy validator
+        function validatePassword(pwd, minLen, maxLen) {
+            if (pwd.length < minLen || pwd.length > maxLen) return `Password must be ${minLen}-${maxLen} characters.`;
+            const alphaCount = (pwd.match(/[a-zA-Z]/g) || []).length;
+            if (alphaCount < 3) return 'Password must contain at least 3 letters.';
+            if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number.';
+            if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Password must contain at least 1 special character.';
+            return null; // valid
         }
 
         // Real-time validation for new password
         document.getElementById('new-password').addEventListener('input', function() {
             if (sessionUser && sessionUser.role === 'voter') {
-                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+                if (this.value.length > 10) this.value = this.value.slice(0, 10);
             }
         });
 
@@ -255,10 +265,13 @@
 
             const newPass = document.getElementById('new-password').value.trim();
             if (newPass) {
-                if (sessionUser.role === 'voter' && newPass.length !== 10) {
-                    btn.disabled = false;
-                    btn.innerText = "Update Details";
-                    return alert("Voter PIN must be exactly 10 digits.");
+                if (sessionUser.role === 'voter') {
+                    const pwdError = validatePassword(newPass, 6, 10);
+                    if (pwdError) {
+                        btn.disabled = false;
+                        btn.innerText = "Update Details";
+                        return alert(pwdError);
+                    }
                 }
                 pendingUpdates.password = newPass;
             }

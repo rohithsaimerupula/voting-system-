@@ -633,12 +633,11 @@
 
         recNewPassInput.addEventListener('input', function() {
             if (isVoter) {
-                this.value = this.value.replace(/[^0-9]/g, '');
+                // Allow all chars, but length limit applies
+                if (this.value.length > 10) this.value = this.value.slice(0, 10);
             } else {
                 // Allow all chars in pass
             }
-            // Let's remove the length limit for admin passwords since they might be securely generated
-            if (isVoter && this.value.length > 10) this.value = this.value.slice(0, 10);
         });
 
         function showRecoveryModal(forcedRole = null) {
@@ -660,7 +659,7 @@
                 title.innerText = "Voter Password Recovery";
                 desc.innerText = "Enter registration number to receive reset code";
                 recIdInput.placeholder = "Enter registration number";
-                recNewPassInput.placeholder = "Enter 10-digit PIN";
+                recNewPassInput.placeholder = "New Password (6-10 chars)";
             } else if (displayRole === 'subadmin') {
                 title.innerText = "Sub-Admin Recovery";
                 desc.innerText = "Enter Sub-Admin ID to receive reset code";
@@ -751,6 +750,16 @@
 
         let recoveryInstitution = null;
 
+        // Password policy validator
+        function validatePassword(pwd, minLen, maxLen) {
+            if (pwd.length < minLen || pwd.length > maxLen) return `Password must be ${minLen}-${maxLen} characters.`;
+            const alphaCount = (pwd.match(/[a-zA-Z]/g) || []).length;
+            if (alphaCount < 3) return 'Password must contain at least 3 letters.';
+            if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number.';
+            if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Password must contain at least 1 special character.';
+            return null; // valid
+        }
+
         async function resetPasswordConfirm() {
             const otpIn = document.getElementById('rec-otp').value.trim();
             const newPass = recNewPassInput.value;
@@ -759,7 +768,10 @@
             if (otpIn !== recoveryOtp) return alert("Invalid Code");
             
             // Role-based validation
-            if (recoveryTargetRole === 'voter' && newPass.length !== 10) return alert("Voter PIN must be 10 digits.");
+            if (recoveryTargetRole === 'voter') {
+                const pwdError = validatePassword(newPass, 6, 10);
+                if (pwdError) return alert(pwdError);
+            }
             if (recoveryTargetRole === 'admin' && newPass.length !== 8) return alert("Admin password must be 8 characters.");
             if (recoveryTargetRole === 'subadmin' && newPass.length !== 6) return alert("Sub-Admin password must be 6 characters.");
             if (recoveryTargetRole === 'superadmin' && newPass.length !== 10) return alert("Super Admin password must be 10 characters.");
