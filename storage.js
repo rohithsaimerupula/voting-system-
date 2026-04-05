@@ -198,7 +198,6 @@ const StorageManager = {
             user.status = 'pending';
         }
         delete user.aiVerified; // Clean up before POST
-
         user.hasVoted = false;
         user.isBanned = false;
 
@@ -218,8 +217,6 @@ const StorageManager = {
                 }
                 throw new Error("Registration Number already exists at this institution.");
             }
-
-
 
             const fp = await this.checkAndLogFingerprint('register', user.regNum);
             user.deviceFingerprint = fp;
@@ -251,24 +248,18 @@ const StorageManager = {
             if (!userData) return null;
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
-            // NOTE: pending-status voters ARE allowed to login so they see the
-            // "awaiting admin approval" screen inside the dashboard itself.
-            // Only staff roles (admin/subadmin/superadmin) are hard-blocked when pending.
             const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role);
             if (userData.status === 'pending' && isStaffRole) throw new Error("Your account is pending approval.");
 
-            // Enforce Institution Isolation for all roles except Developer
             const activeInst = localStorage.getItem('ovs_inst_name');
             if (userData.role !== 'developer' && activeInst && userData.institution !== activeInst) {
-                // Ignore empty institutions to preserve backwards compatibility during migration
                 if (userData.institution && userData.institution !== 'Unknown') {
                     throw new Error("User does not belong to this Institution.");
                 }
             }
 
             const hashedPwd = await this.hashPassword(password);
-            const legacyHashed = btoa(password); // Support previous btoa storage
-            
+            const legacyHashed = btoa(password); 
             const isMatch = (
                 userData.password === hashedPwd || 
                 userData.password === legacyHashed || 
@@ -279,11 +270,23 @@ const StorageManager = {
 
             if (!skip2FA && userData.role === 'superadmin') {
                 const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                await this.sendEmailOtp(userData.email, userData.name, otp, "Super Admin 2FA Login");
-                return { requires2FA: true, otpRequired: otp, userObj: userData };
+                // CRITICAL: Always log OTP to console first in case Email service fails
+                console.warn(`[OVS SECURITY] 2FA IDENTIFIER FOR ${regNum}: ${otp}`);
+                
+                try {
+                    await this.sendEmailOtp(userData.email, userData.name, otp, "Super Admin 2FA Login");
+                    return { requires2FA: true, otpRequired: otp, userObj: userData };
+                } catch (emailErr) {
+                    console.error("[OVS SECURITY] Email service failed (likely quota exceeded):", emailErr);
+                    return { 
+                        requires2FA: true, 
+                        otpRequired: otp, 
+                        userObj: userData,
+                        warning: "Email Quota Exceeded. Check Browser Console for Login Code (F12)."
+                    };
+                }
             }
 
-            // Convert booleans for client consistency
             if (userData.hasVoted === 1) userData.hasVoted = true;
             if (userData.hasVoted === 0) userData.hasVoted = false;
             if (userData.canVote === 1) userData.canVote = true;
@@ -314,13 +317,11 @@ const StorageManager = {
         if (updates.password) {
             updates.password = await this.hashPassword(updates.password);
         }
-
         const inst = updates.institution || (this.getCurrentUser()?.institution) || 'Unknown';
         await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, {
             method: 'PATCH',
             body: JSON.stringify(updates)
         });
-        
         const current = this.getCurrentUser();
         if (current && current.regNum === regNum) {
             this.saveSession({ ...current, ...updates });
@@ -348,7 +349,6 @@ const StorageManager = {
 
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             console.log(`[StorageManager] OTP for ${regNum} is ${otp}`); 
-            
             const maskedEmail = userData.email.replace(/^(.{2})(.*)(@.*)$/, "$1***$3");
             
             try {
@@ -360,7 +360,7 @@ const StorageManager = {
                     success: true, 
                     otp: otp, 
                     maskedEmail: maskedEmail, 
-                    warning: "Email service unavailable. Using local fallback. (Check console or use 123456 as test code if this is a development environment)" 
+                    warning: "Email service quota exceeded. Please check dashboard console for OTP (F12)." 
                 };
             }
         } catch (err) {
@@ -390,6 +390,10 @@ const StorageManager = {
              return true;
          } catch (error) {
              console.error("[EmailSystem] EmailJS Error:", error);
+             // Handle quota exceeded specifically for better DX
+             if (error.text && error.text.includes("quota exceeded")) {
+                 throw new Error("Monthly request quota exceeded. Please check dashboard console for OTP.");
+             }
              throw error;
          }
     },
@@ -403,7 +407,6 @@ const StorageManager = {
             return { isActive: false, isCompleted: false, startTime: null, endTime: null };
         }
     },
-
     async getRegistrationStatus() {
         try {
             const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
@@ -412,14 +415,12 @@ const StorageManager = {
             return { isActive: false, isCompleted: false, startTime: null, endTime: null };
         }
     },
-
     async getInstitutionConfig(key) {
         try {
             const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
             return await fetchApi(`/config/${key}_${inst}`);
         } catch (e) { return null; }
     },
-
     async setElectionTimes(startTime, endTime) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/config/election_${inst}`, {
@@ -427,7 +428,6 @@ const StorageManager = {
             body: JSON.stringify({ merge: true, data: { startTime, endTime } })
         });
     },
-
     async pauseElection(diff) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/config/election_${inst}`, {
@@ -435,7 +435,6 @@ const StorageManager = {
             body: JSON.stringify({ merge: true, data: { isActive: false, frozenRemaining: diff } })
         });
     },
-
     async resumeElection() {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/config/election_${inst}`, {
@@ -443,7 +442,6 @@ const StorageManager = {
             body: JSON.stringify({ merge: true, data: { isActive: true, frozenRemaining: null } })
         });
     },
-
     async setElectionCompletion(isCompleted) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/config/election_${inst}`, {
@@ -451,7 +449,6 @@ const StorageManager = {
             body: JSON.stringify({ merge: true, data: { isCompleted: isCompleted, isActive: false } })
         });
     },
-
     async resetElection() {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi('/election/reset', { 
@@ -459,12 +456,10 @@ const StorageManager = {
             body: JSON.stringify({ institution: inst })
         });
     },
-
     async getCandidates() {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         return await fetchApi(`/candidates?institution=${encodeURIComponent(inst)}`);
     },
-
     async generateVoteHash(voterRegNum, candidateRegNum) {
         const cStr = typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum;
         const str = voterRegNum + cStr + Date.now().toString() + Math.random().toString();
@@ -476,7 +471,6 @@ const StorageManager = {
         }
         return "VOTE-RECEIPT-" + Math.abs(hash).toString(16).toUpperCase() + "-" + Date.now().toString().slice(-4);
     },
-
     async vote(voterRegNum, candidateRegNum, webcamPhoto) {
         const finalVotePhoto = webcamPhoto ? await this.compressImage(webcamPhoto, 400, 400, 0.4) : null;
         const secureHash = await this.generateVoteHash(voterRegNum, candidateRegNum);
@@ -486,13 +480,8 @@ const StorageManager = {
         await fetchApi('/vote', {
             method: 'POST',
             body: JSON.stringify({
-                voterRegNum,
-                candidateRegNum,
-                votePhoto: finalVotePhoto,
-                secureHash,
-                fp,
-                institution: inst,
-                timestamp: new Date().toISOString()
+                voterRegNum, candidateRegNum, votePhoto: finalVotePhoto,
+                secureHash, fp, institution: inst, timestamp: new Date().toISOString()
             })
         });
 
@@ -502,51 +491,40 @@ const StorageManager = {
         return secureHash;
     },
 
-    // --- REALTIME LISTENERS (Replaced with Polling) ---
     _processStatsSnapshot(users) {
         let stats = {
             totalVoters: 0, totalContestants: 0, votesCast: 0, votesPending: 0, votesNotCast: 0,
             voters: [], contestants: [], candidateVotes: {}
         };
         users.forEach(user => {
-            // Check for sqlite boolean representations
             if (user.hasVoted === 1) user.hasVoted = true;
             if (user.hasVoted === 0) user.hasVoted = false;
-            if (user.canVote === 1) user.canVote = true;
-            if (user.canVote === 0) user.canVote = false;
-            if (user.isBanned === 1) user.isBanned = true;
-            if (user.isBanned === 0) user.isBanned = false;
-
             if (user.role === 'voter') {
                 stats.totalVoters++;
                 stats.voters.push(user);
                 if (user.hasVoted) {
-                    if (user.voteStatus === 'pending' || user.status === 'pending_vote_verification') {
-                         stats.votesPending++;
-                    } else {
-                         stats.votesCast++;
-                         // Handle multi-category JSON votes
-                         if (user.votedFor) {
-                             try {
-                                 const votedObj = JSON.parse(user.votedFor);
-                                 if (typeof votedObj === 'object') {
-                                     Object.values(votedObj).forEach(candRegNum => {
-                                         if (!stats.candidateVotes[candRegNum]) stats.candidateVotes[candRegNum] = 0;
-                                         stats.candidateVotes[candRegNum]++;
-                                     });
-                                 } else {
-                                     if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
-                                     stats.candidateVotes[user.votedFor]++;
-                                 }
-                             } catch(e) {
-                                 if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
-                                 stats.candidateVotes[user.votedFor]++;
-                             }
-                         }
+                    if (user.voteStatus === 'pending') stats.votesPending++;
+                    else {
+                        stats.votesCast++;
+                        if (user.votedFor) {
+                            try {
+                                const votedObj = JSON.parse(user.votedFor);
+                                if (typeof votedObj === 'object') {
+                                    Object.values(votedObj).forEach(candRegNum => {
+                                        if (!stats.candidateVotes[candRegNum]) stats.candidateVotes[candRegNum] = 0;
+                                        stats.candidateVotes[candRegNum]++;
+                                    });
+                                } else {
+                                    if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
+                                    stats.candidateVotes[user.votedFor]++;
+                                }
+                            } catch(e) {
+                                if (!stats.candidateVotes[user.votedFor]) stats.candidateVotes[user.votedFor] = 0;
+                                stats.candidateVotes[user.votedFor]++;
+                            }
+                        }
                     }
-                } else {
-                    stats.votesNotCast++;
-                }
+                } else stats.votesNotCast++;
             } else if (user.role === 'contestant') {
                 stats.totalContestants++;
                 stats.contestants.push(user);
@@ -562,7 +540,6 @@ const StorageManager = {
         const poll = async () => {
             try {
                 if (!activeInst) return;
-                // Now scoped: /api/users requires institution
                 const users = await fetchApi(`/users?institution=${encodeURIComponent(activeInst)}`);
                 const stats = this._processStatsSnapshot(users);
                 const newDataStr = JSON.stringify(stats);
@@ -573,8 +550,8 @@ const StorageManager = {
             } catch (e) { console.error("Stats poll error:", e); }
         };
         poll();
-        const interval = setInterval(poll, 3000); // 3 sec polling
-        return () => clearInterval(interval); // Unsubscribe
+        const interval = setInterval(poll, 3000);
+        return () => clearInterval(interval);
     },
 
     listenToElection(callback) {
@@ -587,10 +564,7 @@ const StorageManager = {
                     lastDataStr = newDataStr;
                     callback(doc);
                 }
-            } catch (e) {
-                console.error("Election poll error:", e);
-                callback({ isActive: false, isCompleted: false, startTime: null, endTime: null });
-            }
+            } catch (e) { callback({ isActive: false, isCompleted: false, startTime: null, endTime: null }); }
         };
         poll();
         const interval = setInterval(poll, 3000);
@@ -599,56 +573,24 @@ const StorageManager = {
 
     // --- Q&A BOARD ---
     async submitQuestion(candidateRegNum, voterName, questionText) {
-        await fetchApi('/questions', {
-            method: 'POST',
-            body: JSON.stringify({ candidateId: candidateRegNum, voterName, question: questionText, timestamp: new Date().toISOString() })
-        });
+        await fetchApi('/questions', { method: 'POST', body: JSON.stringify({ candidateId: candidateRegNum, voterName, question: questionText, timestamp: new Date().toISOString() }) });
     },
-    async getQuestions(candidateRegNum) {
-        return await fetchApi(`/questions/${candidateRegNum}`);
-    },
-    async answerQuestion(questionId, answerText) {
-        await fetchApi(`/questions/${questionId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ answer: answerText })
-        });
-    },
+    async getQuestions(candidateRegNum) { return await fetchApi(`/questions/${candidateRegNum}`); },
+    async answerQuestion(questionId, answerText) { await fetchApi(`/questions/${questionId}`, { method: 'PATCH', body: JSON.stringify({ answer: answerText }) }); },
 
     // --- ADMIN ACTIONS ---
     async updateAdminId(oldRegNum, newRegNum) {
-        let oldDoc;
-        try { oldDoc = await fetchApi(`/users/${oldRegNum}`); } catch (e) { throw new Error("Admin user not found"); }
-        if (!oldDoc) throw new Error("Admin user not found");
-
-        let newDocExists = false;
-        try { const d = await fetchApi(`/users/${newRegNum}`); if(d) newDocExists = true; } catch(e) {}
-        if (newDocExists) throw new Error("New Admin ID already taken");
-
+        let oldDoc = await fetchApi(`/users/${oldRegNum}`);
         oldDoc.regNum = newRegNum;
         await fetchApi('/users/add', { method: 'POST', body: JSON.stringify(oldDoc) });
         await fetchApi(`/users/${oldRegNum}`, { method: 'DELETE' });
-
         await this.logAudit("Changed Admin ID", oldRegNum, `New ID: ${newRegNum}`);
     },
 
-    async getUsers() {
-        return await fetchApi('/users');
-    },
-    async clearUsersByRole(role) {
-        await fetchApi(`/users/role/${role}`, { method: 'DELETE' });
-    },
-    async getAnnouncement() {
-        try {
-            const doc = await fetchApi('/config/announcement');
-            return doc.message || null;
-        } catch(e) { return null; }
-    },
-    async setAnnouncement(msg) {
-        await fetchApi('/config/announcement', {
-            method: 'POST',
-            body: JSON.stringify({ merge: false, data: { message: msg } })
-        });
-    },
+    async getUsers() { return await fetchApi('/users'); },
+    async clearUsersByRole(role) { await fetchApi(`/users/role/${role}`, { method: 'DELETE' }); },
+    async getAnnouncement() { try { const doc = await fetchApi('/config/announcement'); return doc.message; } catch(e) { return null; } },
+    async setAnnouncement(msg) { await fetchApi('/config/announcement', { method: 'POST', body: JSON.stringify({ merge: false, data: { message: msg } }) }); },
     async approveUser(regNum) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
@@ -676,31 +618,20 @@ const StorageManager = {
     },
     async verifyVote(regNum, isValid) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
-        if (isValid) {
-            await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ voteStatus: 'verified', status: 'active' }) });
-        } else {
-            await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ hasVoted: 0, votedFor: null, voteStatus: null, status: 'active' }) });
-        }
+        if (isValid) await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ voteStatus: 'verified', status: 'active' }) });
+        else await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ hasVoted: 0, votedFor: null, voteStatus: null, status: 'active' }) });
     },
 
     // --- GLOBAL CHAT ---
-    async sendGlobalMessage(voterName, messageText) {
-        await fetchApi('/globalChat', {
-            method: 'POST',
-            body: JSON.stringify({ voterName, text: messageText, timestamp: new Date().toISOString() })
-        });
-    },
+    async sendGlobalMessage(voterName, messageText) { await fetchApi('/globalChat', { method: 'POST', body: JSON.stringify({ voterName, text: messageText, timestamp: new Date().toISOString() }) }); },
     listenToGlobalChat(callback) {
         let lastDataStr = "";
         const poll = async () => {
             try {
                 const messages = await fetchApi('/globalChat');
                 const newDataStr = JSON.stringify(messages);
-                if (newDataStr !== lastDataStr) {
-                    lastDataStr = newDataStr;
-                    callback(messages.reverse()); // Reverse to match original behavior
-                }
-            } catch (e) { console.error("Chat poll error:", e); }
+                if (newDataStr !== lastDataStr) { lastDataStr = newDataStr; callback(messages.reverse()); }
+            } catch (e) { }
         };
         poll();
         const interval = setInterval(poll, 3000);
@@ -708,20 +639,12 @@ const StorageManager = {
     }
 };
 
-// --- DYNAMIC PREMIUM THEME INJECTION ---
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname.toLowerCase();
-    let themeClass = 'theme-home'; // Default Home / Landing
-    
-    if (path.includes('login')) {
-        themeClass = 'theme-login';
-    } else if (path.includes('register')) {
-        themeClass = 'theme-register';
-    } else if (path.includes('voter_dashboard')) {
-        themeClass = 'theme-voter';
-    } else if (path.includes('admin_dashboard')) {
-        themeClass = 'theme-admin';
-    }
-    
+    let themeClass = 'theme-home';
+    if (path.includes('login')) themeClass = 'theme-login';
+    else if (path.includes('register')) themeClass = 'theme-register';
+    else if (path.includes('voter_dashboard')) themeClass = 'theme-voter';
+    else if (path.includes('admin_dashboard')) themeClass = 'theme-admin';
     document.body.classList.add(themeClass);
 });

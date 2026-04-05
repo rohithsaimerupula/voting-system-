@@ -535,6 +535,12 @@
                         current2faState = userObj;
                         document.getElementById('credentials-section').classList.add('hidden');
                         document.getElementById('inline-twofa-section').classList.remove('hidden');
+                        
+                        // Error handling for email quota exceeded
+                        if (userObj.warning) {
+                            showError("⚠️ " + userObj.warning);
+                        }
+                        
                         submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
                         return;
                     }
