@@ -210,6 +210,7 @@
 
         let selectedCandidateId = null;
         let candidates = [];
+        let definedCategories = []; // Categories with candidates present
         let candidatesGrid = document.getElementById('candidates-grid');
 
         async function init() {
@@ -407,7 +408,7 @@
             }
 
             // Fetch configured Categories
-            let definedCategories = [];
+            definedCategories = [];
             try {
                 const res = await fetch('/api/config/categories_' + encodeURIComponent(currentUser.institution));
                 if(res.ok) {
@@ -456,9 +457,14 @@
                         <img src="${c.portrait || 'https://via.placeholder.com/150'}" alt="${c.name}" class="candidate-photo">
                         <div class="candidate-info">
                             <h3>${c.name}</h3>
-                            <p class="text-muted">${c.regNum} • Sec: ${c.section}</p>
+                            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem; margin-bottom:0.4rem;">
+                                <span style="background:rgba(168,85,247,0.25); color:#c084fc; border:1px solid rgba(168,85,247,0.5); border-radius:20px; padding:0.15rem 0.65rem; font-size:0.72rem; font-weight:700; letter-spacing:0.5px;">🏷️ ${cat}</span>
+                                <span style="color:var(--text-muted); font-size:0.8rem;">${c.regNum}</span>
+                            </div>
+                            <p class="text-muted" style="font-size:0.82rem;">Sec: ${c.section} &bull; ${c.branch || ''}</p>
                             <p style="margin-top:0.5rem;">Symbol: <span style="font-size:1.5rem;">${c.symbol}</span></p>
-                            <p style="margin-top:1rem; font-size:0.9rem; font-style:italic;">"${c.manifesto || "No manifesto provided."}"</p>
+                            <p style="margin-top:1rem; font-size:0.9rem; font-style:italic;">"${c.manifesto || "No manifesto provided."}"
+                            </p>
                         </div>
                         
                         <div style="width:100%; display:flex; gap:10px; margin-top:1rem;">
@@ -466,14 +472,14 @@
                         </div>
 
                         <div class="debate-section">
-                            <p style="font-weight:bold; font-size:0.9rem; color:var(--text-muted);">Q&A Board</p>
+                            <p style="font-weight:bold; font-size:0.9rem; color:var(--text-muted);">Q&amp;A Board</p>
                             <div id="qa-list-${c.regNum}" style="max-height:100px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.85rem;"></div>
                             <div style="display:flex; gap:5px;">
                                 <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:4px; color:white; font-size:0.8rem;">
                                 <button onclick="askQuestion('${c.regNum}')" style="background:var(--neon-blue); border:none; color:white; border-radius:4px; padding:0 10px; cursor:pointer;">Ask</button>
                             </div>
                         </div>
-                    `;
+                    `
                     grid.appendChild(card);
                     loadQuestions(c.regNum);
                 });
@@ -482,11 +488,77 @@
             updateCartUI();
         }
 
+        function updateCartUI() {
+            let actBtn = document.getElementById('cart-finalize');
+            const totalSelected = Object.keys(ballotCart).length;
+            
+            // Determine required categories (those that have at least 1 candidate)
+            const activeCats = definedCategories.filter(cat => {
+                return candidates.some(c => (c.category || 'General') === cat);
+            });
+            // Also include any category from candidates not in defined list
+            const extraCats = [...new Set(candidates.map(c => c.category || 'General'))].filter(cat => !definedCategories.includes(cat));
+            const requiredCategories = [...activeCats, ...extraCats];
+            const totalRequired = requiredCategories.length;
+            const unselected = requiredCategories.filter(cat => !ballotCart[cat]);
+
+            if(!actBtn && totalSelected > 0) {
+                actBtn = document.createElement('button');
+                actBtn.className = 'submit-btn';
+                actBtn.id = 'cart-finalize';
+                actBtn.style.marginTop = "3rem";
+                actBtn.style.position = 'sticky';
+                actBtn.style.bottom = '20px';
+                actBtn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+                actBtn.style.zIndex = '1000';
+                actBtn.style.color = 'black';
+                
+                // Add to root container
+                document.getElementById('voting-section').appendChild(actBtn);
+            }
+            
+            if(actBtn) {
+                if(totalSelected === 0) {
+                    actBtn.remove();
+                } else {
+                    const desc = Object.entries(ballotCart).map(([k,v]) => `${k}: ${v.name}`).join(' | ');
+                    const allSelected = totalRequired === 0 || unselected.length === 0;
+
+                    if (allSelected) {
+                        actBtn.innerText = `\ud83d\uddf3\ufe0f Finalize Ballot (${totalSelected}/${totalRequired} selected) \u2714\ufe0f Ready!`;
+                        actBtn.style.background = "linear-gradient(135deg, var(--neon-cyan), var(--neon-blue))";
+                        actBtn.disabled = false;
+                        actBtn.style.opacity = '1';
+                        actBtn.style.cursor = 'pointer';
+                        actBtn.onclick = () => startVoteFlow(desc);
+                    } else {
+                        actBtn.innerText = `\u26a0\ufe0f Select candidate for: ${unselected.join(', ')} (${totalSelected}/${totalRequired})`;
+                        actBtn.style.background = "linear-gradient(135deg, #f59e0b, #d97706)";
+                        actBtn.disabled = true;
+                        actBtn.style.opacity = '0.8';
+                        actBtn.style.cursor = 'not-allowed';
+                        actBtn.title = `You must select a candidate in every category before finalizing. Missing: ${unselected.join(', ')}`;
+                        actBtn.onclick = () => {
+                            showToast(`\u26a0\ufe0f Please also select a candidate for: ${unselected.join(', ')}`, 'info');
+                            // Scroll to first missing section header
+                            const headers = document.querySelectorAll('.title');
+                            for(const h of headers) {
+                                if(h.innerText.replace(' Category','') === unselected[0]) {
+                                    h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    break;
+                                }
+                            }
+                        };
+                    }
+                }
+            }
+        }
+
         function queueVote(id, name, cat) {
             ballotCart[cat] = { id, name };
             showToast(`Selected ${name} for ${cat}`, "success");
             
-            // Visual feedback
+            // Visual feedback — reset all buttons in this category
             document.querySelectorAll(`button[id^="btn-vote-"]`).forEach(b => {
                 if(b.innerText.includes(`for ${cat}`)) {
                     b.innerText = `Select for ${cat}`;
@@ -503,37 +575,6 @@
                 selBtn.classList.remove('btn-outline');
             }
             updateCartUI();
-        }
-
-        function updateCartUI() {
-            let actBtn = document.getElementById('cart-finalize');
-            const totalSelected = Object.keys(ballotCart).length;
-
-            if(!actBtn && totalSelected > 0) {
-                actBtn = document.createElement('button');
-                actBtn.className = 'submit-btn';
-                actBtn.id = 'cart-finalize';
-                actBtn.style.marginTop = "3rem";
-                actBtn.style.position = 'sticky';
-                actBtn.style.bottom = '20px';
-                actBtn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
-                actBtn.style.zIndex = '1000';
-                actBtn.style.background = "linear-gradient(135deg, var(--neon-cyan), var(--neon-blue))";
-                actBtn.style.color = 'black';
-                
-                // Add to root container
-                document.getElementById('voting-section').appendChild(actBtn);
-            }
-            
-            if(actBtn) {
-                if(totalSelected === 0) {
-                    actBtn.remove();
-                } else {
-                    const desc = Object.entries(ballotCart).map(([k,v]) => `${k}: ${v.name}`).join(' | ');
-                    actBtn.innerText = `Finalize Ballot (${totalSelected} selected) ➔`;
-                    actBtn.onclick = () => startVoteFlow(desc);
-                }
-            }
         }
 
         async function loadQuestions(candidateId) {

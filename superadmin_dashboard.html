@@ -290,7 +290,7 @@
         <button class="btn btn-green" onclick="grantAllInstitutionVote()" style="min-width:140px;margin:0;padding:0.6rem 1rem;font-size:0.85rem;border-radius:10px;font-weight:700;">Grant All Vote</button>
       </div>
       <div class="card" style="padding:0.5rem">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Reg No</th><th>Name</th><th>Year</th><th>Branch</th><th>Class</th><th>Category</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -858,9 +858,13 @@ function renderStudents(list) {
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--purple);">${s.year||'1st'}</span></td>
     <td>${s.branch||'-'}</td><td>${s.class||'-'}</td>
+    <td>${s.role === 'contestant' 
+      ? `<span class="badge" style="background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.4);font-size:0.72rem;padding:0.3rem 0.7rem;">🏷️ ${s.category||'General'}</span>`
+      : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">–</span>'
+    }</td>
     <td>${s.canVote==1 ? '<span class="badge badge-active">✅ Yes</span>' : '<span class="badge badge-pending">❌ No</span>'}</td>
     <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
-    <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.status}</span></td>
+    <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.role==='contestant'?'Candidate':'Voter'} · ${s.status}</span></td>
     <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
       ${s.status === 'active' 
         ? `<button class="btn-sm ${s.canVote==1?'btn-danger-sm':'btn-success-sm'}" onclick="toggleCanVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>` 
@@ -1080,6 +1084,32 @@ async function setElectionTimes() {
   if (currentRegistrationConfig && currentRegistrationConfig.isActive) {
       return toast('Cannot start Election: Registration is currently active! Stop registration first.', false);
   }
+  // ── Guard: Categories must be defined first ──
+  if (!electionCategories || electionCategories.length === 0) {
+      await loadElectionCategories();
+      if (!electionCategories || electionCategories.length === 0) {
+          return toast('❌ You must define at least one Election Category before starting the Election Schedule!', false);
+      }
+  }
+  // ── Guard: Each category must have at least 2 candidates ──
+  try {
+      const allUsers = await apiFetch('/users');
+      const contestants = allUsers.filter(u => u.role === 'contestant' && u.institution === saSession.institution && u.status === 'active');
+      // Count candidates per category
+      const countByCat = {};
+      electionCategories.forEach(cat => { countByCat[cat] = 0; });
+      contestants.forEach(c => {
+          const cat = c.category || 'General';
+          if (countByCat[cat] !== undefined) countByCat[cat]++;
+      });
+      const underMinCats = electionCategories.filter(cat => (countByCat[cat] || 0) < 2);
+      if (underMinCats.length > 0) {
+          const details = underMinCats.map(cat => `"${cat}" (${countByCat[cat] || 0} candidate${countByCat[cat] === 1 ? '' : 's'})`).join(', ');
+          return toast(`❌ Cannot start Election: Each category needs at least 2 candidates. Insufficient: ${details}`, false);
+      }
+  } catch(e) {
+      return toast('❌ Could not verify candidate counts. Please try again.', false);
+  }
   const name = document.getElementById('v-name').value.trim();
   const start = document.getElementById('v-start').value;
   const end = document.getElementById('v-end').value;
@@ -1107,6 +1137,14 @@ async function setElectionTimes() {
 async function setRegistrationTimes() {
   if (currentElectionConfig && currentElectionConfig.isActive) {
       return toast('Cannot start Registration: Election is currently active! Stop election first.', false);
+  }
+  // ── Guard: Categories must be defined first ──
+  if (!electionCategories || electionCategories.length === 0) {
+      // Try reloading from DB before rejecting
+      await loadElectionCategories();
+      if (!electionCategories || electionCategories.length === 0) {
+          return toast('❌ You must define at least one Election Category before starting Registration! Candidates need to choose a category when registering.', false);
+      }
   }
   const start = document.getElementById('r-start').value;
   const end = document.getElementById('r-end').value;

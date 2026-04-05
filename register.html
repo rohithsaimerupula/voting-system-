@@ -261,6 +261,7 @@
                 const API_URL = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
                 const res = await fetch(`${API_URL}/config/categories_${encodeURIComponent(inst)}`);
                 const sel = document.getElementById('category');
+                const contestantOpt = document.querySelector('#role option[value="contestant"]');
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.categories && data.categories.length > 0) {
@@ -271,8 +272,27 @@
                             opt.textContent = c;
                             sel.appendChild(opt);
                         });
+                        // Enable contestant option
+                        if (contestantOpt) {
+                            contestantOpt.disabled = false;
+                            contestantOpt.textContent = 'Candidate';
+                        }
                     } else {
-                        sel.innerHTML = '<option value="">No categories globally defined</option>';
+                        sel.innerHTML = '<option value="">⚠️ No categories defined yet</option>';
+                        // Disable contestant option with a visible indicator
+                        if (contestantOpt) {
+                            contestantOpt.disabled = true;
+                            contestantOpt.textContent = 'Candidate (Unavailable — No categories set by Admin)';
+                        }
+                        // Show a non-blocking warning below the role selector
+                        const roleGroup = document.querySelector('#role').closest('.form-group');
+                        if (roleGroup && !document.getElementById('no-cat-warning')) {
+                            const warn = document.createElement('div');
+                            warn.id = 'no-cat-warning';
+                            warn.style.cssText = 'margin-top:0.5rem; padding:0.6rem 0.9rem; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:8px; color:#f87171; font-size:0.82rem;';
+                            warn.innerHTML = '🚫 <strong>Candidate registration is currently unavailable.</strong> The Super Admin has not defined any electoral categories yet. Only Voters can register at this time.';
+                            roleGroup.appendChild(warn);
+                        }
                     }
                 }
             } catch(e) { console.error("Categories fetch fail", e); }
