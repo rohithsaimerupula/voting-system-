@@ -122,22 +122,27 @@
         </div>
     </div>
     
-    <!-- OTP Section -->
-    <div id="otp-section" style="display:none; text-align:left; margin-bottom:2rem; animation:slideUp 0.4s ease;">
-      <label style="display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">
-          <span>Verification Code</span>
-          <small style="color:var(--muted); font-weight:400; text-transform:none;">Sent to inbox</small>
-      </label>
-      <div style="position:relative;">
-         <span style="position:absolute; left:1.2rem; top:50%; transform:translateY(-50%); opacity:0.8; font-size:1.2rem;">🛡️</span>
-         <input type="text" id="auth-otp" placeholder="000 000" maxlength="6" class="auth-input" style="padding-left:3.2rem; padding-right:1rem; height:56px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.3); color:var(--gold); font-size:1.4rem; letter-spacing:6px; font-weight:800; border-radius:12px;">
-      </div>
-    </div>
-    
-    <!-- Action Button -->
-    <button class="btn btn-gold" id="auth-btn" style="width:100%; height:54px; font-size:1.1rem; border-radius:12px; font-weight:700; letter-spacing:0.5px; display:flex; justify-content:center; align-items:center; gap:0.6rem; box-shadow:0 12px 24px -10px rgba(245,158,11,0.4); border:1px solid rgba(245,158,11,0.5);" onclick="saLoginStep()">
-      Authorize Access <span style="font-size:1.2rem; line-height:1;">→</span>
+    <!-- Step 1: Action Button (Send OTP) -->
+    <button class="btn btn-gold" id="auth-btn-step1" style="width:100%; height:54px; font-size:1.05rem; border-radius:12px; font-weight:700; letter-spacing:0.5px; display:flex; justify-content:center; align-items:center; gap:0.6rem; box-shadow:0 12px 24px -10px rgba(245,158,11,0.4); border:1px solid rgba(245,158,11,0.5); margin-bottom:1rem;" onclick="saStep1()">
+      📧 Send OTP &amp; Continue
     </button>
+    
+    <!-- Step 2: OTP Section (hidden initially) -->
+    <div id="otp-section" style="display:none; animation:slideUp 0.4s ease;">
+      <div style="text-align:left; margin-bottom:1rem;">
+        <label style="display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">
+            <span>Verification Code</span>
+            <small style="color:var(--muted); font-weight:400; text-transform:none;">Sent to your inbox</small>
+        </label>
+        <div style="position:relative;">
+           <span style="position:absolute; left:1.2rem; top:50%; transform:translateY(-50%); opacity:0.8; font-size:1.2rem;">🛡️</span>
+           <input type="text" id="auth-otp" placeholder="000 000" maxlength="6" class="auth-input" style="padding-left:3.2rem; padding-right:1rem; height:56px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.3); color:var(--gold); font-size:1.4rem; letter-spacing:6px; font-weight:800; border-radius:12px;">
+        </div>
+      </div>
+      <button class="btn btn-gold" id="auth-btn-step2" style="width:100%; height:54px; font-size:1.05rem; border-radius:12px; font-weight:700; letter-spacing:0.5px; display:flex; justify-content:center; align-items:center; gap:0.6rem; box-shadow:0 12px 24px -10px rgba(245,158,11,0.4); border:1px solid rgba(245,158,11,0.5);" onclick="saStep2()">
+        🔓 Verify &amp; Login
+      </button>
+    </div>
     
     <div id="auth-err" style="color:var(--red); margin-top:1.5rem; font-size:0.9rem; min-height:1.2rem; font-weight:600;"></div>
   </div>
@@ -667,65 +672,85 @@ function toast(msg, ok=true) {
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-async function saLoginStep() {
+async function saStep1() {
   const err = document.getElementById('auth-err');
-  const otpSection = document.getElementById('otp-section');
-  const btn = document.getElementById('auth-btn');
+  const btn = document.getElementById('auth-btn-step1');
   err.textContent = '';
 
-  if (otpSection.style.display === 'none') {
-    // Step 1: Validate credentials
-    const id = document.getElementById('auth-id').value.trim().toUpperCase();
-    const pass = document.getElementById('auth-pass').value;
-    if (id.length !== 9) { err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
-    if (pass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
-    if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password must contain at least 3 letters.'; return; }
-    if (!/[0-9]/.test(pass)) { err.textContent = 'Password must contain at least 1 number.'; return; }
-    if (!/[^a-zA-Z0-9]/.test(pass)) { err.textContent = 'Password must contain at least 1 special character.'; return; }
+  // Validate ID
+  const id = document.getElementById('auth-id').value.trim().toUpperCase();
+  const pass = document.getElementById('auth-pass').value;
+  if (id.length !== 9) { err.style.color='var(--red)'; err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
+  if (pass.length !== 10) { err.style.color='var(--red)'; err.textContent = 'Password must be exactly 10 characters.'; return; }
+  if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 3 letters.'; return; }
+  if (!/[0-9]/.test(pass)) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 1 number.'; return; }
+  if (!/[^a-zA-Z0-9]/.test(pass)) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 1 special character.'; return; }
+
+  btn.textContent = 'Verifying...';
+  btn.disabled = true;
+  try {
+    const user = await apiFetch(`/users/${id}`);
+    if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
+    if (user.status !== 'active') throw new Error('Account is not active.');
+    const hashed = btoa(pass);
+    if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+
+    // Credentials OK — Generate and send OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    window._saOtp = otp;
+    window._saUser = user;
+    btn.textContent = 'Sending OTP...';
     try {
-      const user = await apiFetch(`/users/${id}`);
-      if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
-      if (user.status !== 'active') throw new Error('Account is not active.');
-      const hashed = btoa(pass);
-      if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
-      // Generate 6-digit OTP and send to registered email
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      window._saOtp = otp;
-      window._saUser = user;
-      btn.textContent = 'Sending OTP...';
-      try {
-        const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
-        const SERVICE_ID = 'service_emwze5b';
-        const TEMPLATE_ID = 'template_vcrerg5';
-        await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-          name: user.name || 'Super Admin',
-          otp: otp,
-          context: 'Super Admin Login',
-          to_email: user.email
-        }, PUBLIC_KEY);
-        otpSection.style.display = 'block';
-        btn.textContent = 'Verify OTP & Login';
-        err.style.color = 'var(--green)';
-        err.textContent = `OTP sent successfully! Check your inbox.`;
-      } catch(emailErr) {
-        btn.textContent = 'Login to Super Admin Panel';
-        err.style.color = 'var(--red)';
-        err.textContent = 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error');
-      }
-    } catch(e) { err.style.color = 'var(--red)'; err.textContent = e.message; }
-  } else {
-    // Step 2: Validate OTP
-    const enteredOtp = document.getElementById('auth-otp').value.trim();
-    if (enteredOtp !== window._saOtp) { err.style.color='var(--red)'; err.textContent = 'Invalid OTP. Try again.'; return; }
-    const user = window._saUser;
-    saSession = user;
-    localStorage.setItem('ovs_currentUser', JSON.stringify(user));
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('main-layout').style.display = 'flex';
-    document.getElementById('sa-inst-label').textContent = user.institution || 'Super Admin';
-    document.getElementById('inst-name-sub').textContent = user.institution || '';
-    loadAll();
+      const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
+      const SERVICE_ID = 'service_emwze5b';
+      const TEMPLATE_ID = 'template_vcrerg5';
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+        name: user.name || 'Super Admin',
+        otp: otp,
+        context: 'Super Admin 2FA Login',
+        to_email: user.email
+      }, PUBLIC_KEY);
+      // Show Step 2
+      document.getElementById('auth-id').disabled = true;
+      document.getElementById('auth-pass').disabled = true;
+      btn.style.display = 'none';
+      document.getElementById('otp-section').style.display = 'block';
+      document.getElementById('auth-otp').focus();
+      err.style.color = 'var(--green)';
+      err.textContent = `✅ OTP sent to your email! Enter it below.`;
+    } catch(emailErr) {
+      btn.textContent = '📧 Send OTP & Continue';
+      btn.disabled = false;
+      err.style.color = 'var(--red)';
+      err.textContent = 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error');
+    }
+  } catch(e) {
+    btn.textContent = '📧 Send OTP & Continue';
+    btn.disabled = false;
+    err.style.color = 'var(--red)';
+    err.textContent = e.message;
   }
+}
+
+async function saStep2() {
+  const err = document.getElementById('auth-err');
+  const btn = document.getElementById('auth-btn-step2');
+  err.textContent = '';
+
+  const enteredOtp = document.getElementById('auth-otp').value.trim();
+  if (!enteredOtp || enteredOtp.length !== 6) { err.style.color='var(--red)'; err.textContent = 'Enter the 6-digit OTP from your email.'; return; }
+  if (enteredOtp !== window._saOtp) { err.style.color='var(--red)'; err.textContent = '❌ Invalid OTP. Please try again.'; return; }
+
+  btn.textContent = 'Logging in...';
+  btn.disabled = true;
+  const user = window._saUser;
+  saSession = user;
+  localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('main-layout').style.display = 'flex';
+  document.getElementById('sa-inst-label').textContent = user.institution || 'Super Admin';
+  document.getElementById('inst-name-sub').textContent = user.institution || '';
+  loadAll();
 }
 
 function saLogout() { 
@@ -1519,8 +1544,8 @@ async function loadAudit() {
 
 // Enter key navigation in auth
 document.getElementById('auth-id').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); document.getElementById('auth-pass').focus(); } });
-document.getElementById('auth-pass').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); const otpSec = document.getElementById('otp-section'); if (otpSec.style.display==='none') saLoginStep(); else document.getElementById('auth-otp').focus(); } });
-document.getElementById('auth-otp').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); saLoginStep(); } });
+document.getElementById('auth-pass').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); saStep1(); } });
+document.getElementById('auth-otp').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); saStep2(); } });
 
 // Real-time input enforcement on auth
 document.getElementById('auth-id').addEventListener('input', function() {
