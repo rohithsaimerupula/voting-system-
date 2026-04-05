@@ -1,1321 +1,694 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - OVS</title>
-
-    <link rel="stylesheet" href="style.css">
-    <script src="storage.js?v=2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-      .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;align-items:center;justify-content:center;}
-      .modal-overlay.open{display:flex;}
-      .modal-content-new{background:#111827;border:1px solid var(--glass-border);border-radius:16px;padding:2rem;width:100%;max-width:500px;position:relative;}
-      .modal-content-new h3{font-size:1.3rem;font-weight:700;margin-bottom:1.2rem;color:var(--neon-cyan);}
-      .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Branch Administration — OVS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+      (function() {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('ovs_theme', 'dark');
+      })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { 
+      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3); 
+      --gold:#cccccc; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --purple:#ff2a4d; 
+      --text:#f8fafc; --muted:#cbd5e1; 
+    }
+    body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; }
+    input, select { width:100%; padding:0.8rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-size:0.95rem; font-family:'Outfit',sans-serif; outline:none; transition:border 0.3s; }
+    input:focus, select:focus { border-color:var(--cyan); }
+    select option { background:#1e293b; }
+    label { display:block; color:var(--muted); font-size:0.78rem; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.05em; }
+    .btn { padding:0.75rem 1.5rem; border-radius:10px; border:none; cursor:pointer; font-size:0.95rem; font-weight:600; font-family:'Outfit',sans-serif; transition:all 0.3s; }
+    .btn-cyan { background:linear-gradient(135deg,var(--cyan),#cc223e); color:white; }
+    .btn-green { background:linear-gradient(135deg,#ff2a4d,#cc223e); color:white; }
+    .btn-red { background:linear-gradient(135deg,#ff2a4d,#cc223e); color:white; }
+    .btn:hover { transform:translateY(-2px); opacity:0.9; }
+    .btn-sm { padding:0.3rem 0.8rem; border-radius:6px; border:none; cursor:pointer; font-size:0.78rem; font-family:'Outfit',sans-serif; font-weight:600; }
+    .btn-d { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+    .btn-g { background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.3); }
+    .layout { display:flex; min-height:100vh; }
+    .sidebar { width:230px; background:rgba(255,42,77,0.05); border-right:1px solid rgba(255,42,77,0.15); padding:1.5rem 1rem; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; }
+    .brand { font-size:1.4rem; font-weight:900; color:var(--cyan); margin-bottom:0.2rem; font-family:'Playfair Display', serif;}
+    .role-tag { font-size:0.75rem; color:var(--muted); margin-bottom:2rem; }
+    .nav-item { padding:0.7rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s; margin-bottom:0.25rem; font-size:0.9rem; display:flex; align-items:center; gap:0.6rem; color:var(--muted); }
+    .nav-item:hover, .nav-item.active { background:rgba(255,42,77,0.1); color:var(--cyan); font-weight:600; }
+    .main { margin-left:230px; flex:1; padding:2rem; }
+    .page { display:none; }
+    .page.active { display:block; }
+    .page-title { font-size:1.6rem; font-weight:800; margin-bottom:0.4rem; font-family:'Playfair Display', serif;}
+    .page-sub { color:var(--muted); font-size:0.9rem; margin-bottom:2rem; }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.2rem; text-align:center; }
+    .stat .num { font-size:2rem; font-weight:900; }
+    .stat .lbl { color:var(--muted); font-size:0.78rem; margin-top:0.2rem; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; }
+    .card h3 { font-size:1rem; font-weight:700; margin-bottom:1.2rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
+    .form-field { display:flex; flex-direction:column; gap:0.3rem; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; padding:0.7rem 0.8rem; color:var(--muted); font-size:0.75rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
+    td { padding:0.7rem 0.8rem; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.88rem; vertical-align:middle; }
+    tr:hover td { background:rgba(255,255,255,0.02); }
+    .badge { padding:0.2rem 0.6rem; border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .ba { background:rgba(34,197,94,0.15); color:var(--green); }
+    .bp { background:rgba(245,158,11,0.15); color:var(--gold); }
+    .br { background:rgba(239,68,68,0.15); color:var(--red); }
+    .empty { text-align:center; color:var(--muted); padding:2rem; }
+    .toast { position:fixed; bottom:2rem; right:2rem; background:#1e293b; border:1px solid var(--border); border-radius:10px; padding:0.9rem 1.5rem; font-size:0.9rem; transform:translateY(100px); opacity:0; transition:all 0.4s; z-index:999; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .search-bar { width:100%; padding:0.7rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-family:'Outfit',sans-serif; outline:none; margin-bottom:1rem; }
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:450px;position:relative;}
+    .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;}
+    .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
+  </style>
 </head>
-
 <body>
-    <nav>
-        <div class="brand" style="font-family:'Playfair Display', serif; letter-spacing:-1px;">VANGUARD Admin</div>
-        <div class="nav-links" style="display:flex; align-items:center; gap:1rem;">
-            <span id="admin-name" style="color: var(--text-muted);">Welcome, Admin</span>
-            <button onclick="StorageManager.logout(); window.location.href='login.html?admin=true'">Logout</button>
+    <!-- Cyber Mesh Particles -->
+    <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
+    <script src="storage.js"></script>
+
+<!-- AUTH -->
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(6,182,212,0.08) 0%,var(--bg) 70%)">
+  <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:2rem;font-weight:900;color:var(--cyan);margin-bottom:0.25rem; font-family: 'Playfair Display', serif;">Institutional Portal</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Branch Administration Login</p>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Admin ID</label><input type="text" id="auth-id" placeholder="ADM-CSE"></div>
+    <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
+    <button class="btn btn-cyan" style="width:100%" onclick="adminLogin()">Login</button>
+    <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
+  </div>
+</div>
+
+<div class="layout" id="main-layout" style="display:none">
+  <div class="sidebar">
+    <div class="brand">🧑‍💼 OVS</div>
+    <div class="role-tag" id="branch-label">Branch Authority</div>
+    <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
+    <div class="nav-item" onclick="showPage('students')">🎓 My Branch Students</div>
+    <div class="nav-item" onclick="showPage('subadmins')">👥 Manage Sub-Admins</div>
+    <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
+      <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)">🔄 Refresh Data</div>
+      <div class="nav-item" onclick="adminLogout()" style="color:var(--red)">🚪 Logout</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-title">📊 Branch Overview</div>
+      <div class="page-sub" id="branch-sub">Your assigned branch</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Total Students</div></div>
+        <div class="stat"><div class="num" id="s-accepted" style="color:var(--green)">-</div><div class="lbl">Accepted</div></div>
+        <div class="stat"><div class="num" id="s-pending" style="color:var(--gold)">-</div><div class="lbl">Pending</div></div>
+        <div class="stat"><div class="num" id="s-canvote" style="color:var(--cyan)">-</div><div class="lbl">Can Vote</div></div>
+        <div class="stat"><div class="num" id="s-voted" style="color:var(--purple)">-</div><div class="lbl">Voted</div></div>
+        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--gold)">-</div><div class="lbl">Sub-Admins</div></div>
+      </div>
+      <!-- PIE CHARTS -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:0.5rem;">
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1rem;">📋 Registration Status</h3>
+          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total registrations vs accepted</p>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="chart-registrations"></canvas>
+          </div>
+          <div id="chart-reg-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
         </div>
-    </nav>
-
-    <div class="container animate-fade-in">
-        <!-- Controls & Status -->
-        <div class="glass-panel"
-            style="padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-color: var(--gold-primary);">
-            <div>
-                <h3 style="margin-bottom: 0.5rem; font-family: var(--font-heading);">
-                    Election Status: <span id="status-text" class="text-success"
-                        style="filter: brightness(1.2);">Loading...</span>
-                </h3>
-                <div style="display:flex; align-items:center; gap:1rem; margin-top:0.5rem; background:rgba(255,255,255,0.05); padding:0.8rem 1.5rem; border-radius:12px; border:1px solid var(--glass-border); width: fit-content;">
-                    <span style="font-size:1.8rem; filter: drop-shadow(0 0 5px var(--neon-cyan));">📅</span>
-                    <div>
-                        <div style="font-weight:700; font-size:1.8rem; font-family:monospace; color:var(--neon-cyan); letter-spacing:2px; line-height:1;"
-                            id="countdown-display">--:--:--</div>
-                        <span id="timer-label" class="text-muted" style="font-size:0.75rem; font-weight:600; text-transform:uppercase; margin-top:2px; display:block;"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                <!-- Time Settings -->
-                <div style="display:flex; flex-direction:column; gap:0.5rem; margin-right: 1rem;">
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <span style="font-size:0.8rem; color:var(--text-muted); width:40px;">Start:</span>
-                        <input type="datetime-local" id="start-time-input"
-                            style="padding:0.3rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.5); color:white; font-size:0.8rem;">
-                    </div>
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <span style="font-size:0.8rem; color:var(--text-muted); width:40px;">End:</span>
-                        <input type="datetime-local" id="end-time-input"
-                            style="padding:0.3rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.5); color:white; font-size:0.8rem;">
-                    </div>
-                    <button onclick="saveElectionTimes()" class="action-btn"
-                        style="font-size:0.7rem; padding:0.2rem; margin:0; width:100%;">Set Custom Time</button>
-                </div>
-
-                <button onclick="renderDashboard()" class="submit-btn"
-                    style="width: auto; background: white; color: black; border:none;">Refresh <span id="refresh-icon"
-                        style="display:inline-block">🔄</span></button>
-
-                <button id="toggle-election-btn" class="submit-btn"
-                    style="width: auto; padding-left: 1.5rem; padding-right: 1.5rem; background: var(--glass-border);">Loading...</button>
-
-                <button id="complete-election-btn" class="submit-btn"
-                    style="width: auto; background: linear-gradient(135deg, #f59e0b, #d97706); margin-left:1rem; color:white;">Complete
-                    Election 🏁</button>
-
-                <!-- Post Election Controls: Visible when complete -->
-                <button id="download-btn" class="submit-btn hidden"
-                    style="width: auto; background: var(--accent-blue); color:white;">Export Result
-                    CSV 📥</button>
-
-                <button id="reset-election-btn" class="submit-btn hidden"
-                    style="width: auto; background: var(--danger); color:white; margin-left:1rem;">Start
-                    New Election ⚡</button>
-            </div>
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1rem;">🗳️ Voting Eligibility</h3>
+          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total students vs allowed to vote</p>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="chart-voting"></canvas>
+          </div>
+          <div id="chart-vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
         </div>
+      </div>
+    </div>
 
-        <!-- Announcements Bar (New) -->
-        <div class="glass-panel" style="padding:1rem; margin-bottom:2rem; display:flex; gap:1rem; align-items:center;">
-            <strong style="color:var(--text-muted);">📢 Announcement:</strong>
-            <input type="text" id="announcement-input" placeholder="Broadcast message to voters..."
-                style="flex:1; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); padding:0.5rem; color:white; border-radius:4px;">
-            <button onclick="postAnnouncement()" class="action-btn"
-                style="width:auto; background:var(--neon-blue);">Post</button>
-            <button onclick="clearAnnouncement()" class="action-btn"
-                style="width:auto; background:var(--glass-border);">Clear</button>
+    <!-- STUDENTS -->
+    <div class="page" id="page-students">
+      <div class="page-title">🎓 Branch Students</div>
+      <div class="page-sub">Manage student registrations, edits, and vote access for your branch</div>
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <input class="search-bar" id="sf-search" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search students..." oninput="applyStudentFilters()">
+        <select id="sf-year" onchange="applyStudentFilters()" style="min-width:140px;margin:0; background:var(--surface); border:1px solid var(--border); color:white; border-radius:8px; padding:0.6rem;">
+          <option value="">All Years</option>
+          <option value="1st">1st Year</option>
+          <option value="2nd">2nd Year</option>
+          <option value="3rd">3rd Year</option>
+          <option value="4th">4th Year</option>
+        </select>
+        <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
+      </div>
+      <div class="card" style="padding:0.5rem; overflow-x:auto;">
+        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Role</th><th>Yr</th><th>Cls</th><th>Vote Access</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="student-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- SUBADMINS -->
+    <div class="page" id="page-subadmins">
+      <div class="page-title">👥 Sub-Admins</div>
+      <div class="page-sub">Create and manage sub-admins for classes in your branch</div>
+      <div class="card">
+        <h3>➕ Create Sub-Admin</h3>
+        <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--cyan);">
+          🔒 Sub-Admins you create are automatically locked to <strong id="admin-branch-tag">your branch</strong>. Branch cannot be changed.
         </div>
-
-        <!-- Stats Grid (Aligned) -->
-        <div class="dashboard-grid"
-            style="margin-bottom: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
-            <div class="glass-panel stat-card" onclick="filterTable('voter')">
-                <div>
-                    <div class="text-muted" style="font-weight: 600;">Registered Voters</div>
-                    <div class="stat-number" id="count-voters" style="color:white;">-</div>
-                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;">View Details ➔</div>
-                </div>
-            </div>
-            <div class="glass-panel stat-card" onclick="filterTable('contestant')">
-                <div>
-                    <div class="text-muted" style="font-weight: 600;">Registered Candidates</div>
-                    <div class="stat-number" id="count-candidates" style="color:white;">-</div>
-                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;">View Details ➔</div>
-                </div>
-            </div>
-            <div class="glass-panel stat-card" onclick="openVerificationPanel()">
-                <div>
-                    <div class="text-muted" style="font-weight: 600;">Votes Casted</div>
-                    <div class="stat-number" id="count-votes" style="color:var(--gold-primary);">-</div>
-                    <div style="font-size: 0.8rem; color: var(--gold-primary); margin-top: 0.5rem;"
-                        id="pending-count-label">0 Verified • 0 Pending</div>
-                </div>
-            </div>
+        <div class="form-grid">
+          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(9 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMIN101" maxlength="9"></div>
+          <div class="form-field"><label>Full Name <small style="color:var(--muted);text-transform:none">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
+          <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
+          <div class="form-field"><label>Branch <small style="color:var(--muted);text-transform:none">(auto-assigned)</small></label><input type="text" id="sa-branch-display" readonly style="opacity:0.5;cursor:not-allowed;"></div>
+          <div class="form-field"><label>Assigned Class (e.g. CSE-5)</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Assigned Year</label>
+            <select id="sa-year" style="width:100%; border-radius:8px;">
+              <option value="1st">1st Year</option>
+              <option value="2nd">2nd Year</option>
+              <option value="3rd">3rd Year</option>
+              <option value="4th">4th Year</option>
+            </select>
+          </div>
+          <div class="form-field"><label>Password <small style="color:var(--muted);text-transform:none">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1" maxlength="6"></div>
         </div>
-
-        <!-- Verification Queue Section (New) -->
-        <div class="glass-panel hidden animate-fade-in" id="verification-panel"
-            style="margin-bottom: 2rem; padding: 1.5rem; border-color: var(--warning);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3 style="color: var(--warning);">⚠️ Verification Queue</h3>
-                <button onclick="document.getElementById('verification-panel').classList.add('hidden')"
-                    style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">×</button>
-            </div>
-            <p id="no-verification-msg" class="text-muted hidden">No pending votes to verify.</p>
-            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
-                <table style="width:100%;">
-                    <thead>
-                        <tr style="text-align:left; border-bottom:1px solid var(--glass-border);">
-                            <th style="padding:0.5rem;">Reg Num</th>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="verification-table-body">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 2rem;">
-            <div class="glass-panel" style="padding: 1.5rem; text-align: center; cursor: pointer;"
-                onclick="showParticipationDetails()">
-                <h3>Voter Participation</h3>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="chart-participation-canvas"></canvas>
-                </div>
-            </div>
-
-            <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
-                <h3>Election Results</h3>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="chart-results-canvas"></canvas>
-                </div>
-
-                <div id="winner-display" class="hidden"
-                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border: 1px solid var(--success);">
-                    <h4 style="color: var(--success); margin-bottom: 0.5rem;">🏆 Winner(s) Declared</h4>
-                    <span id="winner-name" style="font-size: 1.4rem; font-weight: 700; color: white;"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Verification Modal -->
-        <div id="verify-modal" class="modal">
-            <div class="glass-panel modal-content"
-                style="width: 95%; max-width: 900px; padding: 2rem; border-color: var(--warning);">
-                <h2 style="font-family: var(--font-heading); margin-bottom: 1.5rem; text-align: center;">Verify Voter
-                    Identity</h2>
-
-                <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
-                    <!-- Registration Data -->
-                    <div style="text-align: center;">
-                        <h4 class="text-muted" style="margin-bottom: 1rem;">Registration Photo</h4>
-                        <img id="verify-reg-img"
-                            style="width: 100%; height: 300px; object-fit: cover; border: 1px solid var(--glass-border); border-radius: 8px; background: #000;">
-                        <div
-                            style="margin-top: 1rem; text-align: left; font-size: 0.9rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                            <p style="margin-bottom:0.5rem;"><strong>Name:</strong> <span id="verify-name"
-                                    style="color:white;"></span></p>
-                            <p style="margin-bottom:0.5rem;"><strong>Reg Num:</strong> <span id="verify-regNum"
-                                    style="color:var(--gold-primary);"></span></p>
-                            <p><strong>Email:</strong> <span id="verify-email" style="color:var(--text-muted);"></span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Voting Data -->
-                    <div style="text-align: center;">
-                        <h4 class="text-muted" style="margin-bottom: 1rem;">Voting Camera Capture</h4>
-                        <img id="verify-vote-img"
-                            style="width: 100%; height: 300px; object-fit: cover; border: 2px solid var(--gold-primary); border-radius: 8px; background: #000;">
-                        <p class="text-muted" style="margin-top: 1rem; font-size: 0.8rem;">Capture Time: <span
-                                id="verify-time"></span></p>
-                        <p style="margin-top: 0.5rem; color: var(--warning);">Check if the person matches the
-                            registration photo.</p>
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
-                    <button class="submit-btn" style="background: var(--danger); width: auto; padding: 0.8rem 2rem;"
-                        onclick="processVerification(false)">Reject Vote ❌</button>
-                    <button class="submit-btn" style="background: var(--success); width: auto; padding: 0.8rem 2rem;"
-                        onclick="processVerification(true)">Accept Vote ✅</button>
-                    <button class="submit-btn"
-                        style="background: transparent; border: 1px solid var(--text-muted); width: auto;"
-                        onclick="closeVerifyModal()">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Election Closed Banner -->
-        <div id="election-closed-banner" class="hidden text-center" style="margin: 3rem 0;">
-            <h1 style="color: #ff2a4d; font-size: 3rem; font-family:'Playfair Display', serif; text-shadow: 0 0 20px rgba(255, 42, 77, 0.3);">ELECTION COMPLETED</h1>
-        </div>
-
-        <!-- GOD EDIT MODAL -->
-        <div class="modal-overlay" id="god-edit-modal">
-          <div class="modal-content-new">
-            <button class="modal-close" onclick="closeGodEditModal()">✕</button>
-            <h3 id="edit-modal-title">God Mode Edit</h3>
-            <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--gold-primary);"></strong></p>
-            <input type="hidden" id="edit-regnum">
-            <input type="hidden" id="edit-role">
-            
-            <div class="form-grid" style="margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-              <div class="form-field"><label style="display:block;margin-bottom:0.3rem">Full Name</label><input type="text" id="edit-name" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
-              <div class="form-field"><label style="display:block;margin-bottom:0.3rem">Email</label><input type="email" id="edit-email" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
-            </div>
-            
-            <div class="form-grid" style="margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-              <div class="form-field" id="edit-inst-group"><label style="display:block;margin-bottom:0.3rem">Institution</label><input type="text" id="edit-institution" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"></div>
-              <div class="form-field" id="edit-branch-group"><label style="display:block;margin-bottom:0.3rem">Branch</label><select id="edit-branch" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white"><option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option><option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option><option>CSC</option><option>AIDS</option></select></div>
-            </div>
-            
-            <div class="form-grid" style="margin-bottom:1rem;">
-              <div class="form-field" id="edit-class-group"><label style="display:block;margin-bottom:0.3rem">Class (e.g. CSE-5)</label><input type="text" id="edit-class" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white" oninput="this.value=this.value.toUpperCase()"></div>
-            </div>
-            
-            <div class="form-field" style="margin-bottom:1.5rem;">
-              <label style="display:block;margin-bottom:0.3rem">Password <small>(Leave blank to keep current)</small></label>
-              <input type="password" id="edit-pass" placeholder="Enter new password to change" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass-bg);color:white">
-            </div>
-            
-            <button class="submit-btn" style="width:100%; background:var(--neon-blue); border:none;" onclick="saveGodEdit()">Save Data</button>
+        <button class="btn btn-cyan" style="margin-top:1rem" onclick="createSubAdmin()">Create Sub-Admin</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap;">
+          <h3 style="margin:0;">📋 Sub-Admins in My Branch</h3>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <label style="margin:0;font-size:0.8rem;color:var(--muted);white-space:nowrap;">Filter by Year:</label>
+            <select id="sa-filter-year" onchange="applySaFilter()" style="max-width:140px;margin:0;padding:0.4rem;font-size:0.85rem;background:rgba(255,42,77,0.05);border:1px solid rgba(255,42,77,0.2);color:white;border-radius:8px;">
+              <option value="">All Years</option>
+              <option value="1st">1st Year</option>
+              <option value="2nd">2nd Year</option>
+              <option value="3rd">3rd Year</option>
+              <option value="4th">4th Year</option>
+            </select>
           </div>
         </div>
-
-
-
-        <!-- Activity Logs Section (New) -->
-        <div class="glass-panel" style="padding: 1.5rem; margin-top:2rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                <h3>📜 Activity Logs</h3>
-                <button onclick="loadLogs()" class="action-btn" style="width:auto;">Refresh Logs</button>
-            </div>
-            <div style="max-height:300px; overflow-y:auto; font-family:monospace; font-size:0.9rem;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr
-                            style="text-align:left; color:var(--text-muted); border-bottom:1px solid var(--glass-border);">
-                            <th style="padding:0.5rem;">Time</th>
-                            <th>User</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logs-table-body">
-                        <tr>
-                            <td colspan="4" class="text-center text-muted" style="padding:1rem;">Loading logs...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="glass-panel"
-            style="padding: 1.5rem; margin-top: 2rem; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);">
-            <h3 style="color: #ef4444; margin-bottom: 1rem;">Danger Zone</h3>
-            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
-                <button onclick="performDangerAction('voter')" class="submit-btn"
-                    style="width: auto; background: #ef4444; color: white; font-weight:700;">Reset All Voters
-                    ⚠️</button>
-
-                <button onclick="performDangerAction('contestant')" class="submit-btn"
-                    style="width: auto; background: #ef4444; color: white; font-weight:700;">Reset All Candidates
-                    ⚠️</button>
-
-
-            </div>
-        </div>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Year</th><th>Class</th><th>Email</th><th>Actions</th></tr></thead>
+        <tbody id="sa-table"></tbody></table>
+      </div>
     </div>
+  </div>
+</div>
 
-    <!-- Participation Modal -->
-    <div id="participation-modal" class="glass-panel hidden"
-        style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width: 80%; max-width: 700px; max-height: 80vh; z-index:200; overflow-y: auto; padding: 2rem;">
-        <h3 style="margin-bottom: 1rem;">Detailed Voter Participation</h3>
-        <div id="participation-list"></div>
-        <button class="submit-btn" style="margin-top: 1rem; width: auto;"
-            onclick="document.getElementById('participation-modal').classList.add('hidden')">Close</button>
+<div class="toast" id="toast"></div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <h3 id="edit-modal-title">✏️ Edit Details</h3>
+    <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--cyan);"></strong></p>
+    <input type="hidden" id="edit-regnum">
+    <input type="hidden" id="edit-role">
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
+      <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
     </div>
-
-    <!-- Change Pass Modal -->
-    <div id="change-pass-modal" class="glass-panel hidden"
-        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 2rem; z-index: 200; width: 90%; max-width: 400px; background:black;">
-        <h3>Change Admin Password</h3>
-        <form id="change-pass-form" style="margin-top: 1rem;">
-            <input type="password" id="new-password" placeholder="New Password (Max 10 chars)" required maxlength="10"
-                style="margin-bottom: 1rem;">
-            <div style="display: flex; gap: 1rem;">
-                <button type="button" class="submit-btn" style="background: var(--glass-border);"
-                    onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancel</button>
-                <button type="submit" class="submit-btn">Update</button>
-            </div>
-        </form>
+    
+    <div class="form-grid" style="margin-bottom:1rem;">
+      <div class="form-field">
+          <label>Class (e.g. CSE-5)</label>
+          <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
+      </div>
     </div>
-
-    <!-- Change ID Modal -->
-    <div id="change-id-modal" class="glass-panel hidden"
-        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 2rem; z-index: 200; width: 90%; max-width: 400px; background:black;">
-        <h3>Change Admin ID</h3>
-        <form id="change-id-form" style="margin-top: 1rem;">
-            <input type="text" id="new-admin-id" placeholder="New Admin ID (Max 10 chars)" required maxlength="10"
-                style="margin-bottom: 1rem;">
-            <small style="color: var(--text-muted); display:block; margin-bottom:1rem;">You will be logged out after
-                this.</small>
-            <div style="display: flex; gap: 1rem;">
-                <button type="button" class="submit-btn" style="background: var(--glass-border);"
-                    onclick="document.getElementById('change-id-modal').classList.add('hidden')">Cancel</button>
-                <button type="submit" class="submit-btn">Update ID</button>
-            </div>
-        </form>
+    
+    <div class="form-field" id="edit-password-group" style="margin-bottom:1.5rem;">
+      <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
+      <input type="password" id="edit-pass" placeholder="Enter new password to change">
     </div>
-
-    <!-- Portrait Preview Modal -->
-    <div id="portrait-modal" class="glass-panel hidden"
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; flex-direction: column;">
-        <img id="portrait-preview" src=""
-            style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
-        <button class="submit-btn" style="width: auto; margin-top: 1rem; background: var(--glass-border);"
-            onclick="document.getElementById('portrait-modal').classList.add('hidden')">Close Preview</button>
-    </div>
-
-    <!-- Toast Container -->
-    <div id="toast-container" class="toast-container"></div>
-
-    <script>
-        // Enforce Vanguard Dark Theme
-        function initTheme() {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('ovs_theme', 'dark');
-        }
-        initTheme();
-
-        // Initialize tsParticles Cyber Mesh
-        window.addEventListener('load', () => {
-            const tpDiv = document.createElement('div');
-            tpDiv.id = "tsparticles";
-            tpDiv.style.cssText = "position:fixed; inset:0; z-index:-1; pointer-events:none;";
-            document.body.appendChild(tpDiv);
-
-            tsParticles.load("tsparticles", {
-                fpsLimit: 60,
-                particles: {
-                    number: { value: 30, density: { enable: true, value_area: 800 } },
-                    color: { value: ["#ffffff", "#ff2a4d"] },
-                    shape: { type: "circle" },
-                    opacity: { value: 0.15, random: true },
-                    size: { value: 2, random: true },
-                    links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
-                    move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
-                }
-            });
-        });
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            
-            let icon = 'ℹ️';
-            if (type === 'success') icon = '✅';
-            if (type === 'error') icon = '❌';
-
-            toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${message}</span>`;
-            container.appendChild(toast);
-
-            // Animate in
-            setTimeout(() => toast.classList.add('show'), 100);
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400); // Wait for transition
-            }, 3000);
-        }
-
-        const currentUser = StorageManager.getCurrentUser();
-        // Wait for superadmin permission - old dashboard is now a module for Super Admin!
-        if (!currentUser || currentUser.role !== 'superadmin') {
-            window.parent.location.href = 'login.html'; // redirect parent
-        }
-        
-        // Hide the navbar since it's embedded
-        document.querySelector('nav').style.display = 'none';
-
-        document.getElementById('admin-name').innerText = `Admin: ${currentUser.regNum}`;
-
-        let currentFilter = 'all';
-        let cachedStats = null;
-        
-        let globalStats = null;
-        let globalElection = null;
-
-        // --- DASHBOARD RENDER ---
-        async function renderDashboard() {
-            try {
-                if (!globalStats || !globalElection) return; // Wait for both listeners
-
-                const stats = globalStats;
-                const election = globalElection;
-                cachedStats = stats;
-
-                // Animation
-                const rfIcon = document.getElementById('refresh-icon');
-                if (rfIcon) rfIcon.classList.add('spin-anim');
-
-                // Stop Animation after delay (to let it be seen)
-                setTimeout(() => { if (rfIcon) rfIcon.classList.remove('spin-anim'); }, 500);
-
-                // Sync Inputs
-                if (election.startTime) document.getElementById('start-time-input').value = election.startTime;
-                if (election.endTime) document.getElementById('end-time-input').value = election.endTime;
-
-                // Start Timer Tick
-                startTimerTick({ start: election.startTime, end: election.endTime }, election);
-
-                // 1. Controls State
-                const btn = document.getElementById('toggle-election-btn');
-                const compBtn = document.getElementById('complete-election-btn');
-                const dlBtn = document.getElementById('download-btn');
-                const resetBtn = document.getElementById('reset-election-btn');
-                const statusText = document.getElementById('status-text');
-                const closedBanner = document.getElementById('election-closed-banner');
-
-                if (election.isCompleted) {
-                    // Completed State
-                    statusText.innerText = "Completed";
-
-                    // Hide controls related to active election
-                    btn.classList.add('hidden'); // Remove "Election Closed" button from top
-                    compBtn.classList.add('hidden');
-
-                    // Show post-election controls
-                    dlBtn.classList.remove('hidden');
-                    resetBtn.classList.remove('hidden');
-
-                    // Show Bottom Banner
-                    closedBanner.classList.remove('hidden');
-
-                } else if (election.isActive) {
-                    // Active State
-                    statusText.innerText = "Live";
-                    statusText.style.color = "#4ade80"; // Bright Green
-
-                    btn.classList.remove('hidden');
-                    btn.innerText = "Pause Election";
-                    btn.style.background = "#ef4444"; // Red for Pause
-                    btn.style.color = "white";
-                    btn.disabled = false;
-
-                    compBtn.classList.remove('hidden');
-
-                    dlBtn.classList.add('hidden');
-                    resetBtn.classList.add('hidden');
-                    closedBanner.classList.add('hidden');
-                } else {
-                    // Paused State
-                    statusText.innerText = "Paused";
-                    statusText.style.color = "#f87171";
-
-                    btn.classList.remove('hidden');
-                    btn.innerText = "Start Election";
-                    btn.style.background = "#22c55e"; // Bright Green for Start
-                    btn.style.color = "white";
-                    btn.disabled = false;
-
-                    compBtn.classList.remove('hidden');
-
-                    dlBtn.classList.add('hidden');
-                    resetBtn.classList.add('hidden');
-                    closedBanner.classList.add('hidden');
-                }
-
-                // 2. Numbers
-                document.getElementById('count-voters').innerText = stats.totalVoters;
-                document.getElementById('count-candidates').innerText = stats.totalContestants;
-                document.getElementById('count-votes').innerText = stats.votesCast + (stats.votesPending || 0);
-                document.getElementById('pending-count-label').innerText = `${stats.votesCast} Verified • ${stats.votesPending || 0} Pending`;
-
-                // 3. Charts & Queue
-                renderParticipationChart(stats);
-                renderResultsChart(stats);
-
-                // Update Verification Queue if open
-                if (!document.getElementById('verification-panel').classList.contains('hidden')) {
-                    renderVerificationTable(stats.voters);
-                }
-
-                // 4. Winner Display
-                // Show winner if Completed OR manually completed logic.
-                const winnerDisplay = document.getElementById('winner-display');
-                if (election.isCompleted && stats.votesCast > 0) {
-                    winnerDisplay.classList.remove('hidden');
-                    const catWinners = calculateWinner(stats);
-                    if (catWinners.length === 0) {
-                        document.getElementById('winner-name').innerText = 'No votes counted yet.';
-                    } else {
-                        document.getElementById('winner-name').innerHTML = catWinners.map(r => {
-                            const names = r.winners.map(w => `${w.symbol || ''} ${w.name}`).join(' & ');
-                            const tied = r.winners.length > 1 ? ' <span style="color:#f59e0b; font-size:0.8rem;">(TIED)</span>' : '';
-                            return `<div style="margin-bottom:0.5rem;"><span style="color:var(--gold-primary); font-size:0.9rem;">${r.cat}:</span> ${names}${tied} <span style="color:#94a3b8; font-size:0.85rem;">(${r.maxVotes} votes)</span></div>`;
-                        }).join('');
-                    }
-                } else {
-                    winnerDisplay.classList.add('hidden');
-                }
-
-                // 5. Table (removed from super admin view)
-
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        // --- CHARTS (Chart.js) ---
-        let participationChartInstance = null;
-        let resultsChartInstance = null;
-
-        function renderParticipationChart(stats) {
-            const ctx = document.getElementById('chart-participation-canvas').getContext('2d');
-            const total = stats.totalVoters;
-            const cast = stats.votesCast;
-            const notCast = stats.votesNotCast;
-
-            if (participationChartInstance) participationChartInstance.destroy();
-
-            participationChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Voted', 'Not Voted'],
-                    datasets: [{
-                        data: [cast, notCast],
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: 'white' } }
-                    }
-                }
-            });
-        }
-
-        function renderResultsChart(stats) {
-            const ctx = document.getElementById('chart-results-canvas').getContext('2d');
-            const total = stats.votesCast;
-
-            if (resultsChartInstance) resultsChartInstance.destroy();
-
-            // Prepare Data
-            const labels = [];
-            const data = [];
-
-            // Sort by votes
-            const sorted = [...stats.contestants].sort((a, b) => (stats.candidateVotes[b.regNum] || 0) - (stats.candidateVotes[a.regNum] || 0));
-
-            sorted.forEach(c => {
-                labels.push(c.name);
-                data.push(stats.candidateVotes[c.regNum] || 0);
-            });
-
-            // Neon Palette
-            const colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#f472b6', '#3b82f6'];
-
-            resultsChartInstance = new Chart(ctx, {
-                type: 'pie', // Pie or Bar
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Votes',
-                        data: data,
-                        backgroundColor: colors.slice(0, labels.length),
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: 'white' } }
-                    }
-                }
-            });
-        }
-
-        // --- WINNER LOGIC (Multi-Category) ---
-        function calculateWinner(stats) {
-            // Group contestants by category
-            const catGroups = {};
-            stats.contestants.forEach(c => {
-                const cat = c.category || 'General';
-                if (!catGroups[cat]) catGroups[cat] = [];
-                catGroups[cat].push(c);
-            });
-
-            const results = [];
-            Object.entries(catGroups).forEach(([cat, cands]) => {
-                let maxVotes = 0;
-                let winners = [];
-                cands.forEach(c => {
-                    const v = stats.candidateVotes[c.regNum] || 0;
-                    if (v > maxVotes) { maxVotes = v; winners = [c]; }
-                    else if (v === maxVotes && v > 0) { winners.push(c); }
-                });
-                if (winners.length > 0) results.push({ cat, winners, maxVotes });
-            });
-            return results;
-        }
-
-        // --- TABLE LOGIC ---
-        function filterTable(type) {
-            currentFilter = type;
-            const filterEl = document.getElementById('filter-role');
-            if (filterEl) filterEl.value = type;
-            const searchEl = document.getElementById('search-bar');
-            renderTable(type, searchEl ? searchEl.value : '');
-        }
-
-        function renderTable(filter, searchTerm) {
-            if (!cachedStats) return;
-            const tbody = document.getElementById('users-table-body');
-            if (!tbody) return; // Table removed from super admin view
-            const users = [...cachedStats.contestants, ...cachedStats.voters];
-            tbody.innerHTML = '';
-
-            // Filter
-            let filtered = users;
-            if (filter === 'voter') filtered = users.filter(u => u.role === 'voter');
-            else if (filter === 'contestant') filtered = users.filter(u => u.role === 'contestant');
-            else if (filter === 'pending') filtered = users.filter(u => u.status === 'pending');
-            // 'voted' filter logic from stats
-            else if (filter === 'voted') filtered = users.filter(u => u.role === 'voter' && u.hasVoted);
-            else if (filter === 'banned') filtered = users.filter(u => u.isBanned);
-
-            // Search
-            if (searchTerm) {
-                const lower = searchTerm.toLowerCase();
-                filtered = filtered.filter(u => u.name.toLowerCase().includes(lower) || u.regNum.toLowerCase().includes(lower));
-            }
-
-            if (filtered.length === 0) {
-                document.getElementById('empty-table-msg').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('empty-table-msg').classList.add('hidden');
-
-            filtered.forEach(u => {
-                const tr = document.createElement('tr');
-
-                // Registration ID Proof (Portrait or PDF)
-                let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
-                if (u.portrait) {
-                    if (u.portrait.startsWith('data:image')) {
-                        portraitHtml = `<img src="${u.portrait}" onclick="showPortrait('${u.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
-                    } else if (u.portrait.startsWith('data:application/pdf')) {
-                        portraitHtml = `<div onclick="viewPdf('${u.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
-                    }
-                }
-
-                // Live Face Capture (webcamReg)
-                let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
-                if (u.webcamReg) {
-                    faceHtml = `<img src="${u.webcamReg}" onclick="showPortrait('${u.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--gold-primary); cursor:pointer;" title="Click to View Live Capture">`;
-                }
-
-                // Time Formatting
-                const joined = u.createdAt ? new Date(u.createdAt).toLocaleString(undefined, {
-                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) : '-';
-
-                // Status / Vote Logic
-                let statusHtml = '';
-                if (u.status === 'pending') statusHtml = '<span style="color:#fbbf24">Pending Approval</span>';
-                else if (u.isBanned) statusHtml = '<span style="color:#ef4444; font-weight:bold;">BANNED 🚫</span>';
-                else if (u.role === 'contestant') statusHtml = 'Active Candidate';
-                else if (u.hasVoted) statusHtml = `<span style="color:#4ade80">Voted<br><small>${u.votedAt ? new Date(u.votedAt).toLocaleString() : ''}</small></span>`;
-                else statusHtml = '<span style="color:#ef4444">Not Voted</span>';
-
-                // Actions
-                let actionsHtml = '';
-                if (u.status === 'pending') {
-                    actionsHtml = `
-                        <button onclick="approveUser('${u.regNum}')" style="background:#22c55e; border:none; border-radius:4px; cursor:pointer; padding:5px 8px; color:black; font-weight:bold;" title="Accept">Accept ✓</button>
-                        <button onclick="rejectUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:5px 8px; margin-left:5px; color:white; font-weight:bold;" title="Decline">Decline ✕</button>
-                    `;
-                } else {
-                    let banBtn = '';
-                    if (u.role !== 'admin') {
-                        if (u.isBanned) {
-                            banBtn = `<button onclick="unbanUser('${u.regNum}')" style="background:#22c55e; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:black; margin-right:5px; font-size:0.8rem;">Unban</button>`;
-                        } else {
-                            banBtn = `<button onclick="banUser('${u.regNum}')" style="background:#f59e0b; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:black; margin-right:5px; font-size:0.8rem;">Ban</button>`;
-                        }
-                    }
-                    let editBtn = `<button onclick="openGodEdit('${u.regNum}', '${u.role}', '${u.name.replace(/'/g, "\\'")}', '${u.email || ''}', '${u.institution || ''}', '${u.branch || ''}', '${u.class || ''}')" style="background:#3b82f6; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; margin-right:5px; font-size:0.8rem;">Edit</button>`;
-                    actionsHtml = `${editBtn}${banBtn}<button onclick="deleteUser('${u.regNum}')" style="background:#ef4444; border:none; border-radius:4px; cursor:pointer; padding:4px 8px; color:white; font-size:0.8rem;">Remove</button>`;
-                }
-
-                tr.innerHTML = `
-                    <td>${portraitHtml}</td>
-                    <td>${faceHtml}</td>
-                    <td>${u.regNum}</td>
-                    <td>
-                        <div style="font-weight: 500;">${u.name}</div>
-                        <div style="font-size: 0.8rem; color: var(--neon-cyan); margin-top: 2px;">${u.email || 'No email provided'}</div>
-                    </td>
-                    <td style="text-transform:capitalize">${u.role === 'contestant' ? 'Candidate' : 'Voter'}</td>
-                    <td>${joined}</td>
-                    <td>${statusHtml}</td>
-                    <td>${actionsHtml}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // --- ACTIONS ---
-        async function approveUser(id) {
-            await StorageManager.approveUser(id);
-            showToast(`User ${id} Registration Approved`, 'success');
-        }
-
-        async function rejectUser(regNum) {
-            const reason = prompt("Enter reason for rejection (will be emailed to user):", "Data Mismatch");
-            if (reason === null) return; // Cancelled
-
-            if (confirm(`Are you sure you want to REJECT and DELETE ${regNum}?`)) {
-                try {
-                    await StorageManager.rejectUser(regNum, reason);
-                    showToast(`User ${regNum} has been Rejected & Deleted.`, 'error');
-                } catch (err) {
-                    showToast("Error: " + err.message, 'error');
-                }
-            }
-        }
-
-        async function deleteUser(id) {
-            if (confirm("Permanently delete user?")) {
-                await StorageManager.deleteUser(id);
-                showToast(`User ${id} Deleted Permanently`, 'error');
-            }
-        }
-
-        async function banUser(id) {
-            if (confirm(`Suspend voting rights for ${id}?`)) {
-                await StorageManager.banUser(id);
-                showToast(`User ${id} is Banned`, 'warning');
-            }
-        }
-
-        async function unbanUser(id) {
-            await StorageManager.unbanUser(id);
-            showToast(`User ${id} unbanned`, 'success');
-        }
-
-        async function performDangerAction(type) {
-            const roleName = type === 'voter' ? 'VOTERS' : 'CANDIDATES';
-            if (confirm(`WARNING: This will PERMANENTLY DELETE ALL registered ${roleName}.\nAre you sure??`)) {
-                await StorageManager.clearUsersByRole(type);
-                showToast("Reset Complete.", "success");
-            }
-        }
-
-        document.getElementById('toggle-election-btn').addEventListener('click', async () => {
-            if(!globalElection) return;
-            const current = globalElection;
-            if (current.isActive) {
-                // PAUSE - Calculate remaining time
-                const now = new Date().getTime();
-                const end = new Date(current.endTime).getTime();
-                let diff = end - now;
-                if (diff < 0) diff = 0;
-                await StorageManager.pauseElection(diff);
-            } else {
-                // RESUME
-                await StorageManager.resumeElection();
-            }
-            renderDashboard();
-        });
-
-        document.getElementById('complete-election-btn').addEventListener('click', async () => {
-            if (confirm("End Election? Results will be finalized.")) {
-                await StorageManager.setElectionCompletion(true);
-                renderDashboard();
-            }
-        });
-
-        document.getElementById('reset-election-btn').addEventListener('click', async () => {
-            if (confirm("Start New Election?\nThis clears vote data but KEEPS user accounts.")) {
-                await StorageManager.resetElection();
-                // Clear times too? maybe or maybe keep them. Let's clear for fresh start.
-                await StorageManager.setElectionTimes(null, null);
-                document.getElementById('start-time-input').value = "";
-                document.getElementById('end-time-input').value = "";
-                renderDashboard();
-            }
-        });
-
-        // --- TIMER LOGIC ---
-        let electionTimes = { start: null, end: null };
-        let timerInterval = null;
-
-        document.getElementById('start-time-input').addEventListener('change', () => { /* save handled by button for atomic update */ });
-
-        async function saveElectionTimes() {
-            const startVal = document.getElementById('start-time-input').value;
-            const endVal = document.getElementById('end-time-input').value; // YYYY-MM-DDTHH:MM
-
-            if (!startVal || !endVal) {
-                alert("Please set both Start and End times.");
-                return;
-            }
-            if (new Date(startVal) >= new Date(endVal)) {
-                alert("Start time must be before End time.");
-                return;
-            }
-
-            await StorageManager.setElectionTimes(startVal, endVal);
-            showToast("Election times updated.", "success");
-        }
-
-        function startTimerTick(times, currentStatus) {
-            if (timerInterval) clearInterval(timerInterval);
-            if (!times.start || !times.end) {
-                document.getElementById('countdown-display').innerText = "--:--:--";
-                document.getElementById('timer-label').innerText = "";
-                return;
-            }
-
-            const startT = new Date(times.start).getTime();
-            const endT = new Date(times.end).getTime();
-
-            const tick = async () => {
-                // (Old generic pause block removed to allow frozen time check)
-
-                // CHECK FROZEN STATE
-                if (!currentStatus.isActive && currentStatus.frozenRemaining) {
-                    updateTimerUI(currentStatus.frozenRemaining, "Paused (Time Frozen)");
-                    return;
-                }
-
-                const now = new Date().getTime();
-                let diff = 0;
-                let label = "";
-
-                if (now < startT) {
-                    // Waiting to Start
-                    diff = startT - now;
-                    label = "Starts in";
-                } else if (now >= startT && now < endT) {
-                    // Running
-                    // Double check active status
-                    if (!currentStatus.isActive) {
-                        // Should have been caught above, but safety
-                        document.getElementById('countdown-display').innerText = "PAUSED";
-                        document.getElementById('timer-label').innerText = "Election Paused";
-                        return;
-                    }
-
-                    // AUTO START Check (Transition)
-                    if (now >= startT && now <= startT + 5000 && !currentStatus.isActive) {
-                        // This logic is tricky. If we pause, we are !isActive. 
-                        // But we don't want to Auto-Start if we MANUALLY paused.
-                        // "Auto-Start" is usually for when we are "Waiting" and time crosses startT.
-                        // If we are already past startT, we shouldn't auto-start if it's currently false (paused).
-                        // So I will REMOVE auto-start loop here to avoid fighting the Pause button.
-                        // The User can click "Start" manually if they paused it.
-                        // Only auto-start if we were strictly 'Waiting' previously? 
-                        // Simpler: Remove Auto-Start logic to respect Manual Control, OR only do it if we are very close to start.
-                        // Correct approach: If 'Pause' button was clicked, we want it paused. 
-                        // I will remove the auto-flip logic to prevent it from restarting itself when paused.
-                    }
-
-                } else {
-                    // Ended
-                    diff = 0;
-                    label = "Election Finished";
-                    document.getElementById('countdown-display').innerText = "00:00:00";
-
-                    // Auto-End
-                    if (!currentStatus.isCompleted) {
-                        // Mark as completed
-                        await StorageManager.setElectionCompletion(true);
-                        // Refresh UI to show "Election Completed" state
-                        renderDashboard();
-                        return; // Stop this tick
-                    }
-                }
-
-                updateTimerUI(diff, label);
-            };
-
-            timerInterval = setInterval(tick, 1000);
-            tick(); // Run immediately
-        }
-
-        function updateTimerUI(ms, label) {
-            if (ms <= 0) {
-                document.getElementById('countdown-display').innerText = "00:00:00";
-                document.getElementById('timer-label').innerText = label;
-                return;
-            }
-            const h = Math.floor(ms / (1000 * 60 * 60));
-            const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((ms % (1000 * 60)) / 1000);
-            document.getElementById('countdown-display').innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            document.getElementById('timer-label').innerText = label;
-        }
-
-        // --- DASHBOARD RENDER OVERRIDE to Include Timer ---
-        // We modify the original renderDashboard to load times.
-        // Since we can't easily replace just the function content without replacing the whole block if using replace call,
-        // and I am appending this logic, I need to make sure the original 'renderDashboard' calls 'startTimerTick'.
-        // But 'startTimerTick' is new. 
-        // I should have replaced 'renderDashboard' entirely or injected into it. 
-        // Let's rely on the fact that I can edit renderDashboard in previous steps.
-        // Wait, I didn't edit renderDashboard yet in this tool call.
-        // I will do it in a separate ReplacementChunk in this same call.
-
-
-        // --- DOWNLOAD LOGIC ---
-        document.getElementById('download-btn').addEventListener('click', () => {
-            if (!cachedStats) return;
-
-            let csv = "--- CAMDIDATE RESULTS ---\n";
-            csv += "Rank,Name,Reg No,Votes\n";
-
-            // Calculate ranks
-            const candidates = [...cachedStats.contestants].map(c => {
-                return { ...c, votes: cachedStats.candidateVotes[c.regNum] || 0 };
-            }).sort((a, b) => b.votes - a.votes);
-
-            const winnerVotes = candidates.length > 0 ? candidates[0].votes : 0;
-
-            candidates.forEach((c, i) => {
-                csv += `${i + 1},"${c.name}",${c.regNum},${c.votes}`;
-                if (i > 0) {
-                    csv += `,(-${winnerVotes - c.votes} vs Winner)`; // Margin
-                } else {
-                    csv += `,(WINNER)`;
-                }
-                csv += "\n";
-            });
-
-            csv += "\n--- REGISTERED VOTERS ---\n";
-            csv += "Reg No,Name,Joined At,Status,Voted For,Voted At\n";
-            cachedStats.voters.forEach(v => {
-                let voteInfo = v.hasVoted ? v.votedFor : "N/A";
-                let timeInfo = v.votedAt ? new Date(v.votedAt).toLocaleString() : "-";
-                csv += `${v.regNum},"${v.name}",${v.createdAt || '-'},${v.hasVoted ? "Voted" : "Not Voted"},${voteInfo},"${timeInfo}"\n`;
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Election_Full_Result_${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-        });
-
-        // --- PASSWORD / ID CHANGE ---
-        // --- INPUT VALIDATION FOR MODALS ---
-        document.getElementById('new-admin-id').addEventListener('input', function (e) {
-            // Admin ID: small and capital letters and numbers... we cannot use spaces ending... 
-            // PRECISE RULE: "admin id we can only enter small and capiter letters and numbers also spaces are cannot use from startiong letter we can we after first letter"
-            let val = this.value.replace(/[^a-zA-Z0-9 ]/g, '');
-            if (val.startsWith(' ')) val = val.trimStart();
-            this.value = val;
-        });
-
-        document.getElementById('new-password').addEventListener('input', function (e) {
-            // Password: small and capital letters and numbers only no space required
-            this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
-        });
-
-        document.getElementById('change-pass-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const p = document.getElementById('new-password').value;
-            await StorageManager.resetPassword(currentUser.regNum, p);
-            alert("Password Changed.");
-            document.getElementById('change-pass-modal').classList.add('hidden');
-        });
-
-        document.getElementById('change-id-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newId = document.getElementById('new-admin-id').value;
-            try {
-                await StorageManager.updateAdminId(currentUser.regNum, newId);
-                alert("Admin ID Changed! Please login again.");
-                StorageManager.logout();
+    
+    <button class="btn btn-cyan" style="width:100%" onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
+
+<!-- Portrait Preview Modal -->
+<div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
+  <img id="portrait-preview" src="" style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
+  <button class="btn btn-d" style="margin-top: 1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+</div>
+
+<script>
+const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+let branchStudents = [];
+let allBranchSubAdmins = [];
+let studentMap = {};  // regNum -> student object (safe onclick lookup)
+let saMap = {};       // regNum -> subadmin object
+
+let chartReg = null, chartVote = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (session && session.role === 'admin') {
+        // Re-validate session against server (don't trust stale localStorage)
+        try {
+            const liveUser = await apiFetch(`/users/${session.regNum}?institution=${encodeURIComponent(session.institution)}`);
+            if (!liveUser || liveUser.role !== 'admin' || liveUser.status !== 'active' || liveUser.isBanned == 1) {
+                alert('Session invalid or account suspended. Please login again.');
+                localStorage.removeItem('ovs_currentUser');
                 window.location.href = 'login.html?admin=true';
-            } catch (err) {
-                alert("Error: " + err.message);
+                return;
             }
-        });
-
-        // --- PORTRAIT VIEWER ---
-        function showPortrait(src) {
-            document.getElementById('portrait-preview').src = src;
-            document.getElementById('portrait-modal').classList.remove('hidden');
+            session = liveUser;
+            localStorage.setItem('ovs_currentUser', JSON.stringify(liveUser));
+        } catch(e) {
+            console.warn('[Admin] Session re-validation failed, continuing with cached session:', e.message);
         }
+        document.getElementById('auth-overlay').style.display='none';
+        document.getElementById('main-layout').style.display='flex';
+        document.getElementById('branch-label').textContent=`Branch: ${session.branch}`;
+        document.getElementById('branch-sub').textContent=`Admin for ${session.branch} — ${session.institution}`;
+        document.getElementById('admin-branch-tag').textContent = session.branch;
+        document.getElementById('sa-branch-display').value = session.branch;
+        loadAll();
+    } else {
+        window.location.href = 'login.html?admin=true';
+    }
+});
 
-        function viewPdf(dataUrl) {
-            try {
-                const pdfData = dataUrl.split(',')[1];
-                const byteCharacters = atob(pdfData);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], {type: 'application/pdf'});
-                const fileURL = URL.createObjectURL(blob);
-                window.open(fileURL);
-            } catch (err) {
-                alert("Could not open PDF: " + err.message);
-            }
+async function apiFetch(path, opts={}) {
+  const r = await fetch(API+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});
+  if (!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
+  return r.json();
+}
+
+function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+async function adminLogin(){
+  const id=document.getElementById('auth-id').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  const err=document.getElementById('auth-err');
+  const btn=document.querySelector('#auth-overlay button');
+  err.textContent='';
+  
+  if(!id || !pass) {
+    err.textContent = "Please enter both Admin ID and Password.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Authenticating...";
+
+  try{
+    // Use the central StorageManager.login for consistency and security
+    const user = await StorageManager.login(id, pass);
+    
+    if(!user) {
+        throw new Error('Invalid credentials');
+    }
+    
+    if(user.role !== 'admin') {
+        StorageManager.logout();
+        throw new Error('Not an Admin account. Use the correct login portal.');
+    }
+
+    // Success - UI already handled status checks inside StorageManager.login
+    document.getElementById('auth-overlay').style.display='none';
+    document.getElementById('main-layout').style.display='flex';
+    document.getElementById('branch-label').textContent=`Branch: ${user.branch}`;
+    document.getElementById('branch-sub').textContent=`Admin for ${user.branch} — ${user.institution}`;
+    loadAll();
+  }catch(e){
+    err.textContent=e.message;
+    btn.disabled = false;
+    btn.innerText = "Login";
+  }
+}
+function adminLogout(){
+  session=null;
+  localStorage.removeItem('ovs_currentUser');
+  window.location.href='login.html?admin=true';
+}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+async function refreshAll() {
+  toast('🔄 Refreshing...');
+  await loadAll();
+  toast('✅ Data refreshed!');
+}
+
+async function loadAll(){
+  try{
+    const [students,subadmins]=await Promise.all([
+      apiFetch(`/voters/by-branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`),
+      apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
+    ]);
+    branchStudents=students;
+    // Build lookup maps for safe onclick use (avoids XSS from inline interpolation)
+    studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
+    saMap = {}; subadmins.forEach(s => { saMap[s.regNum] = s; });
+    const accepted = students.filter(s=>s.status==='active').length;
+    const pending  = students.filter(s=>s.status==='pending').length;
+    const canVote  = students.filter(s=>s.canVote==1).length;
+    document.getElementById('s-students').textContent=students.length;
+    document.getElementById('s-accepted').textContent=accepted;
+    document.getElementById('s-pending').textContent=pending;
+    document.getElementById('s-canvote').textContent=canVote;
+    document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
+    document.getElementById('s-subadmins').textContent=subadmins.length;
+    allBranchSubAdmins = subadmins;
+    renderCharts(students.length, accepted, pending, canVote);
+    renderStudents(students);
+    renderSaTable(subadmins);
+  }catch(e){toast(e.message,false);}
+}
+
+function renderStudents(list){
+  const tb=document.getElementById('student-table');
+  if(!list.length){tb.innerHTML='<tr><td colspan="11" class="empty">No students in this branch</td></tr>';return;}
+  tb.innerHTML=list.map(s=>{
+    const id = s.regNum;
+    let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+    if (s.portrait) {
+        if (s.portrait.startsWith('data:image')) {
+            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${id}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
+        } else if (s.portrait.startsWith('data:application/pdf')) {
+            portraitHtml = `<div onclick="viewPdf('${id}','portrait')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
         }
+    }
+    let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+    if (s.webcamReg) {
+        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${id}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--cyan); cursor:pointer;" title="Click to View Live Capture">`;
+    }
+    return `<tr>
+    <td>${portraitHtml}</td>
+    <td>${faceHtml}</td>
+    <td><strong>${s.regNum}</strong></td>
+    <td>
+        <div style="font-weight: 500;">${s.name}</div>
+        <div style="font-size: 0.8rem; color: var(--cyan); margin-top: 2px;">${s.email || 'No email provided'}</div>
+    </td>
+    <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${s.role === 'contestant' ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${s.role === 'contestant' ? 'Candidate' : 'Voter'}</span></td>
+    <td>${s.year||'-'}</td>
+    <td>${s.class||'-'}</td>
+    <td>${s.canVote==1?'<span class="badge ba">ACTIVE</span>':'<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">REVOKED</span>'}</td>
+    <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
+    <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
+    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
+      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${id}')">Accept</button>` : ''}
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudentById('${id}')">Edit</button>
+      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${id}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
+      <button class="btn-sm btn-d" onclick="removeStudent('${id}')">Remove</button>
+    </td>
+  </tr>`;
+  }).join('');
+}
 
-        // --- VERIFICATION LOGIC ---
-        function openVerificationPanel() {
-            document.getElementById('verification-panel').classList.remove('hidden');
-            renderDashboard(); // Trigger refresh to load table
+async function acceptStudent(id) {
+  try {
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
+    toast(`Registration accepted for ${id}`);
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+function applyStudentFilters(){
+  const q = (document.getElementById('sf-search').value || '').toLowerCase();
+  const year = document.getElementById('sf-year').value;
+  const filtered = branchStudents.filter(s => {
+    const matchQ = !q || [s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q);
+    const matchYear = !year || (s.year||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
+    return matchQ && matchYear;
+  });
+  renderStudents(filtered);
+}
+function filterStudents(q){ applyStudentFilters(); }
+
+async function grantAllVote(){
+  if(!confirm('Grant vote access to ALL ACTIVE students in this branch?')) return;
+  const eligible = branchStudents.filter(s => s.status === 'active');
+  if(eligible.length === 0) return toast('No active students to grant access to.', false);
+  try{
+    const ids=eligible.map(s=>s.regNum);
+    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:ids,canVote:true,institution:session.institution})});
+    toast(`Vote granted to ${eligible.length} active students!`); loadAll();
+  }catch(e){toast(e.message,false);}
+}
+
+async function toggleVote(regNum,val){
+  try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote granted!':'Vote revoked');loadAll();}
+  catch(e){toast(e.message,false);}
+}
+
+async function removeStudent(id){
+  if(!confirm(`Remove student ${id}?`)) return;
+  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
+  catch(e){toast(e.message,false);}
+}
+
+function renderSaTable(list){
+  const tb=document.getElementById('sa-table');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins found matching criteria</td></tr>';return;}
+  tb.innerHTML=list.map(s=>`<tr>
+    <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
+    <td style="display:flex;gap:0.4rem;">
+      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editFullSAById('${s.regNum}')">Edit</button>
+      <button class="btn-sm btn-d" onclick="removeSA('${s.regNum}')">Remove</button>
+    </td>
+  </tr>`).join('');
+}
+
+function applySaFilter() {
+  const year = document.getElementById('sa-filter-year').value;
+  const filtered = year ? allBranchSubAdmins.filter(s => (s.year||'') === year) : allBranchSubAdmins;
+  renderSaTable(filtered);
+}
+
+function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+// Safe lookup-based edit openers — uses regNum only in onclick, data from Map
+function openEditStudentById(id) {
+  const s = studentMap[id]; if (!s) return;
+  document.getElementById('edit-modal-title').textContent = '✏️ Edit Student Details';
+  document.getElementById('edit-role').value = 'student';
+  document.getElementById('edit-regnum').value = s.regNum;
+  document.getElementById('edit-regnum-display').textContent = s.regNum;
+  document.getElementById('edit-name').value = s.name || '';
+  document.getElementById('edit-email').value = s.email || '';
+  document.getElementById('edit-class').value = s.class || '';
+  document.getElementById('edit-password-group').style.display = 'none';
+  document.getElementById('edit-pass').value = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function openEditStudent(id, name, email, cls) {
+  // Legacy wrapper - kept for backward compatibility
+  openEditStudentById(id);
+}
+
+function editFullSAById(id) {
+  const s = saMap[id]; if (!s) return;
+  document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin Details';
+  document.getElementById('edit-role').value = 'subadmin';
+  document.getElementById('edit-regnum').value = s.regNum;
+  document.getElementById('edit-regnum-display').textContent = s.regNum;
+  document.getElementById('edit-name').value = s.name || '';
+  document.getElementById('edit-email').value = s.email || '';
+  document.getElementById('edit-class').value = s.class || '';
+  document.getElementById('edit-password-group').style.display = 'block';
+  document.getElementById('edit-pass').value = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function editFullSA(id, name, email, cls) {
+  // Legacy wrapper
+  editFullSAById(id);
+}
+
+function showPortrait(regNum, type) {
+  const s = studentMap[regNum];
+  if (!s) return;
+  const src = type === 'webcam' ? s.webcamReg : s.portrait;
+  if (!src) return;
+  if (src.startsWith('data:application/pdf')) { viewPdf(regNum, type); return; }
+  document.getElementById('portrait-preview').src = src;
+  document.getElementById('portrait-modal').style.display = 'flex';
+}
+
+function viewPdf(regNum, type) {
+  const s = studentMap[regNum];
+  if (!s) return;
+  const src = type === 'webcam' ? s.webcamReg : s.portrait;
+  if (!src) return;
+  const newWin = window.open('', '_blank');
+  if (newWin) {
+    newWin.document.title = 'ID Proof PDF';
+    newWin.document.body.style.margin = '0';
+    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
+  } else {
+    toast('Popup blocked! Please allow popups to view PDF.', false);
+  }
+}
+
+async function saveEdit() {
+  const role = document.getElementById('edit-role').value;
+  const id = document.getElementById('edit-regnum').value;
+  const name = document.getElementById('edit-name').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
+  const cls = document.getElementById('edit-class').value.trim().toUpperCase();
+  const pass = document.getElementById('edit-pass').value;
+
+  if(!name) return toast('Name required', false);
+  
+  if (role === 'subadmin') {
+      if (!cls.startsWith(session.branch + '-')) {
+          return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
+      }
+  }
+
+  const updates = { name, email, class: cls };
+  
+  if (role === 'subadmin' && pass && pass.trim() !== '') {
+    const err = validatePassword(pass, 6, 6);
+    if (err) return toast("Sub-Admin: " + err, false);
+    updates.password = btoa(pass);
+  }
+
+  try {
+    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify(updates) });
+    toast(`${id} details updated successfully!`);
+    closeEditModal();
+    loadAll();
+  } catch(e) { toast(e.message, false); }
+}
+
+function validatePassword(pwd, minLen, maxLen) {
+  if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
+    return maxLen === minLen ? `Password must be exactly ${minLen} characters.` : `Password must be ${minLen}-${maxLen} characters.`;
+  }
+  if ((pwd.match(/[a-zA-Z]/g)||[]).length < 3) return 'Must have at least 3 letters.';
+  if (!/[0-9]/.test(pwd)) return 'Must have at least 1 number.';
+  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Must have at least 1 special character.';
+  return null;
+}
+
+function renderCharts(total, accepted, pending, canVote) {
+  const notAccepted = total - accepted;
+  const notVoting   = total - canVote;
+
+  // Chart 1 — Registrations
+  if (chartReg) chartReg.destroy();
+  const ctx1 = document.getElementById('chart-registrations').getContext('2d');
+  chartReg = new Chart(ctx1, {
+    type: 'pie',
+    data: {
+      labels: ['Accepted', 'Not Accepted'],
+      datasets: [{ data: [accepted, notAccepted],
+        backgroundColor: ['rgba(255,42,77,0.8)','rgba(255,255,255,0.1)'],
+        borderColor: ['#ff2a4d','#333333'], borderWidth: 2 }]
+    },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
+  });
+  document.getElementById('chart-reg-legend').innerHTML =
+    `<span style="color:#22c55e;">● Accepted: ${accepted}</span>
+     <span style="color:#f59e0b;">● Pending: ${pending}</span>
+     <span style="color:var(--muted);">Total: ${total}</span>`;
+
+  // Chart 2 — Voting eligibility
+  if (chartVote) chartVote.destroy();
+  const ctx2 = document.getElementById('chart-voting').getContext('2d');
+  chartVote = new Chart(ctx2, {
+    type: 'pie',
+    data: {
+      labels: ['Allowed to Vote', 'Not Yet Allowed'],
+      datasets: [{ data: [canVote, notVoting],
+        backgroundColor: ['rgba(255,255,255,0.8)','rgba(255,42,77,0.1)'],
+        borderColor: ['#ffffff','#ff2a4d'], borderWidth: 2 }]
+    },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
+  });
+  document.getElementById('chart-vote-legend').innerHTML =
+    `<span style="color:#06b6d4;">● Allowed: ${canVote}</span>
+     <span style="color:#64748b;">● Not Allowed: ${notVoting}</span>
+     <span style="color:var(--muted);">Total: ${total}</span>`;
+}
+
+async function createSubAdmin(){
+  const id = document.getElementById('sa-id').value.trim().toUpperCase();
+  const nameInput = document.getElementById('sa-name').value;
+  if (nameInput.startsWith(' ')) return toast('Name cannot start with a space.', false);
+  const name = nameInput.trim();
+  const email = document.getElementById('sa-email').value.trim();
+  const cls = document.getElementById('sa-class').value.trim().toUpperCase();
+  const year = document.getElementById('sa-year').value;
+  const pass = document.getElementById('sa-pass').value;
+  if(!id||!name||!cls||!year||!pass) return toast('Fill all required fields',false);
+  if(!cls.startsWith(session.branch + '-')) return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
+  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
+  if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
+  const pwdErr = validatePassword(pass, 6, 6);
+  if (pwdErr) return toast('Sub-Admin: ' + pwdErr, false);
+  try{
+    await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:session.branch,class:cls,year:year,institution:session.institution,managedBy:session.regNum,status:'active'})});
+    toast(`Sub-Admin ${id} created for ${session.branch} — class ${cls} (${year})`);
+    ['sa-id','sa-name','sa-email','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
+    loadAll();
+  }catch(e){toast(e.message,false);}
+}
+
+async function removeSA(id){
+  if(!confirm(`Remove sub-admin ${id}?`)) return;
+  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
+  catch(e){toast(e.message,false);}
+}
+
+// Real-time input enforcement on sub-admin form
+document.getElementById('sa-id').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);
+});
+document.getElementById('sa-name').addEventListener('input', function() {
+  if(this.value.startsWith(' ')) this.value=this.value.trimStart();
+  this.value = this.value.replace(/[^a-zA-Z\s.]/g,'').slice(0,30);
+});
+document.getElementById('sa-pass').addEventListener('input', function() {
+  this.value = this.value.replace(/\s/g,'').slice(0,6);
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')adminLogin();});
+
+// Initialize tsParticles Cyber Mesh Effect
+tsParticles.load("tsparticles", {
+    fpsLimit: 60,
+    particles: {
+        number: { value: 30, density: { enable: true, value_area: 800 } },
+        color: { value: ["#ffffff", "#ff2a4d"] },
+        shape: { type: "circle" },
+        opacity: { value: 0.2, random: true },
+        size: { value: 2, random: true },
+        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+        move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
+    },
+    interactivity: {
+        detectsOn: "canvas",
+        events: {
+            onHover: { enable: true, mode: "grab" },
+            resize: true
+        },
+        modes: {
+            grab: { distance: 150, links: { opacity: 0.3 } }
         }
-
-        function renderVerificationTable(voters) {
-            const tbody = document.getElementById('verification-table-body');
-            tbody.innerHTML = '';
-
-            // Filter Pending Votes
-            const pending = voters.filter(v => v.hasVoted && v.voteStatus === 'pending');
-
-            if (pending.length === 0) {
-                document.getElementById('no-verification-msg').classList.remove('hidden');
-                document.querySelector('#verification-panel table').classList.add('hidden');
-            } else {
-                document.getElementById('no-verification-msg').classList.add('hidden');
-                document.querySelector('#verification-panel table').classList.remove('hidden');
-
-                pending.forEach(v => {
-                    const tr = document.createElement('tr');
-                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-                    tr.innerHTML = `
-                        <td style="padding:1rem;">${v.regNum}</td>
-                        <td>${v.name}</td>
-                        <td><span style="background:rgba(245, 158, 11, 0.2); color:#f59e0b; padding:0.2rem 0.5rem; border-radius:4px;">Pending Review</span></td>
-                        <td>
-                            <button class="action-btn" onclick="openVerifyModal('${v.regNum}')">Verify 🔍</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-
-        let currentVerifyId = null;
-
-        async function openVerifyModal(regNum) {
-            currentVerifyId = regNum;
-            const users = await StorageManager.getUsers();
-            const user = users.find(u => u.regNum === regNum);
-
-            if (!user) return alert("User not found");
-
-            document.getElementById('verify-name').innerText = user.name;
-            document.getElementById('verify-regNum').innerText = user.regNum;
-            document.getElementById('verify-email').innerText = user.email || "No Email";
-
-            // Photos Logic for Verification
-            const regImg = document.getElementById('verify-reg-img');
-            
-            // Prefer Live Face for verification if available, else use Portrait
-            // If portrait is PDF, show a placeholder and provide a "View PDF" button
-            if (user.webcamReg) {
-                regImg.src = user.webcamReg;
-                regImg.classList.remove('hidden');
-                document.getElementById('pdf-verify-btn')?.remove();
-            } else if (user.portrait && user.portrait.startsWith('data:image')) {
-                regImg.src = user.portrait;
-                regImg.classList.remove('hidden');
-                document.getElementById('pdf-verify-btn')?.remove();
-            } else if (user.portrait && user.portrait.startsWith('data:application/pdf')) {
-                regImg.src = ''; // Clear img
-                regImg.classList.add('hidden');
-                
-                // Add a button to view PDF if not already there
-                if (!document.getElementById('pdf-verify-btn')) {
-                    const btn = document.createElement('button');
-                    btn.id = 'pdf-verify-btn';
-                    btn.className = 'action-btn';
-                    btn.innerText = 'View ID Proof (PDF) 📄';
-                    btn.onclick = () => viewPdf(user.portrait);
-                    regImg.parentNode.appendChild(btn);
-                }
-            }
-
-            document.getElementById('verify-vote-img').src = user.webcamVote || '';
-            document.getElementById('verify-time').innerText = user.votedAt ? new Date(user.votedAt).toLocaleString() : '-';
-
-            document.getElementById('verify-modal').classList.add('visible');
-        }
-
-        function closeVerifyModal() {
-            document.getElementById('verify-modal').classList.remove('visible');
-            currentVerifyId = null;
-        }
-
-        async function processVerification(isValid) {
-            if (!currentVerifyId) return;
-            try {
-                await StorageManager.verifyVote(currentVerifyId, isValid);
-                closeVerifyModal();
-                renderDashboard(); // Refresh UI
-            } catch (err) {
-                alert("Error: " + err.message);
-            }
-        }
-
-        // --- ANNOUNCEMENTS ---
-        async function postAnnouncement() {
-            const msg = document.getElementById('announcement-input').value;
-            if (!msg) return;
-            await StorageManager.setAnnouncement(msg);
-            alert("Announcement Posted!");
-        }
-
-        async function clearAnnouncement() {
-            document.getElementById('announcement-input').value = "";
-            await StorageManager.setAnnouncement("");
-            alert("Announcement Cleared");
-        }
-
-        async function loadAnnouncementInput() {
-            const msg = await StorageManager.getAnnouncement();
-            if (msg) document.getElementById('announcement-input').value = msg;
-        }
-
-        // --- LOGS ---
-        async function loadLogs() {
-            const tbody = document.getElementById('logs-table-body');
-            try {
-                const logs = await StorageManager.getAuditLogs();
-                tbody.innerHTML = '';
-
-                if (logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:1rem;">No activity recorded.</td></tr>';
-                    return;
-                }
-
-                // Sort new to old
-                logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                logs.forEach(l => {
-                    const tr = document.createElement('tr');
-                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-                    tr.innerHTML = `
-                        <td style="padding:0.5rem; color:var(--text-muted);">${new Date(l.timestamp).toLocaleTimeString()}</td>
-                        <td style="color:var(--neon-cyan);">${l.userId}</td> 
-                        <td style="font-weight:bold;">${l.action}</td>
-                        <td class="text-muted">${l.details}</td>
-                     `;
-                    tbody.appendChild(tr);
-                });
-            } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading logs</td></tr>';
-            }
-        }
-
-        // --- INACTIVITY AUTO-LOGOUT ---
-        let inactivityTime = function () {
-            let time;
-            // reset timer on any of these events
-            window.onload = resetTimer;
-            document.onmousemove = resetTimer;
-            document.onkeypress = resetTimer;
-            document.onclick = resetTimer;
-            document.onscroll = resetTimer;
-
-            function logout() {
-                alert("You have been logged out due to inactivity.");
-                StorageManager.logout();
-                window.location.href = 'login.html?admin=true';
-            }
-
-            function resetTimer() {
-                clearTimeout(time);
-                time = setTimeout(logout, 15 * 60 * 1000); // 15 minutes
-            }
-        };
-        inactivityTime();
-
-        // --- INIT LIVE LISTENERS ---
-        function startLiveListeners() {
-            const statusText = document.getElementById('status-text');
-            if (statusText) statusText.innerText = "Connecting to DB...";
-            
-            try {
-                StorageManager.listenToStats(stats => {
-                    if (statusText) statusText.innerText = "Stats Loaded, Waiting for Config...";
-                    globalStats = stats;
-                    renderDashboard();
-                });
-
-                StorageManager.listenToElection(election => {
-                    if (statusText) statusText.innerText = "Config Loaded, Rendering...";
-                    globalElection = election;
-                    renderDashboard();
-                });
-            } catch (err) {
-                alert("CRITICAL FIREBASE INIT ERROR: " + err.message);
-                if (statusText) statusText.innerText = "Error: " + err.message;
-            }
-        }
-
-        function closeGodEditModal() { document.getElementById('god-edit-modal').classList.remove('open'); }
-
-        function openGodEdit(id, role, name, email, institution, branch, cls) {
-            document.getElementById('edit-role').value = role;
-            document.getElementById('edit-regnum').value = id;
-            document.getElementById('edit-regnum-display').textContent = id + ' (' + role.toUpperCase() + ')';
-            document.getElementById('edit-name').value = name;
-            document.getElementById('edit-email').value = email || '';
-            document.getElementById('edit-institution').value = institution || '';
-            document.getElementById('edit-branch').value = branch || '';
-            document.getElementById('edit-class').value = cls || '';
-            document.getElementById('edit-pass').value = '';
-
-            document.getElementById('edit-inst-group').style.display = (role === 'superadmin' || role === 'developer') ? 'block' : 'none';
-            document.getElementById('edit-branch-group').style.display = (role === 'admin' || role === 'subadmin' || role === 'voter' || role === 'contestant') ? 'block' : 'none';
-            document.getElementById('edit-class-group').style.display = (role === 'subadmin' || role === 'voter' || role === 'contestant') ? 'block' : 'none';
-
-            document.getElementById('god-edit-modal').classList.add('open');
-        }
-
-        async function saveGodEdit() {
-            const role = document.getElementById('edit-role').value;
-            const id = document.getElementById('edit-regnum').value;
-            const name = document.getElementById('edit-name').value.trim();
-            const email = document.getElementById('edit-email').value.trim();
-            const institution = document.getElementById('edit-institution').value.trim();
-            const branch = document.getElementById('edit-branch').value;
-            const cls = document.getElementById('edit-class').value.trim().toUpperCase();
-            const pass = document.getElementById('edit-pass').value;
-
-            if(!name) return alert('Name required');
-            
-            const updates = { name, email };
-            if (role === 'superadmin' || role === 'developer') updates.institution = institution;
-            if (role === 'admin' || role === 'subadmin' || role === 'voter' || role === 'contestant') updates.branch = branch;
-            if (role === 'subadmin' || role === 'voter' || role === 'contestant') updates.class = cls;
-            
-            if (pass && pass.trim() !== '') {
-                updates.password = btoa(pass);
-            }
-
-            try {
-                const apiUrl = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-                const inst = currentUser.institution || 'Unknown';
-                const response = await fetch(apiUrl + '/users/' + id + '?institution=' + encodeURIComponent(inst), {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updates)
-                });
-                if (!response.ok) throw new Error('Update failed');
-                alert(id + ' details updated successfully!');
-                closeGodEditModal();
-                if (StorageManager._fetchState) {
-                    StorageManager._fetchState();
-                } else {
-                    window.location.reload();
-                }
-            } catch(e) { alert(e.message); }
-        }
-
-        // Init
-        startLiveListeners();
-        loadAnnouncementInput();
-        loadLogs();
-    </script>
+    },
+    retina_detect: true,
+    background: { color: "transparent" }
+});
+</script>
 </body>
-
 </html>

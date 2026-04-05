@@ -95,10 +95,10 @@
   <div style="background:rgba(20, 25, 35, 0.6); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); border-top:1px solid rgba(245,158,11,0.3); border-radius:24px; padding:3.5rem; width:100%; max-width:460px; text-align:center; box-shadow: 0 30px 60px -15px rgba(0,0,0,0.8); animation:slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
     
     <!-- Logo -->
-    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size: 2.2rem; margin: 0 auto 1.5rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">👑</div>
+    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.4); border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size: 2.2rem; margin: 0 auto 1.5rem auto; box-shadow: 0 0 30px rgba(245,158,11,0.15);">⚔️</div>
     
-    <h2 style="font-size:2.2rem; font-weight:900; color:#fff; margin-bottom:0.2rem; letter-spacing:-0.5px; font-family:'Playfair Display', serif;">VANGUARD Super-Portal</h2>
-    <p style="color:var(--muted); font-size:0.9rem; margin-bottom:2.5rem; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Secure Access Portal</p>
+    <h2 style="font-size:2.2rem; font-weight:900; color:#fff; margin-bottom:0.2rem; letter-spacing:-0.5px; font-family:'Playfair Display', serif;">Sovereign Command</h2>
+    <p style="color:rgba(255,255,255,0.5); font-size:0.95rem; margin-bottom:2.5rem; font-weight:500;">Global Infrastructure & Multi-Tenant Oversight</p>
     
     <!-- Credential Fields -->
     <div style="text-align:left; margin-bottom:1.5rem;">
@@ -207,8 +207,8 @@
 <div class="layout" id="main-layout" style="display:none">
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-brand">👑 OVS</div>
-    <div class="sidebar-role" id="sa-inst-label">Super Admin</div>
+    <div class="sidebar-brand">SOVEREIGN CONTROL</div>
+    <div class="sidebar-role" id="sa-inst-label" style="color: var(--gold); font-weight: 700;">Global Super-Portal</div>
     <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
     <div class="nav-item" onclick="showPage('admins')">🧑‍💼 Manage Admins</div>
     <div class="nav-item" onclick="showPage('subadmins')">👥 Sub-Admins</div>
@@ -722,6 +722,21 @@ async function apiFetch(path, opts = {}) {
   return r.json();
 }
 
+// Security: SHA-256 Hashing for Super Admin
+async function hashSA(pwd) {
+    if (!pwd) return "";
+    try {
+        if (!window.crypto || !window.crypto.subtle) return btoa(pwd);
+        const msgUint8 = new TextEncoder().encode(pwd);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { return btoa(pwd); }
+}
+
+// Obfuscated 2FA State
+let _sv_o = null; 
+let _sv_u = null;
+
 function toast(msg, ok=true) {
   const t = document.getElementById('toast');
   t.textContent = (ok?'✅ ':'❌ ') + msg;
@@ -749,13 +764,17 @@ async function saStep1() {
     const user = await apiFetch(`/users/${id}`);
     if (user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
     if (user.status !== 'active') throw new Error('Account is not active.');
-    const hashed = btoa(pass);
-    if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+    const hashedSA = await hashSA(pass);
+    const legacyB64 = btoa(pass);
+    
+    if (user.password !== pass && user.password !== legacyB64 && user.password !== hashedSA) {
+        throw new Error('Wrong password.');
+    }
 
     // Credentials OK — Generate and send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    window._saOtp = otp;
-    window._saUser = user;
+    _sv_o = otp;
+    _sv_u = user;
     btn.textContent = 'Sending OTP...';
     try {
       const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
@@ -796,11 +815,11 @@ async function saStep2() {
 
   const enteredOtp = document.getElementById('auth-otp').value.trim();
   if (!enteredOtp || enteredOtp.length !== 6) { err.style.color='var(--red)'; err.textContent = 'Enter the 6-digit OTP from your email.'; return; }
-  if (enteredOtp !== window._saOtp) { err.style.color='var(--red)'; err.textContent = '❌ Invalid OTP. Please try again.'; return; }
+  if (enteredOtp !== _sv_o) { err.style.color='var(--red)'; err.textContent = '❌ Invalid OTP. Please try again.'; return; }
 
   btn.textContent = 'Logging in...';
   btn.disabled = true;
-  const user = window._saUser;
+  const user = _sv_u;
   saSession = user;
   localStorage.setItem('ovs_currentUser', JSON.stringify(user));
   document.getElementById('auth-overlay').style.display = 'none';

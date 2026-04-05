@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OVS Developer Console</title>
+  <title>System Master Interface — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
       (function() {
@@ -328,17 +328,17 @@
 </head>
 
 <body>
-    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <script src="storage.js"></script>
     <!-- Cyber Mesh Particles -->
     <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
   <!-- AUTH -->
   <div id="auth-screen">
     <div class="auth-box">
-      <h1><span style="color:#ffffff">VANGUARD</span> Core-Engine</h1>
-      <p>Restricted Access — Authorized Personnel Only</p>
-      <div><label>Developer ID</label><input type="text" id="dev-id" placeholder="OVSDEV2026" autocomplete="off" maxlength="10"></div>
-      <div><label>Password</label><input type="password" id="dev-pass" placeholder="Enter 12-char password" maxlength="12"></div>
-      <button class="btn btn-red" onclick="devLogin()">Access Developer Console</button>
+      <h1><span style="color:#ffffff">SYSTEM</span> MASTER</h1>
+      <p style="color:#ff2a4d; font-weight:700; letter-spacing:1px;">CORE INFRASTRUCTURE ACCESS</p>
+      <div><label>Root Identifier</label><input type="text" id="dev-id" placeholder="OVS-CORE-ROOT" autocomplete="off" maxlength="15"></div>
+      <div><label>Master Cipher</label><input type="password" id="dev-pass" placeholder="Enter Secure Cipher" maxlength="12"></div>
+      <button class="btn btn-red" onclick="devLogin()">Verify Root Access</button>
       <div id="auth-error"></div>
     </div>
   </div>
@@ -346,10 +346,10 @@
   <!-- CONSOLE -->
   <div id="console-screen">
     <header>
-      <h1>VANGUARD Core-Engine</h1>
+      <h1>CORE INFRASTRUCTURE PRIME</h1>
       <div style="display:flex;align-items:center;gap:1rem;">
-        <span id="dev-name-label">Developer</span>
-        <button class="btn btn-red-outline" onclick="devLogout()">Logout</button>
+        <span id="dev-name-label" style="color:#ff2a4d; font-weight:900; letter-spacing:1px;">ROOT OPERATOR</span>
+        <button class="btn btn-red-outline" onclick="devLogout()">Deauthorize Session</button>
       </div>
     </header>
     <div class="container">
@@ -487,41 +487,34 @@
     }
 
     async function devLogin() {
-      const rawId = document.getElementById('dev-id').value;
-      if (rawId.includes(' ')) {
-          document.getElementById('auth-error').textContent = 'Developer ID cannot contain spaces.';
-          return;
-      }
-      if (rawId.length !== 10) {
-          document.getElementById('auth-error').textContent = 'Developer ID must be exactly 10 characters long.';
-          return;
-      }
-      
+      const id = document.getElementById('dev-id').value.trim().toUpperCase();
       const pass = document.getElementById('dev-pass').value;
-      if (pass.includes(' ')) {
-          document.getElementById('auth-error').textContent = 'Password cannot contain spaces.';
-          return;
-      }
-      if (pass.length !== 12 || (pass.match(/[a-zA-Z]/g) || []).length < 3 || (pass.match(/[0-9]/g) || []).length < 2 || (pass.match(/[^a-zA-Z0-9]/g) || []).length < 1) {
-          document.getElementById('auth-error').textContent = 'Password must be 12 chars: 3 letters, 2 numbers, 1 special char.';
-          return;
-      }
-
-      const id = rawId.trim().toUpperCase();
       const errEl = document.getElementById('auth-error');
+      const btn = document.querySelector('.auth-box .btn-red');
+      
       errEl.textContent = '';
+      if(!id || !pass) return errEl.textContent = 'Identifiers required.';
+
+      btn.disabled = true;
+      btn.innerText = 'Initializing Root Access...';
+
       try {
-        // Developers have institution: "Unknown" in the new schema (from migration)
-        const user = await api(`/users/${id}?institution=Unknown`);
-        if (user.role !== 'developer') throw new Error('Not a developer account.');
-        const hashed = btoa(pass);
-        if (user.password !== pass && user.password !== hashed) throw new Error('Wrong password.');
+        const user = await StorageManager.login(id, pass);
+        if (user.role !== 'developer') {
+            StorageManager.logout();
+            throw new Error('Unauthorized Access Level.');
+        }
+
         devSession = user;
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('console-screen').style.display = 'block';
         document.getElementById('dev-name-label').textContent = user.name;
         loadConsole();
-      } catch (e) { errEl.textContent = e.message; }
+      } catch (e) { 
+          errEl.textContent = e.message; 
+          btn.disabled = false;
+          btn.innerText = 'Verify Root Access';
+      }
     }
 
     function devLogout() {

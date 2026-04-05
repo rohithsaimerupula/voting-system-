@@ -393,8 +393,8 @@
                 navRight.innerHTML = `<a href="index.html" class="btn-outline">🏠 Home</a>`;
                 tabsContainer.style.display = 'flex';
                 tabsContainer.innerHTML = `
-                    <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Admin Login</button>
-                    <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Sub-Admin Login</button>
+                    <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Branch Admin</button>
+                    <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Class Admin</button>
                 `;
 
                 document.getElementById('tab-admin').addEventListener('click', () => {
@@ -403,7 +403,7 @@
                     document.getElementById('tab-admin').style.border = 'none';
                     document.getElementById('tab-subadmin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-subadmin').style.border = '1px solid var(--glass-border)';
-                    loginTitle.innerText = 'Admin Login';
+                    loginTitle.innerText = 'Branch Admin Login';
                     regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
                     regInput.placeholder = 'e.g. ADMCSE01';
                     regInput.maxLength = 7;
@@ -417,7 +417,7 @@
                     document.getElementById('tab-subadmin').style.border = 'none';
                     document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
-                    loginTitle.innerText = 'Sub-Admin Login';
+                    loginTitle.innerText = 'Class Admin Login';
                     regLabel.innerText = 'Sub-Admin ID (9 chars · A-Z & 0-9)';
                     regInput.placeholder = 'e.g. SADMIN101';
                     regInput.maxLength = 9;
@@ -583,7 +583,7 @@
                     // Success Redirect based on role
                     if (user.role === 'developer') window.location.href = 'developer.html';
                     else if (user.role === 'superadmin') window.location.href = 'superadmin_dashboard.html';
-                    else if (user.role === 'admin') window.location.href = 'admin_dashboard_v2.html';
+                    else if (user.role === 'admin') window.location.href = 'admin_dashboard.html';
                     else if (user.role === 'subadmin') window.location.href = 'subadmin_dashboard.html';
                     else window.location.href = 'voter_dashboard.html';
 

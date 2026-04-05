@@ -163,29 +163,30 @@ async function initDb() {
 
         // Developer (GOD) account
         const devSnap = await db.execute("SELECT * FROM users WHERE role = 'developer'");
+        const devPass = process.env.OVS_DEV_PASS || 'OvsDev@2026!';
         if (devSnap.rows.length === 0) {
             await db.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status) VALUES (?, ?, ?, ?, ?, ?)`,
-                args: ['OVSDEV2026', Buffer.from('OvsDev@2026!').toString('base64'), 'developer', 'OVS Developer', 'admin@ovs.com', 'active']
+                args: ['OVSDEV2026', Buffer.from(devPass).toString('base64'), 'developer', 'OVS Developer', 'admin@ovs.com', 'active']
             });
-            console.log("Developer account created: OVSDEV2026 / OvsDev@2026!");
+            console.log("Developer account initialized.");
         } else if (devSnap.rows[0].regNum === 'DEV001') {
-            // Upgrade existing legacy developer account to new rules
             await db.execute({
                 sql: `UPDATE users SET regNum = 'OVSDEV2026', password = ? WHERE role = 'developer'`,
-                args: [Buffer.from('OvsDev@2026!').toString('base64')]
+                args: [Buffer.from(devPass).toString('base64')]
             });
-            console.log("Developer account upgraded to: OVSDEV2026 / OvsDev@2026!");
+            console.log("Developer account upgraded.");
         }
 
         // Default Super Admin (for legacy institution)
         const saSnap = await db.execute("SELECT * FROM users WHERE role = 'superadmin'");
+        const saPass = process.env.OVS_SA_PASS || 'OvsAdm@123';
         if (saSnap.rows.length === 0) {
             await db.execute({
                 sql: `INSERT INTO users (regNum, password, role, name, email, status, institution) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                args: ['OVSADM001', Buffer.from('OvsAdm@123').toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
+                args: ['OVSADM001', Buffer.from(saPass).toString('base64'), 'superadmin', 'Super Admin', 'tharunmerupula01@gmail.com', 'active', 'Default Institution']
             });
-            console.log("Super Admin account created: OVSADM001 / OvsAdm@12");
+            console.log("Super Admin account initialized.");
         }
 
         // Keep old ADMIN001 but mark as superadmin for backwards compat
@@ -426,8 +427,8 @@ app.delete('/api/users/orphans', async (req, res) => {
         const inst = req.query.institution;
         if (!inst) return res.status(400).json({ error: "Institution required" });
         const adminToken = req.headers['x-admin-token'];
-        if (adminToken !== process.env.ADMIN_SECRET && adminToken !== 'OVS_DELETE_CONFIRM') {
-            return res.status(403).json({ error: "Forbidden: Admin token required" });
+        if (!adminToken || adminToken !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ error: "Forbidden: Valid admin token required" });
         }
         const result = await db.execute({ 
             sql: "DELETE FROM users WHERE institution = ? AND role NOT IN ('developer','superadmin') AND (status IS NULL OR status = 'rejected')", 
@@ -443,8 +444,8 @@ app.delete('/api/users/role/:role', async (req, res) => {
         const inst = req.query.institution;
         if (!inst) return res.status(400).json({ error: "Institution required for role-based deletion" });
         const adminToken = req.headers['x-admin-token'];
-        if (adminToken !== process.env.ADMIN_SECRET && adminToken !== 'OVS_DELETE_CONFIRM') {
-            return res.status(403).json({ error: "Forbidden: Admin token required" });
+        if (!adminToken || adminToken !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ error: "Forbidden: Valid admin token required" });
         }
         const role = req.params.role;
         if (['developer', 'superadmin'].includes(role)) {
@@ -691,7 +692,9 @@ app.post('/api/election/reset', async (req, res) => {
         if (!institution) return res.status(400).json({ error: "Institution parameter is strictly required" });
         
         await db.execute({ sql: "UPDATE config SET value = ? WHERE key = ?", args: [JSON.stringify({ isCompleted: false, isActive: false, startTime: null, endTime: null }), 'election_' + institution] });
-        await db.execute({ sql: "UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL WHERE role IN ('voter','contestant') AND institution = ?", args: [institution] });
+        // Also clear the registration schedule for this institution to prevent stale temporal guards
+        await db.execute({ sql: "DELETE FROM config WHERE key = ?", args: ['registration_' + institution] });
+        await db.execute({ sql: "UPDATE users SET hasVoted = 0, votedFor = NULL, voteStatus = NULL, canVote = 0 WHERE role IN ('voter','contestant') AND institution = ?", args: [institution] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

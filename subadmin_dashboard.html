@@ -68,6 +68,7 @@
 </head>
 <body>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <script src="storage.js"></script>
     <!-- Cyber Mesh Particles -->
     <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
 
@@ -207,13 +208,31 @@ async function saLogin(){
   const id=document.getElementById('auth-id').value.trim();
   const pass=document.getElementById('auth-pass').value;
   const err=document.getElementById('auth-err');
+  const btn=document.querySelector('#auth-overlay button');
   err.textContent='';
+  
+  if(!id || !pass) {
+    err.textContent = "Please enter both Sub-Admin ID and Password.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Authenticating...";
+
   try{
-    const user=await apiFetch(`/users/${id}`);
-    if(user.role!=='subadmin') throw new Error('Not a Sub-Admin account.');
-    if(user.status!=='active') throw new Error('Account is not active.');
-    if(user.password!==pass&&user.password!==btoa(pass)) throw new Error('Wrong password.');
-    localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+    // Use the central StorageManager.login for consistency and security
+    const user = await StorageManager.login(id, pass);
+    
+    if(!user) {
+        throw new Error('Invalid credentials');
+    }
+    
+    if(user.role !== 'subadmin') {
+        StorageManager.logout();
+        throw new Error('Not a Sub-Admin account. Use the correct login portal.');
+    }
+
+    // Success - UI already handled status checks inside StorageManager.login
     session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
@@ -221,7 +240,11 @@ async function saLogin(){
     document.getElementById('class-sub').textContent=`Managing ${user.year || ''} ${user.class} — ${user.branch} — ${user.institution}`;
     document.getElementById('class-students-sub').textContent=`Students in ${user.year || ''} ${user.class}`;
     loadAll();
-  }catch(e){err.textContent=e.message;}
+  }catch(e){
+    err.textContent=e.message;
+    btn.disabled = false;
+    btn.innerText = "Login";
+  }
 }
 function saLogout(){
   session=null;

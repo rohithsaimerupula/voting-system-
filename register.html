@@ -1080,18 +1080,22 @@
                 const liveStatus = await StorageManager.getRegistrationStatus();
                 const now = Date.now();
                 if (!liveStatus || liveStatus.isActive === false) {
+                    btn.innerText = "Registration Stopped";
                     return showError("❌ Registration has been stopped by the administrator. Your submission was not accepted.");
                 }
                 if (liveStatus.endTime && now > new Date(liveStatus.endTime).getTime()) {
+                    btn.innerText = "Registration Closed";
                     return showError("❌ Registration deadline has passed. No more submissions are accepted.");
                 }
                 if (liveStatus.startTime && now < new Date(liveStatus.startTime).getTime()) {
+                    btn.disabled = false;
+                    btn.innerText = "Complete Registration";
                     return showError("❌ Registration has not opened yet.");
                 }
+                // If we get here, gate is open. We don't reset the button yet because
+                // we're about to show "Checking file..." and other progress states.
             } catch(gateErr) {
                 console.warn("[OVS] Status gate check failed:", gateErr);
-                // Proceed on network error (leniency) — server will validate on save
-            } finally {
                 btn.disabled = false;
                 btn.innerText = "Complete Registration";
             }
@@ -1210,7 +1214,13 @@
                 createdAt: new Date().toISOString()
             };
 
-            await StorageManager.addUser(user);
+            try {
+                await StorageManager.addUser(user);
+            } catch (saveErr) {
+                btn.disabled = false;
+                btn.innerText = "Complete Registration";
+                return showError("❌ Submission failed: " + saveErr.message);
+            }
 
             // --- Show Success Screen ---
             const instName = localStorage.getItem('ovs_inst_name') || 'Your Institution';

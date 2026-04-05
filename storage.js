@@ -125,7 +125,21 @@ const StorageManager = {
     },
 
     async hashPassword(password) {
-        return btoa(password); 
+        if (!password) return "";
+        try {
+            // SubtleCrypto requires a secure context (HTTPS or localhost)
+            if (!window.crypto || !window.crypto.subtle) {
+                console.warn("[OVS Security] crypto.subtle unavailable. Falling back to btoa.");
+                return btoa(password);
+            }
+            const msgUint8 = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (e) {
+            console.error("[OVS Security] Hashing failed:", e);
+            return btoa(password); // Final fallback
+        }
     },
 
     // --- OFFLINE/FIRESTORE IMAGE COMPRESSION ---
@@ -253,7 +267,13 @@ const StorageManager = {
             }
 
             const hashedPwd = await this.hashPassword(password);
-            const isMatch = (userData.password === password || userData.password === hashedPwd);
+            const legacyHashed = btoa(password); // Support previous btoa storage
+            
+            const isMatch = (
+                userData.password === hashedPwd || 
+                userData.password === legacyHashed || 
+                userData.password === password
+            );
 
             if (!isMatch) throw new Error("Invalid credentials.");
 
