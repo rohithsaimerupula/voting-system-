@@ -441,8 +441,18 @@
                 sectionHeader.style.textAlign = 'left';
                 sectionHeader.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
                 sectionHeader.style.paddingBottom = '0.5rem';
-                sectionHeader.innerText = cat + " Category";
+                sectionHeader.innerText = cat + " Category (Select 1 Candidate)";
                 candidatesGrid.appendChild(sectionHeader);
+
+                // Add instruction if first section
+                if (candidatesGrid.children.length === 1) {
+                    const info = document.createElement('p');
+                    info.className = 'text-muted';
+                    info.style.marginBottom = '1.5rem';
+                    info.style.fontSize = '0.9rem';
+                    info.innerHTML = 'ℹ️ <strong style="color:var(--neon-cyan);">Rule:</strong> You must select exactly one candidate for every category listed below. Click "Select" to make a choice; clicking another candidate in the same category will automatically update your selection.';
+                    candidatesGrid.insertBefore(info, sectionHeader);
+                }
 
                 const grid = document.createElement('div');
                 grid.style.display = 'grid';
