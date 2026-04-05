@@ -544,9 +544,10 @@
       retryBtn.style.display = 'none';
       try {
         const data = await api('/dev/stats');
-        const { counts, superAdmins } = data;
+        const { counts, superAdmins, institutions } = data;
         
         window.saCache = superAdmins;
+        window.instCache = institutions;
         overlay.style.display = 'none';
 
         document.getElementById('stat-sa').textContent = counts.saCount;

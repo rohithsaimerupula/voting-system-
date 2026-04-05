@@ -602,13 +602,16 @@ app.get('/api/dev/stats', async (req, res) => {
                 (SELECT COUNT(*) FROM users WHERE role = 'admin') as adminCount,
                 (SELECT COUNT(*) FROM users WHERE role = 'subadmin') as subAdminCount,
                 (SELECT COUNT(*) FROM users WHERE role IN ('voter','contestant')) as studentCount,
-                (SELECT COUNT(DISTINCT institution) FROM users WHERE institution IS NOT NULL) as instCount
+                (SELECT COUNT(DISTINCT institution) FROM users WHERE role = 'superadmin' AND institution IS NOT NULL AND institution != 'Unknown') as instCount
             FROM users LIMIT 1
         `);
         const saResult = await db.execute("SELECT regNum, name, institution, email, status FROM users WHERE role = 'superadmin' ORDER BY name ASC");
+        const instResult = await db.execute("SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution IS NOT NULL AND institution != 'Unknown' ORDER BY institution ASC");
+        
         res.json({
             counts: stats.rows[0],
-            superAdmins: saResult.rows
+            superAdmins: saResult.rows,
+            institutions: instResult.rows.map(r => r.institution)
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
