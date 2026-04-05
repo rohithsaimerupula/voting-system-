@@ -377,24 +377,29 @@
                 return;
             }
 
+            let currentStatus = null;
+
             const updateTimer = () => {
                 const now = new Date().getTime();
                 const start = new Date(regStatus.startTime).getTime();
                 const end = new Date(regStatus.endTime).getTime();
                 
-                let targetDate, labelText, statusText, isClosed = false, isUpcoming = false;
+                let targetDate, labelText, statusText, isClosed = false, isUpcoming = false, statusKey;
                 
                 if (now < start) {
                     targetDate = start;
                     labelText = "Registration Starts In";
                     statusText = "Prepare for upcoming elections";
                     isUpcoming = true;
+                    statusKey = 'upcoming';
                 } else if (now < end) {
                     targetDate = end;
                     labelText = "Registration Ends In";
                     statusText = "Submit your application now";
+                    statusKey = 'live';
                 } else {
                     isClosed = true;
+                    statusKey = 'closed';
                 }
 
                 if (isClosed) {
@@ -402,6 +407,7 @@
                     overlayDesc.innerText = "The registration portal is currently not active. Please check the schedule for your institution.";
                     overlay.classList.remove('hidden');
                     formContent.classList.add('hidden');
+                    currentStatus = 'closed';
                     return;
                 }
 
@@ -418,38 +424,46 @@
                     if(badge) badge.innerText = "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution");
                 }
 
+                if (currentStatus !== statusKey) {
+                    container.innerHTML = `
+                        <div class="reg-timer-banner">
+                            <div class="timer-label">
+                                <h4>${labelText}</h4>
+                                <p>${statusText}</p>
+                            </div>
+                            <div class="timer-display">
+                                <div class="time-block">
+                                    <div id="reg-days" class="time-value">0</div>
+                                    <div class="time-unit">D</div>
+                                </div>
+                                <div class="time-block">
+                                    <div id="reg-hours" class="time-value">0</div>
+                                    <div class="time-unit">H</div>
+                                </div>
+                                <div class="time-block">
+                                    <div id="reg-mins" class="time-value">0</div>
+                                    <div class="time-unit">M</div>
+                                </div>
+                                <div class="time-block">
+                                    <div id="reg-secs" class="time-value">0</div>
+                                    <div class="time-unit">S</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    currentStatus = statusKey;
+                }
+
                 const diff = targetDate - now;
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
-                container.innerHTML = `
-                    <div class="reg-timer-banner">
-                        <div class="timer-label">
-                            <h4>${labelText}</h4>
-                            <p>${statusText}</p>
-                        </div>
-                        <div class="timer-display">
-                            <div class="time-block">
-                                <div class="time-value">${days}</div>
-                                <div class="time-unit">D</div>
-                            </div>
-                            <div class="time-block">
-                                <div class="time-value">${hours}</div>
-                                <div class="time-unit">H</div>
-                            </div>
-                            <div class="time-block">
-                                <div class="time-value">${mins}</div>
-                                <div class="time-unit">M</div>
-                            </div>
-                            <div class="time-block">
-                                <div class="time-value">${secs}</div>
-                                <div class="time-unit">S</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                document.getElementById('reg-days').textContent = days;
+                document.getElementById('reg-hours').textContent = hours;
+                document.getElementById('reg-mins').textContent = mins;
+                document.getElementById('reg-secs').textContent = secs;
             };
 
             updateTimer();

@@ -410,12 +410,14 @@
                     .then(r => r.ok ? r.json() : currentUser)
                     .catch(() => currentUser);
 
+                let currentStatus = null;
+
                 const updateTimer = () => {
                     const now = new Date().getTime();
                     const startT = election.startTime ? new Date(election.startTime).getTime() : 0;
                     const endT = election.endTime ? new Date(election.endTime).getTime() : 0;
                     
-                    let targetDate, labelText, statusText, colorClass = "var(--neon-cyan)";
+                    let targetDate, labelText, statusText, colorClass = "var(--neon-cyan)", statusKey;
                     let isClosed = false, isLive = false, isUpcoming = false;
 
                     if (!startT || !endT) {
@@ -423,6 +425,7 @@
                         overlayDesc.innerText = "No election has been scheduled for your institution at this time.";
                         overlay.classList.remove('hidden');
                         votingSection.classList.add('hidden');
+                        currentStatus = 'closed';
                         return;
                     }
 
@@ -431,14 +434,17 @@
                         labelText = "Election Starts In";
                         statusText = "Prepare to cast your vote";
                         isUpcoming = true;
+                        statusKey = 'upcoming';
                     } else if (now < endT) {
                         targetDate = endT;
                         labelText = "Election Ends In";
                         statusText = "Polls are open — Cast your vote!";
                         colorClass = "var(--success)";
                         isLive = true;
+                        statusKey = 'live';
                     } else {
                         isClosed = true;
+                        statusKey = 'closed';
                     }
 
                     if (isClosed) {
@@ -446,42 +452,50 @@
                         overlayDesc.innerText = "The official voting time has concluded. Polls are now strictly closed.";
                         overlay.classList.remove('hidden');
                         votingSection.classList.add('hidden');
+                        currentStatus = 'closed';
                         return;
                     }
 
-                    // Handle Countdown
+                    if (currentStatus !== statusKey) {
+                        timerContainer.innerHTML = `
+                            <div class="election-timer-banner" style="border-color: ${colorClass}44; background: ${colorClass}08;">
+                                <div class="timer-label">
+                                    <h4 style="color: ${colorClass};">${labelText}</h4>
+                                    <p>${statusText}</p>
+                                </div>
+                                <div class="timer-display">
+                                    <div class="time-block">
+                                        <div id="elec-days" class="time-value">0</div>
+                                        <div class="time-unit">D</div>
+                                    </div>
+                                    <div class="time-block">
+                                        <div id="elec-hours" class="time-value">0</div>
+                                        <div class="time-unit">H</div>
+                                    </div>
+                                    <div class="time-block">
+                                        <div id="elec-mins" class="time-value">0</div>
+                                        <div class="time-unit">M</div>
+                                    </div>
+                                    <div class="time-block">
+                                        <div id="elec-secs" class="time-value">0</div>
+                                        <div class="time-unit">S</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        currentStatus = statusKey;
+                    }
+
                     const diff = targetDate - now;
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
-                    timerContainer.innerHTML = `
-                        <div class="election-timer-banner" style="border-color: ${colorClass}44; background: ${colorClass}08;">
-                            <div class="timer-label">
-                                <h4 style="color: ${colorClass};">${labelText}</h4>
-                                <p>${statusText}</p>
-                            </div>
-                            <div class="timer-display">
-                                <div class="time-block">
-                                    <div class="time-value">${days}</div>
-                                    <div class="time-unit">D</div>
-                                </div>
-                                <div class="time-block">
-                                    <div class="time-value">${hours}</div>
-                                    <div class="time-unit">H</div>
-                                </div>
-                                <div class="time-block">
-                                    <div class="time-value">${mins}</div>
-                                    <div class="time-unit">M</div>
-                                </div>
-                                <div class="time-block">
-                                    <div class="time-value">${secs}</div>
-                                    <div class="time-unit">S</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    document.getElementById('elec-days').textContent = days;
+                    document.getElementById('elec-hours').textContent = hours;
+                    document.getElementById('elec-mins').textContent = mins;
+                    document.getElementById('elec-secs').textContent = secs;
 
                     // Handle Access Logic
                     if (isLive) {
