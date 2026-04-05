@@ -232,7 +232,7 @@
                     <div class="form-group hidden" id="otp-group">
                         <label>Enter OTP</label>
                         <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6">
+                            <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                             <button type="button" class="submit-btn" id="verify-otp-btn"
                                 style="width: auto; background: var(--success); color: white;"
                                 onclick="verifyOtp()">Verify</button>
@@ -242,9 +242,9 @@
 
                     <!-- Portrait Upload (File) -->
                     <div class="form-group">
-                        <label>Upload ID Card (Vignan IIT Format)</label>
+                        <label>Upload ID Card (Student ID Photo)</label>
                         <input type="file" id="portrait" accept=".png, .jpg, .jpeg" onchange="handleIdUpload(this)">
-                        <small style="color: var(--text-muted);">Scan ID for AI identity verification. Images Only (.png, .jpg).</small>
+                        <small style="color: var(--text-muted);">Scan your student ID card for AI face verification. Images Only (.png, .jpg).</small>
                         
                         <!-- ID Scan Preview -->
                         <div id="id-scan-indicator" class="hidden" style="margin-top:1rem; padding:0.8rem; background:rgba(6,182,212,0.05); border:1px solid rgba(6,182,212,0.2); border-radius:12px; display:flex; align-items:center; gap:1rem;">
@@ -509,7 +509,13 @@
                         }
                     }
                 }
-            } catch(e) { console.error("Categories fetch fail", e); }
+            } catch(e) {
+                console.error("Categories fetch fail", e);
+                const sel = document.getElementById('category');
+                sel.innerHTML = '<option value="">⚠️ Failed to load categories</option>';
+                const contestantOpt = document.querySelector('#role option[value="contestant"]');
+                if (contestantOpt) { contestantOpt.disabled = true; contestantOpt.textContent = 'Candidate (Unavailable)'; }
+            }
         }
 
         async function checkRegistrationStatus(inst) {
@@ -847,11 +853,16 @@
             } else {
                 btn.disabled = true;
                 let missing = [];
-                if (!otpVerified) missing.push("Verify OTP");
-                if (!webcamPhoto) missing.push("Capture Face");
-                btn.innerText = "Complete: " + missing.join(" & ");
+                if (!otpVerified) missing.push("OTP");
+                if (!webcamPhoto) missing.push("Face Capture");
+                btn.innerText = missing.length > 0 ? "Complete OTP & Face Capture to enable" : "Complete Registration";
             }
         }
+
+        // Stop webcam if user navigates away
+        window.addEventListener('beforeunload', () => {
+            if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); }
+        });
 
         // --- OLD VALIDATION LOGIC ---
         const nameInput = document.getElementById('name');
@@ -993,6 +1004,18 @@
             errorContainer.classList.add('hidden');
             btn.disabled = true;
             btn.innerText = "Checking file...";
+
+            // Duplicate Reg Number check
+            try {
+                const existing = await fetch(`/api/users/${regNum}?institution=${encodeURIComponent(localStorage.getItem('ovs_inst_name')||'')}`);
+                if (existing.ok) {
+                    const existingUser = await existing.json();
+                    if (existingUser && existingUser.regNum) {
+                        btn.disabled = false; btn.innerText = "Complete Registration";
+                        return showError(`Registration ID "${regNum}" is already registered. Each student can only register once.`);
+                    }
+                }
+            } catch(dupErr) { /* API returned 404, user doesn't exist — safe to proceed */ }
 
             // File Handling (Legacy Portrait)
             const fileInput = document.getElementById('portrait');

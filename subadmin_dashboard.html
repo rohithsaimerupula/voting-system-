@@ -90,7 +90,7 @@
     <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
     <div class="nav-item" onclick="showPage('students')">🎓 My Class</div>
     <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
-      <div class="nav-item" onclick="loadAll()" style="color:var(--purple)">🔄 Refresh Data</div>
+      <div class="nav-item" onclick="refreshAll()" style="color:var(--purple)">🔄 Refresh Data</div>
       <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
@@ -237,6 +237,12 @@ function showPage(id){
   if(id==='students') renderStudents(classStudents);
 }
 
+async function refreshAll() {
+  toast('🔄 Refreshing...');
+  await loadAll();
+  toast('✅ Data refreshed!');
+}
+
 async function loadAll(){
   try{
     const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year||'1st')}`);
@@ -342,7 +348,7 @@ async function grantAll(){
   const eligible = classStudents.filter(s => s.status === 'active');
   if(eligible.length === 0) return toast('No active students to grant access to.', false);
   try{
-    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true})});
+    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});
     toast(`Vote granted to ${eligible.length} active students!`);loadAll();
   }catch(e){toast(e.message,false);}
 }
@@ -400,7 +406,7 @@ async function saveEdit(){
   const pass=document.getElementById('edit-pass').value;
 
   if(!name) return toast('Name cannot be empty',false);
-  if(!/^[1-9]$/.test(section)) return toast('Section must be a single digit 1-9',false);
+  if(section && !/^[1-9]$/.test(section)) return toast('Section must be a single digit (1-9)',false);
   
   const updates = { name, email, year, branch, section, class: branch+'-'+section };
   

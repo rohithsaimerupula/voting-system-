@@ -216,7 +216,7 @@
     <div class="nav-item" onclick="showPage('voting')">🗳️ Voting Control</div>
     <div class="nav-item" onclick="showPage('audit')">📜 Audit Log</div>
     <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
-      <div class="nav-item" onclick="loadAll()" style="color:var(--cyan)">🔄 Refresh Data</div>
+      <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)">🔄 Refresh Data</div>
       <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
@@ -923,6 +923,12 @@ function showPage(id) {
   if (id==='students') renderStudents(allStudents);
   if (id==='voting') loadVoting();
   if (id==='audit') loadAudit();
+}
+
+async function refreshAll() {
+  toast('🔄 Refreshing data...');
+  await loadAll();
+  toast('✅ Data refreshed!');
 }
 
 async function loadAll() {

@@ -390,6 +390,7 @@
             } catch (err) {
                 console.error(err);
                 document.getElementById('election-status-header').innerText = "Connection Error";
+                document.getElementById('election-status-desc').innerText = "Could not connect. Please refresh or try again.";
                 document.getElementById('status-banner').classList.remove('hidden');
             }
         }
@@ -406,6 +407,12 @@
             const overlayDesc = document.getElementById('overlay-desc');
 
             try {
+                statusHeader.innerHTML = '';
+                statusDesc.innerHTML = '';
+                statusBanner.classList.add('hidden');
+                timerContainer.innerHTML = '<div class="skeleton" style="height:100px;border-radius:24px;margin-bottom:2rem;"></div>';
+                votingSection.classList.add('hidden');
+
                 const election = await StorageManager.getElectionStatus();
                 const user = await fetch(`/api/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
                     .then(r => r.ok ? r.json() : currentUser)
@@ -501,6 +508,8 @@
                     // Handle Access Logic
                     if (isLive) {
                         overlay.classList.add('hidden');
+                        skeleton.classList.add('hidden');
+                        statusDesc.innerHTML = ''; // Clear stale content
                         if (!user.canVote || user.canVote === 0) {
                             statusHeader.innerText = "Access Pending ⏳";
                             statusHeader.style.color = "#f59e0b";
@@ -811,7 +820,9 @@
                 document.getElementById('vote-video').classList.remove('hidden');
                 document.getElementById('vote-preview').classList.add('hidden');
             } catch (err) {
-                alert("Webcam Error: " + err.message);
+                const errEl = document.getElementById('modal-error');
+                errEl.innerText = "Webcam Error: " + err.message;
+                errEl.classList.remove('hidden');
             }
         }
 
@@ -848,11 +859,11 @@
             if (currentStep === 1) {
                 // Verify Password
                 const pwd = document.getElementById('confirm-password').value;
-                if (pwd !== currentUser.password) {
-                    // Check if hash matches (in case session has hash)
+                // Also accept btoa-encoded password as fallback
+                const btoaPwd = btoa(pwd);
+                if (pwd !== currentUser.password && btoaPwd !== currentUser.password) {
                     const hash = await StorageManager.hashPassword(pwd);
-                    if (hash !== currentUser.password && pwd !== currentUser.password) {
-                        // Fail both plain and hash check
+                    if (hash !== currentUser.password && pwd !== currentUser.password && btoaPwd !== currentUser.password) {
                         const err = document.getElementById('modal-error');
                         err.innerText = "Incorrect Password";
                         err.classList.remove('hidden');
@@ -863,8 +874,9 @@
 
             } else if (currentStep === 2) {
                 // Final Submit
-                // Final Submit
                 if (!voteWebcamPhoto) return;
+                // Stop webcam stream before submitting
+                if (voteWebcamStream) { voteWebcamStream.getTracks().forEach(t => t.stop()); }
 
                 try {
                     // Prepare the candidateRegNum payload
@@ -955,7 +967,9 @@
                     closeModal();
                     setTimeout(() => window.location.reload(), 300);
                 } catch (err) {
-                    alert("Error casting vote: " + err.message);
+                    const errEl = document.getElementById('modal-error');
+                    errEl.innerText = "Error casting vote: " + (err.message || 'Unknown error');
+                    errEl.classList.remove('hidden');
                 }
             }
         });

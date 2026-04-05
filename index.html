@@ -527,7 +527,9 @@
                 
                 unlockGateway(data.institution);
             } catch (e) {
-                err.textContent = '✗ ' + e.message;
+                err.textContent = (!navigator.onLine || e.message === 'Failed to fetch')
+                    ? '✗ Server unreachable. Please check your internet connection.'
+                    : '✗ ' + (e.message || 'Invalid access code.');
                 btn.textContent = 'Verify Access →';
                 btn.disabled = false;
 
@@ -560,6 +562,8 @@
             initElectionTimer();
         }
 
+        let _elecTimerInterval = null;
+
         async function initElectionTimer() {
             const container = document.getElementById('election-timer-container');
             const election = await StorageManager.getElectionStatus();
@@ -567,6 +571,8 @@
             if (!election || !election.startTime || !election.endTime) return;
 
             let currentStatus = null; // track status to avoid unnecessary innerHTML resets
+
+            if (_elecTimerInterval) clearInterval(_elecTimerInterval);
 
             const updateTimer = () => {
                 const now = new Date().getTime();
@@ -645,8 +651,10 @@
             };
 
             updateTimer();
-            setInterval(updateTimer, 1000);
+            _elecTimerInterval = setInterval(updateTimer, 1000);
         }
+
+        let _regTimerInterval = null;
 
         async function initRegistrationTimer() {
             const container = document.getElementById('reg-timer-container');
@@ -722,8 +730,14 @@
             };
 
             updateTimer();
-            setInterval(updateTimer, 1000);
+            _regTimerInterval = setInterval(updateTimer, 1000);
         }
+
+        // Clear intervals when navigating away
+        window.addEventListener('beforeunload', () => {
+            if (typeof _regTimerInterval !== 'undefined') clearInterval(_regTimerInterval);
+            if (typeof _elecTimerInterval !== 'undefined') clearInterval(_elecTimerInterval);
+        });
 
         // Navbar scroll effect
         window.addEventListener('scroll', () => {
