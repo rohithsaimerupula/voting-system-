@@ -759,7 +759,7 @@ async function saStep1() {
   btn.textContent = 'Verifying...';
   btn.disabled = true;
   try {
-    const user = await apiFetch(`/users/${id}`);
+    const user = await apiFetch(`/users/${id}?institution=${encodeURIComponent(saSession.institution)}`);
     if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
     if (user.status !== 'active') throw new Error('Account is not active.');
     const hashedSA = await hashSA(pass);
@@ -935,7 +935,7 @@ async function refreshAll() {
 async function loadAll() {
   try {
     const [allUsers, election] = await Promise.all([
-      apiFetch('/users'),
+      apiFetch(`/users?institution=${encodeURIComponent(saSession.institution)}`),
       apiFetch(`/config/election_${saSession.institution}`).catch(()=>({}))
     ]);
 
@@ -1281,7 +1281,7 @@ async function setElectionTimes() {
   }
   // ── Guard: Each category must have at least 2 candidates ──
   try {
-      const allUsers = await apiFetch('/users');
+      const allUsers = await apiFetch(`/users?institution=${encodeURIComponent(saSession.institution)}`);
       const contestants = allUsers.filter(u => u && u.role === 'contestant' && u.institution === saSession.institution && u.status === 'active');
       // Count candidates per category
       const countByCat = {};
@@ -1455,7 +1455,7 @@ async function saveCategories() {
 async function loadVoting() {
   try {
     const [users, election, registration] = await Promise.all([
-      apiFetch('/users'),
+      apiFetch(`/users?institution=${encodeURIComponent(saSession.institution)}`),
       apiFetch(`/config/election_${saSession.institution}`).catch(() => ({})),
       apiFetch(`/config/registration_${saSession.institution}`).catch(() => ({}))
     ]);
