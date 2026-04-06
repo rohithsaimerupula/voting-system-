@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
 const { createClient } = require('@libsql/client');
@@ -15,6 +16,25 @@ const turso = createClient({
     url: process.env.TURSO_DATABASE_URL || "libsql://dummy",
     authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
 });
+// ─────────────────────────────────────────
+//  MAILER (Nodemailer Transporter)
+// ─────────────────────────────────────────
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'localhost',
+    port: process.env.SMTP_PORT || 587,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+// Verify transporter connection on start (silent)
+if (process.env.SMTP_USER) {
+    transporter.verify((error) => {
+        if (error) console.warn("[SMTP] Connection failure:", error.message);
+        else console.log("[SMTP] Connection established successfully.");
+    });
+}
 
 // ─────────────────────────────────────────
 //  DB RETRY WRAPPER (handles Turso cold-start sleeps)
@@ -741,6 +761,52 @@ app.get('/api/candidates', async (req, res) => {
         });
         res.json(result.rows);
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────
+//  AUTH / OTP ENDPOINT
+// ─────────────────────────────────────────
+app.post('/api/auth/send-otp', async (req, res) => {
+    try {
+        const { email, name, otp, context } = req.body;
+        if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+
+        console.log(`[AUTH] Sending ${context || 'OTP'} to ${email}: ${otp}`);
+
+        // If SMTP is NOT configured, we log to console (Development Fallback)
+        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username') {
+            console.warn(`[AUTH] SMTP NOT CONFIGURED. OTP for ${email} is ${otp}`);
+            return res.json({ 
+                success: true, 
+                warning: "Development Mode: SMTP not configured. OTP printed to server console." 
+            });
+        }
+
+        const mailOptions = {
+            from: `"Vanguard Security" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+            to: email,
+            subject: `${context || 'Verification Code'} — OVS`,
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                    <h2 style="color: #ff2a4d; text-align: center;">Vanguard Voting System</h2>
+                    <p>Hello <strong>${name || 'User'}</strong>,</p>
+                    <p>You requested a verification code for: <strong>${context || 'Secure Activity'}</strong>.</p>
+                    <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: 800; letter-spacing: 5px; color: #333; margin: 20px 0;">
+                        ${otp}
+                    </div>
+                    <p style="font-size: 13px; color: #666; text-align: center;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 11px; color: #999; text-align: center;">&copy; 2026 Vanguard Secure Systems. All rights reserved.</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    } catch (e) {
+        console.error("[AUTH] Mail Error:", e);
+        res.status(500).json({ error: "Failed to send email. " + e.message });
+    }
 });
 
 // ─────────────────────────────────────────

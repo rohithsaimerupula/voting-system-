@@ -9,13 +9,13 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         (function() {
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem('ovs_theme', 'dark');
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <style>
 
@@ -335,12 +335,6 @@
     <script>
         console.log("[OVS] Login System Initializing...");
 
-        if (typeof emailjs !== 'undefined') {
-            console.log("[OVS] EmailJS library loaded successfully.");
-        } else {
-            console.error("[OVS] EmailJS library failed to load!");
-        }
-
         const form = document.getElementById('login-form');
         const loginTitle = document.getElementById('login-title');
         const regInput = document.getElementById('regNum');
@@ -581,7 +575,6 @@
 
                     if (user.status === 'rejected') {
                         showError("Registration Rejected. Please register again.");
-                        // Optional: Delete them? For now just deny.
                         submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
                         return;
                     }
@@ -1014,20 +1007,12 @@
                 if (!user) throw new Error('Invalid credentials.');
                 if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
 
-                // Generate OTP and send via EmailJS
+                // Generate OTP and send via Backend
                 const otp = Math.floor(100000 + Math.random() * 900000).toString();
                 window._saModalOtp = otp;
                 window._saModalUser = user;
                 btn.textContent = 'Sending OTP...';
-                const PUBLIC_KEY = 'Iv4IKpLnL_2v-p5Ne';
-                const SERVICE_ID = 'service_emwze5b';
-                const TEMPLATE_ID = 'template_vcrerg5';
-                await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-                    name: user.name || 'Super Admin',
-                    otp: otp,
-                    context: 'Super Admin Login',
-                    to_email: user.email
-                }, PUBLIC_KEY);
+                await StorageManager.sendEmailOtp(user.email, user.name || 'Super Admin', otp, 'Super Admin Login');
                 document.getElementById('sa-step-1').style.display = 'none';
                 document.getElementById('sa-step-2').style.display = 'block';
                 err.style.color = '#22c55e';
@@ -1036,7 +1021,7 @@
                 btn.textContent = 'Send OTP & Continue';
                 btn.disabled = false;
                 err.style.color = '#ef4444';
-                err.textContent = e.message || (e.text ? 'Email error: ' + e.text : 'Error');
+                err.textContent = e.message || 'Error sending OTP';
             }
         }
 

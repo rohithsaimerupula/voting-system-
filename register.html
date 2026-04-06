@@ -90,18 +90,6 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script>
-        // Initialize EmailJS immediately after loading
-        (function() {
-            if (typeof emailjs !== 'undefined') {
-                emailjs.init("Iv4IKpLnL_2v-p5Ne");
-                console.log("[OVS] EmailJS initialized.");
-            } else {
-                console.error("[OVS] EmailJS failed to load from CDN.");
-            }
-        })();
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script></head>
 
@@ -806,9 +794,6 @@
             document.getElementById('error-container').classList.add('hidden');
 
             try {
-                if (typeof emailjs === 'undefined') {
-                    throw new Error("Email service not loaded. Please refresh the page.");
-                }
                 await StorageManager.sendEmailOtp(email, name, generatedOtp, "Registration");
                 lastOtpSentAt = Date.now();
                 // Only show OTP group AFTER confirmed sent

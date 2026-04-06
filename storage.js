@@ -278,12 +278,12 @@ const StorageManager = {
                     await this.sendEmailOtp(userData.email, userData.name, otp, "Super Admin 2FA Login");
                     return { requires2FA: true, otpRequired: otp, userObj: userData };
                 } catch (emailErr) {
-                    console.error("[OVS SECURITY] Email service failed (likely quota exceeded):", emailErr);
+                    console.error("[OVS SECURITY] Email service failed:", emailErr);
                     return { 
                         requires2FA: true, 
                         otpRequired: otp, 
                         userObj: userData,
-                        warning: "Email Quota Exceeded. Check Browser Console for Login Code (F12)."
+                        warning: "Email Delivery Failed. Check Browser Console for Login Code (F12)."
                     };
                 }
             }
@@ -361,7 +361,7 @@ const StorageManager = {
                     success: true, 
                     otp: otp, 
                     maskedEmail: maskedEmail, 
-                    warning: "Email service quota exceeded. Please check dashboard console for OTP (F12)." 
+                    warning: "Email Delivery Failed. Check Browser Console for Login Code (F12)." 
                 };
             }
         } catch (err) {
@@ -371,29 +371,32 @@ const StorageManager = {
     },
 
     async sendEmailOtp(email, name, otp, context) {
-         console.log(`[EmailSystem] Sending ${context} OTP to ${email}`);
-         const PUBLIC_KEY = "Iv4IKpLnL_2v-p5Ne"; 
-         const SERVICE_ID = "service_emwze5b";
-         const TEMPLATE_ID = "template_vcrerg5";
+         console.log(`[EmailSystem] Sending ${context} OTP Request to Backend: ${email}`);
          
-         if (typeof emailjs === 'undefined') {
-             throw new Error("EmailJS library not loaded. Check your connection.");
-         }
-
          try {
-             await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-                 name: name,
-                 otp: otp,
-                 context: context,
-                 to_email: email
-             }, PUBLIC_KEY);
-             console.log("[EmailSystem] Success: Email sent via EmailJS");
+             const response = await fetchApi('/auth/send-otp', {
+                 method: 'POST',
+                 body: JSON.stringify({
+                     email: email,
+                     name: name,
+                     otp: otp,
+                     context: context
+                 })
+             });
+
+             if (response.warning) {
+                 console.warn("[EmailSystem] Backend Warning:", response.warning);
+                 // We return the warning so it can be shown in the UI if needed
+                 return { success: true, warning: response.warning };
+             }
+
+             console.log("[EmailSystem] Success: OTP request processed by backend");
              return true;
          } catch (error) {
-             console.error("[EmailSystem] EmailJS Error:", error);
-             // Handle quota exceeded specifically for better DX
-             if (error.text && error.text.includes("quota exceeded")) {
-                 throw new Error("Monthly request quota exceeded. Please check dashboard console for OTP.");
+             console.error("[EmailSystem] Backend Error:", error);
+             // Special handling for quota/error messages from backend
+             if (error.message && error.message.includes("Failed to send email")) {
+                 throw new Error("Local email service failed. Please check backend logs or dashboard console for OTP.");
              }
              throw error;
          }
