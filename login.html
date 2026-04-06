@@ -860,6 +860,9 @@
 
         async function checkElectionCountdown() {
             if (isStaffMode) return; // Only for voters
+            const inst = localStorage.getItem('ovs_inst_name');
+            if (!inst) return; // Guard: No institution selected yet
+
             try {
                 const [status, users] = await Promise.all([
                     StorageManager.getElectionStatus(),

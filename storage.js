@@ -44,11 +44,10 @@ const StorageManager = {
 
     async logAudit(action, userRegNum, details = "") {
         try {
-            const currentUser = this.getCurrentUser();
-            const institution = currentUser ? currentUser.institution : "Unknown";
-            await fetchApi('/auditLogs', {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            await fetchApi(`/auditLogs?institution=${encodeURIComponent(inst)}`, {
                 method: 'POST',
-                body: JSON.stringify({ action, user: userRegNum, details, timestamp: new Date().toISOString(), institution })
+                body: JSON.stringify({ action, user: userRegNum, details, timestamp: new Date().toISOString(), institution: inst })
             });
         } catch(e) { console.error("Audit Log Failure: ", e); }
     },
@@ -577,24 +576,54 @@ const StorageManager = {
 
     // --- Q&A BOARD ---
     async submitQuestion(candidateRegNum, voterName, questionText) {
-        await fetchApi('/questions', { method: 'POST', body: JSON.stringify({ candidateId: candidateRegNum, voterName, question: questionText, timestamp: new Date().toISOString() }) });
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/questions?institution=${encodeURIComponent(inst)}`, { 
+            method: 'POST', 
+            body: JSON.stringify({ candidateId: candidateRegNum, voterName, question: questionText, timestamp: new Date().toISOString(), institution: inst }) 
+        });
     },
-    async getQuestions(candidateRegNum) { return await fetchApi(`/questions/${candidateRegNum}`); },
-    async answerQuestion(questionId, answerText) { await fetchApi(`/questions/${questionId}`, { method: 'PATCH', body: JSON.stringify({ answer: answerText }) }); },
+    async getQuestions(candidateRegNum) { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        return await fetchApi(`/questions/${candidateRegNum}?institution=${encodeURIComponent(inst)}`); 
+    },
+    async answerQuestion(questionId, answerText) { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/questions/${questionId}?institution=${encodeURIComponent(inst)}`, { 
+            method: 'PATCH', 
+            body: JSON.stringify({ answer: answerText }) 
+        }); 
+    },
 
     // --- ADMIN ACTIONS ---
     async updateAdminId(oldRegNum, newRegNum) {
-        let oldDoc = await fetchApi(`/users/${oldRegNum}`);
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        let oldDoc = await fetchApi(`/users/${oldRegNum}?institution=${encodeURIComponent(inst)}`);
         oldDoc.regNum = newRegNum;
-        await fetchApi('/users/add', { method: 'POST', body: JSON.stringify(oldDoc) });
-        await fetchApi(`/users/${oldRegNum}`, { method: 'DELETE' });
+        await fetchApi(`/users/add?institution=${encodeURIComponent(inst)}`, { method: 'POST', body: JSON.stringify(oldDoc) });
+        await fetchApi(`/users/${oldRegNum}?institution=${encodeURIComponent(inst)}`, { method: 'DELETE' });
         await this.logAudit("Changed Admin ID", oldRegNum, `New ID: ${newRegNum}`);
     },
 
-    async getUsers() { return await fetchApi('/users'); },
-    async clearUsersByRole(role) { await fetchApi(`/users/role/${role}`, { method: 'DELETE' }); },
-    async getAnnouncement() { try { const doc = await fetchApi('/config/announcement'); return doc.message; } catch(e) { return null; } },
-    async setAnnouncement(msg) { await fetchApi('/config/announcement', { method: 'POST', body: JSON.stringify({ merge: false, data: { message: msg } }) }); },
+    async getUsers() { 
+        const inst = localStorage.getItem('ovs_inst_name');
+        if (!inst) return [];
+        return await fetchApi(`/users?institution=${encodeURIComponent(inst)}`); 
+    },
+    async clearUsersByRole(role) { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/users/role/${role}?institution=${encodeURIComponent(inst)}`, { method: 'DELETE' }); 
+    },
+    async getAnnouncement() { 
+        try { 
+            const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+            const doc = await fetchApi(`/config/announcement_${inst}`); 
+            return doc.message; 
+        } catch(e) { return null; } 
+    },
+    async setAnnouncement(msg) { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi(`/config/announcement_${inst}`, { method: 'POST', body: JSON.stringify({ merge: false, data: { message: msg } }) }); 
+    },
     async approveUser(regNum) {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         await fetchApi(`/users/${regNum}?institution=${encodeURIComponent(inst)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
@@ -627,12 +656,20 @@ const StorageManager = {
     },
 
     // --- GLOBAL CHAT ---
-    async sendGlobalMessage(voterName, messageText) { await fetchApi('/globalChat', { method: 'POST', body: JSON.stringify({ voterName, text: messageText, timestamp: new Date().toISOString() }) }); },
+    async getGlobalMessages() { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        const messages = await fetchApi(`/globalChat?institution=${encodeURIComponent(inst)}`); 
+        return messages; 
+    },
+    async sendGlobalMessage(voterName, messageText) { 
+        const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
+        await fetchApi('/globalChat', { method: 'POST', body: JSON.stringify({ voterName, text: messageText, timestamp: new Date().toISOString(), institution: inst }) }); 
+    },
     listenToGlobalChat(callback) {
         let lastDataStr = "";
         const poll = async () => {
             try {
-                const messages = await fetchApi('/globalChat');
+                const messages = await this.getGlobalMessages();
                 const newDataStr = JSON.stringify(messages);
                 if (newDataStr !== lastDataStr) { lastDataStr = newDataStr; callback(messages.reverse()); }
             } catch (e) { }
