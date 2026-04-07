@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Branch Administration — OVS</title>
+  <title>Branch Admin Dashboard — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
       (function() {
@@ -14,74 +14,89 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { 
-      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3); 
-      --gold:#cccccc; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --purple:#ff2a4d; 
-      --text:#f8fafc; --muted:#cbd5e1; 
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root {
+      --bg:#050505; --surface:#111111; --border:rgba(6,182,212,0.3);
+      --cyan:#06b6d4; --blue:#3b82f6; --green:#22c55e; --red:#ef4444; --gold:#f59e0b;
+      --purple:#a855f7; --text:#f8fafc; --muted:#cbd5e1;
     }
-    body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; }
-    input, select { width:100%; padding:0.8rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-size:0.95rem; font-family:'Outfit',sans-serif; outline:none; transition:border 0.3s; }
-    input:focus, select:focus { border-color:var(--cyan); }
-    select option { background:#1e293b; }
-    label { display:block; color:var(--muted); font-size:0.78rem; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.05em; }
-    .btn { padding:0.75rem 1.5rem; border-radius:10px; border:none; cursor:pointer; font-size:0.95rem; font-weight:600; font-family:'Outfit',sans-serif; transition:all 0.3s; }
-    .btn-cyan { background:linear-gradient(135deg,var(--cyan),#cc223e); color:white; }
-    .btn-green { background:linear-gradient(135deg,#ff2a4d,#cc223e); color:white; }
-    .btn-red { background:linear-gradient(135deg,#ff2a4d,#cc223e); color:white; }
-    .btn:hover { transform:translateY(-2px); opacity:0.9; }
-    .btn-sm { padding:0.3rem 0.8rem; border-radius:6px; border:none; cursor:pointer; font-size:0.78rem; font-family:'Outfit',sans-serif; font-weight:600; }
-    .btn-d { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
-    .btn-g { background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.3); }
-    .layout { display:flex; min-height:100vh; }
-    .sidebar { width:230px; background:rgba(255,42,77,0.05); border-right:1px solid rgba(255,42,77,0.15); padding:1.5rem 1rem; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; }
-    .brand { font-size:1.4rem; font-weight:900; color:var(--cyan); margin-bottom:0.2rem; font-family:'Playfair Display', serif;}
-    .role-tag { font-size:0.75rem; color:var(--muted); margin-bottom:2rem; }
-    .nav-item { padding:0.7rem 1rem; border-radius:10px; cursor:pointer; transition:all 0.2s; margin-bottom:0.25rem; font-size:0.9rem; display:flex; align-items:center; gap:0.6rem; color:var(--muted); }
-    .nav-item:hover, .nav-item.active { background:rgba(255,42,77,0.1); color:var(--cyan); font-weight:600; }
-    .main { margin-left:230px; flex:1; padding:2rem; }
-    .page { display:none; }
-    .page.active { display:block; }
-    .page-title { font-size:1.6rem; font-weight:800; margin-bottom:0.4rem; font-family:'Playfair Display', serif;}
-    .page-sub { color:var(--muted); font-size:0.9rem; margin-bottom:2rem; }
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:2rem; }
-    .stat { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.2rem; text-align:center; }
-    .stat .num { font-size:2rem; font-weight:900; }
-    .stat .lbl { color:var(--muted); font-size:0.78rem; margin-top:0.2rem; }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; }
-    .card h3 { font-size:1rem; font-weight:700; margin-bottom:1.2rem; }
-    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
-    .form-field { display:flex; flex-direction:column; gap:0.3rem; }
-    table { width:100%; border-collapse:collapse; }
-    th { text-align:left; padding:0.7rem 0.8rem; color:var(--muted); font-size:0.75rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
-    td { padding:0.7rem 0.8rem; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.88rem; vertical-align:middle; }
-    tr:hover td { background:rgba(255,255,255,0.02); }
-    .badge { padding:0.2rem 0.6rem; border-radius:20px; font-size:0.72rem; font-weight:600; }
-    .ba { background:rgba(34,197,94,0.15); color:var(--green); }
-    .bp { background:rgba(245,158,11,0.15); color:var(--gold); }
-    .br { background:rgba(239,68,68,0.15); color:var(--red); }
-    .empty { text-align:center; color:var(--muted); padding:2rem; }
-    .toast { position:fixed; bottom:2rem; right:2rem; background:#1e293b; border:1px solid var(--border); border-radius:10px; padding:0.9rem 1.5rem; font-size:0.9rem; transform:translateY(100px); opacity:0; transition:all 0.4s; z-index:999; }
-    .toast.show { transform:translateY(0); opacity:1; }
-    .search-bar { width:100%; padding:0.7rem 1rem; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white; font-family:'Outfit',sans-serif; outline:none; margin-bottom:1rem; }
+    body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
+    input,select{width:100%;padding:0.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-size:0.95rem;font-family:'Outfit',sans-serif;outline:none;transition:border 0.3s;}
+    input:focus,select:focus{border-color:var(--cyan);}
+    select option{background:#1e293b;}
+    label{display:block;color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
+    .btn{padding:0.75rem 1.5rem;border-radius:10px;border:none;cursor:pointer;font-size:0.95rem;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.3s;}
+    .btn-cyan{background:linear-gradient(135deg,var(--cyan),var(--blue));color:white;}
+    .btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:white;}
+    .btn-red{background:linear-gradient(135deg,var(--red),#dc2626);color:white;}
+    .btn:hover{transform:translateY(-2px);opacity:0.9;}
+    .btn-sm{padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif;font-weight:600;}
+    .btn-d{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+    .btn-g{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
+    .btn-e{background:rgba(6,182,212,0.15);color:var(--cyan);border:1px solid rgba(6,182,212,0.3);}
+    .layout{display:flex;min-height:100vh;}
+    .sidebar{width:240px;background:rgba(6,182,212,0.05);border-right:1px solid rgba(6,182,212,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
+    .brand{font-size:1.4rem;font-weight:900;color:var(--cyan);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
+    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;}
+    .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.15rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
+    .nav-item:hover,.nav-item.active{background:rgba(6,182,212,0.1);color:var(--cyan);font-weight:600;}
+    .nav-group-label{font-size:0.68rem;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.1em;padding:0.8rem 1rem 0.3rem;margin-top:0.5rem;}
+    .nav-sub-item{padding:0.55rem 1rem 0.55rem 2rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.1rem;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);}
+    .nav-sub-item:hover,.nav-sub-item.active{background:rgba(6,182,212,0.08);color:var(--cyan);}
+    .sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
+    .main{margin-left:240px;flex:1;padding:2rem;}
+    .page{display:none;}.page.active{display:block;}
+    .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Playfair Display', serif;}
+    .page-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:2rem;}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem;text-align:center;}
+    .stat .num{font-size:2rem;font-weight:900;}.stat .lbl{color:var(--muted);font-size:0.78rem;margin-top:0.2rem;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;}
+    .card h3{font-size:1rem;font-weight:700;margin-bottom:1.2rem;}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;}
+    .form-field{display:flex;flex-direction:column;gap:0.3rem;}
+    table{width:100%;border-collapse:collapse;}
+    th{text-align:left;padding:0.7rem 0.8rem;color:var(--muted);font-size:0.75rem;text-transform:uppercase;border-bottom:1px solid var(--border);}
+    td{padding:0.7rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.88rem;vertical-align:middle;}
+    tr:hover td{background:rgba(255,255,255,0.02);}
+    .badge{padding:0.2rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:600;}
+    .ba{background:rgba(34,197,94,0.15);color:var(--green);}
+    .bp{background:rgba(245,158,11,0.15);color:var(--gold);}
+    .br{background:rgba(239,68,68,0.15);color:var(--red);}
+    .empty{text-align:center;color:var(--muted);padding:2rem;}
+    .toast{position:fixed;bottom:2rem;right:2rem;background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.5rem;font-size:0.9rem;transform:translateY(100px);opacity:0;transition:all 0.4s;z-index:999;}
+    .toast.show{transform:translateY(0);opacity:1;}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
-    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:450px;position:relative;}
+    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:500px;position:relative;max-height:85vh;overflow-y:auto;}
     .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;}
     .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
+    /* Action Dropdown */
+    .action-select{padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;font-family:'Outfit',sans-serif;cursor:pointer;min-width:130px;}
+    .action-select:focus{border-color:var(--cyan);outline:none;}
+    /* Checkbox Hierarchy */
+    .hierarchy-group { margin-bottom: 0.5rem; }
+    .hierarchy-year { font-weight: bold; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .hierarchy-classes { margin-left: 2rem; display: none; flex-direction: column; gap: 0.2rem; }
+    .hierarchy-classes.open { display: flex; }
+    /* Election Code */
+    .election-code-box{background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(6,182,212,0.05));border:2px solid rgba(6,182,212,0.5);border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;}
+    .election-code-box .code{font-size:2.5rem;font-weight:900;letter-spacing:0.3em;color:#fff;font-family:monospace;}
+    .pill-active{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
+    .pill-pending{background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
+    .pill-completed{background:rgba(100,116,139,0.15);color:#64748b;border:1px solid rgba(100,116,139,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
   </style>
 </head>
 <body>
-    <!-- Cyber Mesh Particles -->
-    <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
-    <script src="storage.js"></script>
+  <script src="storage.js"></script>
+  <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
 <!-- AUTH -->
 <div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(6,182,212,0.08) 0%,var(--bg) 70%)">
   <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:2rem;font-weight:900;color:var(--cyan);margin-bottom:0.25rem; font-family: 'Playfair Display', serif;">Institutional Portal</div>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Branch Administration Login</p>
-    <div style="text-align:left;margin-bottom:1rem;"><label>Admin ID</label><input type="text" id="auth-id" placeholder="ADM-CSE"></div>
+    <div style="font-size:2rem;font-weight:900;color:var(--cyan);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Branch Admin Portal</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Branch Level Management</p>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Admin ID</label><input type="text" id="auth-id" placeholder="ADMCSE01"></div>
     <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
     <button class="btn btn-cyan" style="width:100%" onclick="adminLogin()">Login</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
@@ -92,603 +107,529 @@
   <div class="sidebar">
     <div class="brand">🧑‍💼 OVS</div>
     <div class="role-tag" id="branch-label">Branch Authority</div>
-    <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
-    <div class="nav-item" onclick="showPage('students')">🎓 My Branch Students</div>
-    <div class="nav-item" onclick="showPage('subadmins')">👥 Manage Sub-Admins</div>
-    <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
+    <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)">📊 Overview</div>
+    <div class="nav-item" id="nav-students" onclick="showPage('students',this)">🎓 My Branch Students</div>
+    <div class="nav-item" id="nav-subadmins" onclick="showPage('subadmins',this)">👥 Manage Sub-Admins</div>
+    <div class="nav-group-label">🗳️ Voting</div>
+    <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)">🏢 My Election</div>
+    <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)">🎓 College Head Election</div>
+    <div class="sidebar-footer">
       <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)">🔄 Refresh Data</div>
       <div class="nav-item" onclick="adminLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
 
   <div class="main">
+
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
       <div class="page-title">📊 Branch Overview</div>
-      <div class="page-sub" id="branch-sub">Your assigned branch</div>
+      <div class="page-sub" id="branch-sub">Loading...</div>
       <div class="stats-grid">
-        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Total Students</div></div>
-        <div class="stat"><div class="num" id="s-accepted" style="color:var(--green)">-</div><div class="lbl">Accepted</div></div>
-        <div class="stat"><div class="num" id="s-pending" style="color:var(--gold)">-</div><div class="lbl">Pending</div></div>
-        <div class="stat"><div class="num" id="s-canvote" style="color:var(--cyan)">-</div><div class="lbl">Can Vote</div></div>
-        <div class="stat"><div class="num" id="s-voted" style="color:var(--purple)">-</div><div class="lbl">Voted</div></div>
-        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--gold)">-</div><div class="lbl">Sub-Admins</div></div>
+        <div class="stat"><div class="num" id="o-students" style="color:var(--cyan)">-</div><div class="lbl">Students</div></div>
+        <div class="stat"><div class="num" id="o-canvote" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
+        <div class="stat"><div class="num" id="o-subadmins" style="color:var(--purple)">-</div><div class="lbl">Sub-Admins</div></div>
+        <div class="stat"><div class="num" id="o-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
       </div>
-      <!-- PIE CHARTS -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:0.5rem;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
         <div class="card" style="padding:1.5rem;">
-          <h3 style="margin-bottom:1rem;">📋 Registration Status</h3>
-          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total registrations vs accepted</p>
-          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
-            <canvas id="chart-registrations"></canvas>
-          </div>
-          <div id="chart-reg-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+          <h3>📋 Registration Status (Branch)</h3>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;"><canvas id="chart-reg"></canvas></div>
         </div>
         <div class="card" style="padding:1.5rem;">
-          <h3 style="margin-bottom:1rem;">🗳️ Voting Eligibility</h3>
-          <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Total students vs allowed to vote</p>
-          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
-            <canvas id="chart-voting"></canvas>
-          </div>
-          <div id="chart-vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+          <h3>🗳️ Voting Status (Branch)</h3>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;"><canvas id="chart-vote"></canvas></div>
         </div>
       </div>
     </div>
 
     <!-- STUDENTS -->
     <div class="page" id="page-students">
-      <div class="page-title">🎓 Branch Students</div>
-      <div class="page-sub">Manage student registrations, edits, and vote access for your branch</div>
+      <div class="page-title">🎓 My Branch Students</div>
+      <div class="page-sub">Manage student details and viewing permissions</div>
       <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
-        <input class="search-bar" id="sf-search" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Search students..." oninput="applyStudentFilters()">
-        <select id="sf-year" onchange="applyStudentFilters()" style="min-width:140px;margin:0; background:var(--surface); border:1px solid var(--border); color:white; border-radius:8px; padding:0.6rem;">
+        <input style="flex:1;min-width:200px;" id="search-students" placeholder="🔍 Search students..." oninput="filterStudents()">
+        <select id="sf-year" onchange="filterStudents()" style="min-width:140px;max-width:180px;">
           <option value="">All Years</option>
           <option value="1st">1st Year</option>
           <option value="2nd">2nd Year</option>
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
         </select>
-        <button class="btn btn-green" onclick="grantAllVote()">Grant All Vote Access</button>
+        <button class="btn btn-green" onclick="grantAllVoteAccess()">✅ Grant All Vote</button>
       </div>
-      <div class="card" style="padding:0.5rem; overflow-x:auto;">
-        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Role</th><th>Yr</th><th>Cls</th><th>Vote Access</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+      <div class="card" style="padding:0.5rem;overflow-x:auto;">
+        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Role</th><th>Yr</th><th>Cls</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
 
     <!-- SUBADMINS -->
     <div class="page" id="page-subadmins">
-      <div class="page-title">👥 Sub-Admins</div>
-      <div class="page-sub">Create and manage sub-admins for classes in your branch</div>
+      <div class="page-title">👥 Manage Sub-Admins</div>
+      <div class="page-sub">Create and manage class-level administrators for your branch</div>
       <div class="card">
         <h3>➕ Create Sub-Admin</h3>
-        <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.25);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--cyan);">
-          🔒 Sub-Admins you create are automatically locked to <strong id="admin-branch-tag">your branch</strong>. Branch cannot be changed.
-        </div>
         <div class="form-grid">
-          <div class="form-field"><label>Sub-Admin ID <small style="color:var(--muted);text-transform:none">(9 chars · A-Z &amp; 0-9)</small></label><input type="text" id="sa-id" placeholder="SADMIN101" maxlength="9"></div>
-          <div class="form-field"><label>Full Name <small style="color:var(--muted);text-transform:none">(max 30)</small></label><input type="text" id="sa-name" placeholder="Mr. Suresh"></div>
-          <div class="form-field"><label>Email</label><input type="email" id="sa-email" placeholder="sa@inst.edu"></div>
-          <div class="form-field"><label>Branch <small style="color:var(--muted);text-transform:none">(auto-assigned)</small></label><input type="text" id="sa-branch-display" readonly style="opacity:0.5;cursor:not-allowed;"></div>
-          <div class="form-field"><label>Assigned Class (e.g. CSE-5)</label><input type="text" id="sa-class" placeholder="CSE-5" oninput="this.value=this.value.toUpperCase()"></div>
-          <div class="form-field"><label>Assigned Year</label>
-            <select id="sa-year" style="width:100%; border-radius:8px;">
-              <option value="1st">1st Year</option>
-              <option value="2nd">2nd Year</option>
-              <option value="3rd">3rd Year</option>
-              <option value="4th">4th Year</option>
-            </select>
-          </div>
-          <div class="form-field"><label>Password <small style="color:var(--muted);text-transform:none">(6 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sa@ab1" maxlength="6"></div>
+          <div class="form-field"><label>Sub-Admin ID (9 chars)</label><input type="text" id="sa-id" maxlength="9"></div>
+          <div class="form-field"><label>Full Name</label><input type="text" id="sa-name"></div>
+          <div class="form-field"><label>Email</label><input type="email" id="sa-email"></div>
+          <div class="form-field"><label>Assigned Class</label><input type="text" id="sa-class" placeholder="CSE-1" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="form-field"><label>Year</label><select id="sa-year"><option value="1st">1st</option><option value="2nd">2nd</option><option value="3rd">3rd</option><option value="4th">4th</option></select></div>
+          <div class="form-field"><label>Password</label><input type="password" id="sa-pass" maxlength="6"></div>
         </div>
-        <button class="btn btn-cyan" style="margin-top:1rem" onclick="createSubAdmin()">Create Sub-Admin</button>
+        <button class="btn btn-cyan" style="margin-top:1rem" onclick="createSubadmin()">Create Sub-Admin</button>
       </div>
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap;">
-          <h3 style="margin:0;">📋 Sub-Admins in My Branch</h3>
-          <div style="display:flex;align-items:center;gap:0.75rem;">
-            <label style="margin:0;font-size:0.8rem;color:var(--muted);white-space:nowrap;">Filter by Year:</label>
-            <select id="sa-filter-year" onchange="applySaFilter()" style="max-width:140px;margin:0;padding:0.4rem;font-size:0.85rem;background:rgba(255,42,77,0.05);border:1px solid rgba(255,42,77,0.2);color:white;border-radius:8px;">
-              <option value="">All Years</option>
-              <option value="1st">1st Year</option>
-              <option value="2nd">2nd Year</option>
-              <option value="3rd">3rd Year</option>
-              <option value="4th">4th Year</option>
-            </select>
-          </div>
-        </div>
+        <h3>📋 Sub-Admins in My Branch</h3>
         <table><thead><tr><th>ID</th><th>Name</th><th>Year</th><th>Class</th><th>Email</th><th>Actions</th></tr></thead>
         <tbody id="sa-table"></tbody></table>
       </div>
     </div>
+
+    <!-- MY ELECTION -->
+    <div class="page" id="page-voting-my">
+      <div class="page-title">🏢 My Election</div>
+      <div class="page-sub">Create and manage branch-level elections with advanced scope</div>
+      
+      <!-- Election Setup -->
+      <div class="card" id="br-create-election-card">
+        <h3>➕ Create Branch Election</h3>
+        <div class="form-grid">
+          <div class="form-field"><label>Election Name</label><input type="text" id="br-elec-name" placeholder="Branch Pres 26"></div>
+          <div class="form-field"><label>Start Date</label><input type="datetime-local" id="br-elec-start"></div>
+          <div class="form-field"><label>End Date</label><input type="datetime-local" id="br-elec-end"></div>
+        </div>
+        
+        <h4 style="margin: 1.5rem 0 0.5rem; color:var(--text); font-size: 0.95rem;">🎛️ Select Voting Access Scope</h4>
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:1rem;">
+           <label style="display:flex; align-items:center; gap:0.5rem; font-weight:bold; color:var(--cyan); margin-bottom:1rem; font-size:0.9rem; text-transform:none;">
+              <input type="checkbox" id="br-scope-all" onchange="toggleScopeAll()"> Select All Branch Students
+           </label>
+           
+           <div id="br-scope-hierarchy">
+              <!-- Dynamically populated hierarchy based on available branch classes -->
+           </div>
+        </div>
+
+        <button class="btn btn-cyan" onclick="createBranchElection()">🚀 Create Branch Election</button>
+      </div>
+
+      <!-- Active Election -->
+      <div id="br-election-active" style="display:none;">
+        <div class="election-code-box">
+          <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.5rem;">🔑 Branch Election Code</div>
+          <div class="code" id="br-elec-code">------</div>
+          <div style="margin-top:0.8rem; display:flex; justify-content:center; gap:0.75rem;">
+            <button class="btn-sm btn-e" onclick="copyBrCode()">📋 Copy</button>
+            <button class="btn-sm btn-g" id="br-elec-start-btn" onclick="startBrElection()">▶ Start</button>
+            <button class="btn-sm btn-d" id="br-elec-stop-btn" onclick="stopBrElection()" style="display:none;">⏹ End</button>
+            <button class="btn-sm btn-d" style="background:rgba(2ef,44,44,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
+          </div>
+        </div>
+        
+          <div class="stat"><div class="num" id="br-v-pct" style="color:var(--purple)">-</div><div class="lbl">Turnout %</div></div>
+        </div>
+
+        <!-- 🏆 Live Election Results -->
+        <div class="card" id="br-elec-results-card" style="margin-top:1.5rem; display:none;">
+            <h3>🏆 Live Election Results</h3>
+            <div id="br-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
+                <p class="text-muted">Loading results...</p>
+            </div>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+
+    <!-- COLLEGE HEAD ELECTION -->
+    <div class="page" id="page-voting-college">
+      <div class="page-title">🎓 College Head Election</div>
+      <div class="page-sub">Approve voting access for your branch students in college-level elections</div>
+      <div class="card" id="col-elec-info" style="color:var(--muted);">Loading college election data...</div>
+      
+      <div class="card">
+        <h3>📊 Branch Turnout in College Election</h3>
+        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));">
+          <div class="stat"><div class="num" id="col-br-total" style="color:var(--cyan)">-</div><div class="lbl">Branch Studs</div></div>
+          <div class="stat"><div class="num" id="col-br-allowed" style="color:var(--green)">-</div><div class="lbl">Allowed</div></div>
+          <div class="stat"><div class="num" id="col-br-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
-<!-- EDIT USER MODAL -->
+<!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal">
-    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <button class="modal-close" onclick="closeEdit()">✕</button>
     <h3 id="edit-modal-title">✏️ Edit Details</h3>
-    <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--cyan);"></strong></p>
-    <input type="hidden" id="edit-regnum">
-    <input type="hidden" id="edit-role">
-    
+    <input type="hidden" id="edit-regnum"><input type="hidden" id="edit-role">
     <div class="form-grid" style="margin-bottom:1rem;">
       <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
       <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
     </div>
-    
     <div class="form-grid" style="margin-bottom:1rem;">
-      <div class="form-field">
-          <label>Class (e.g. CSE-5)</label>
-          <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
+      <div class="form-field"><label>Year</label>
+        <select id="edit-year"><option value="1st">1st Year</option><option value="2nd">2nd Year</option><option value="3rd">3rd Year</option><option value="4th">4th Year</option></select>
       </div>
+      <div class="form-field"><label>Class</label><input type="text" id="edit-class"></div>
     </div>
-    
-    <div class="form-field" id="edit-password-group" style="margin-bottom:1.5rem;">
-      <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
-      <input type="password" id="edit-pass" placeholder="Enter new password to change">
+    <div class="form-field" style="margin-bottom:1.5rem;">
+      <label>Password</label><input type="password" id="edit-pass">
     </div>
-    
     <button class="btn btn-cyan" style="width:100%" onclick="saveEdit()">Save Changes</button>
   </div>
 </div>
 
-<!-- Portrait Preview Modal -->
-<div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
-  <img id="portrait-preview" src="" style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
-  <button class="btn btn-d" style="margin-top: 1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+<!-- PORTRAIT -->
+<div id="portrait-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;background:rgba(0,0,0,0.9);flex-direction:column;align-items:center;justify-content:center;">
+  <img id="portrait-preview" src="" style="max-height:80vh;max-width:90%;border-radius:8px;border:2px solid white;">
+  <button class="btn btn-cyan" style="margin-top:1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Review</button>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
-let branchStudents = [];
-let allBranchSubAdmins = [];
-let studentMap = {};  // regNum -> student object (safe onclick lookup)
-let saMap = {};       // regNum -> subadmin object
+const API=(location.hostname==='localhost'?'http://localhost:3001':'')+'/api';
+let session=JSON.parse(localStorage.getItem('ovs_currentUser')||'null');
+let branchStudents=[];
+let branchSAs=[];
+let branchElection=null;
+let cReg=null,cVote=null;
 
-let chartReg = null, chartVote = null;
-
-document.addEventListener('DOMContentLoaded', async () => {
-    if (session && session.role === 'admin') {
-        // Re-validate session against server (don't trust stale localStorage)
-        try {
-            const liveUser = await apiFetch(`/users/${session.regNum}?institution=${encodeURIComponent(session.institution)}`);
-            if (!liveUser || liveUser.role !== 'admin' || liveUser.status !== 'active' || liveUser.isBanned == 1) {
-                alert('Session invalid or account suspended. Please login again.');
-                localStorage.removeItem('ovs_currentUser');
-                window.location.href = 'login.html?admin=true';
-                return;
-            }
-            session = liveUser;
-            localStorage.setItem('ovs_currentUser', JSON.stringify(liveUser));
-        } catch(e) {
-            console.warn('[Admin] Session re-validation failed, continuing with cached session:', e.message);
-        }
-        document.getElementById('auth-overlay').style.display='none';
-        document.getElementById('main-layout').style.display='flex';
-        document.getElementById('branch-label').textContent=`Branch: ${session.branch}`;
-        document.getElementById('branch-sub').textContent=`Admin for ${session.branch} — ${session.institution}`;
-        document.getElementById('admin-branch-tag').textContent = session.branch;
-        document.getElementById('sa-branch-display').value = session.branch;
-        loadAll();
-    } else {
-        window.location.href = 'login.html?admin=true';
-    }
+document.addEventListener('DOMContentLoaded', ()=>{
+  if(session&&session.role==='admin'){
+    document.getElementById('auth-overlay').style.display='none';
+    document.getElementById('main-layout').style.display='flex';
+    document.getElementById('branch-label').textContent=`Branch Admin (${session.branch})`;
+    document.getElementById('branch-sub').textContent=`Managing ${session.branch} — ${session.institution}`;
+    loadAll();
+  }else{
+    window.location.href='login.html?admin=true';
+  }
 });
 
-async function apiFetch(path, opts={}) {
-  const r = await fetch(API+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});
-  if (!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
+async function apiFetch(path,opts={}){
+  const r=await fetch(API+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
   return r.json();
 }
-
-function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function toast(m,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+m;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
 async function adminLogin(){
   const id=document.getElementById('auth-id').value.trim();
   const pass=document.getElementById('auth-pass').value;
-  const err=document.getElementById('auth-err');
-  const btn=document.querySelector('#auth-overlay button');
-  err.textContent='';
-  
-  if(!id || !pass) {
-    err.textContent = "Please enter both Admin ID and Password.";
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerText = "Authenticating...";
-
+  if(!id||!pass)return toast('ID and Password required',false);
   try{
-    // Use the central StorageManager.login for consistency and security
-    const user = await StorageManager.login(id, pass);
-    
-    if(!user) {
-        throw new Error('Invalid credentials');
-    }
-    
-    if(!user || user.role !== 'admin') {
-        StorageManager.logout();
-        throw new Error('Not an Admin account. Use the correct login portal.');
-    }
-
-    // Success - UI already handled status checks inside StorageManager.login
+    const user=await StorageManager.login(id,pass);
+    if(user.role!=='admin')throw new Error('Not a Branch Admin');
+    session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('branch-label').textContent=`Branch: ${user.branch}`;
-    document.getElementById('branch-sub').textContent=`Admin for ${user.branch} — ${user.institution}`;
+    document.getElementById('branch-label').textContent=`Branch Admin (${user.branch})`;
+    document.getElementById('branch-sub').textContent=`Managing ${user.branch} — ${user.institution}`;
     loadAll();
-  }catch(e){
-    err.textContent=e.message;
-    btn.disabled = false;
-    btn.innerText = "Login";
-  }
+  }catch(e){toast(e.message,false);}
 }
-function adminLogout(){
-  session=null;
-  localStorage.removeItem('ovs_currentUser');
-  window.location.href='login.html?admin=true';
-}
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  event.currentTarget.classList.add('active');
-}
+function adminLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.reload();}
 
-async function refreshAll() {
-  toast('🔄 Refreshing...');
-  await loadAll();
-  toast('✅ Data refreshed!');
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  if(id==='voting-my')loadBranchElection();
+  if(id==='voting-college')loadCollegeElection();
 }
+async function refreshAll(){toast('🔄 Refreshing...');await loadAll();toast('Done!');}
 
 async function loadAll(){
-  try{
-    const [students,subadmins]=await Promise.all([
-      apiFetch(`/voters/by-branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`),
-      apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
-    ]);
-    branchStudents=students;
-    // Build lookup maps for safe onclick use (avoids XSS from inline interpolation)
-    studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
-    saMap = {}; subadmins.forEach(s => { saMap[s.regNum] = s; });
-    const accepted = students.filter(s=>s.status==='active').length;
-    const pending  = students.filter(s=>s.status==='pending').length;
-    const canVote  = students.filter(s=>s.canVote==1).length;
-    document.getElementById('s-students').textContent=students.length;
-    document.getElementById('s-accepted').textContent=accepted;
-    document.getElementById('s-pending').textContent=pending;
-    document.getElementById('s-canvote').textContent=canVote;
-    document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
-    document.getElementById('s-subadmins').textContent=subadmins.length;
-    allBranchSubAdmins = subadmins;
-    renderCharts(students.length, accepted, pending, canVote);
-    renderStudents(students);
-    renderSaTable(subadmins);
-  }catch(e){toast(e.message,false);}
+    try {
+        const [studs, sas] = await Promise.all([
+            apiFetch(`/voters/by-branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`),
+            apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
+        ]);
+        branchStudents=studs; branchSAs=sas;
+        const allowed=studs.filter(s=>s.canVote==1).length;
+        const voted=studs.filter(s=>s.hasVoted==1).length;
+        document.getElementById('o-students').textContent=studs.length;
+        document.getElementById('o-canvote').textContent=allowed;
+        document.getElementById('o-voted').textContent=voted;
+        document.getElementById('o-subadmins').textContent=sas.length;
+        
+        filterStudents();
+        renderSAs(sas);
+        buildScopeHierarchy(studs);
+        
+        if(cReg)cReg.destroy();
+        const crCtx=document.getElementById('chart-reg').getContext('2d');
+        const activeS=studs.filter(s=>s.status==='active').length;
+        cReg=new Chart(crCtx,{type:'doughnut',data:{labels:['Active','Pending'],datasets:[{data:[activeS,studs.length-activeS],backgroundColor:['rgba(6,182,212,0.8)','rgba(255,255,255,0.1)'],borderColor:['transparent','transparent']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        
+        if(cVote)cVote.destroy();
+        const cvCtx=document.getElementById('chart-vote').getContext('2d');
+        cVote=new Chart(cvCtx,{type:'doughnut',data:{labels:['Can Vote','Cannot'],datasets:[{data:[allowed,studs.length-allowed],backgroundColor:['rgba(34,197,94,0.8)','rgba(255,255,255,0.1)'],borderColor:['transparent','transparent']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        
+    }catch(e){toast(e.message,false);}
 }
 
-function renderStudents(list){
-  const tb=document.getElementById('student-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="11" class="empty">No students in this branch</td></tr>';return;}
-  tb.innerHTML=list.map(s=>{
-    const id = s.regNum;
-    let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
-    if (s.portrait) {
-        if (s.portrait.startsWith('data:image')) {
-            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${id}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
-        } else if (s.portrait.startsWith('data:application/pdf')) {
-            portraitHtml = `<div onclick="viewPdf('${id}','portrait')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
+function filterStudents(){
+    const q=document.getElementById('search-students').value.toLowerCase();
+    const y=document.getElementById('sf-year').value;
+    const f=branchStudents.filter(s=>(!q||(s.regNum+' '+s.name).toLowerCase().includes(q))&&(!y||s.year===y));
+    const tb=document.getElementById('student-table');
+    if(!f.length){tb.innerHTML='<tr><td colspan="8" class="empty">No students found</td></tr>';return;}
+    tb.innerHTML = f.map(s=>{
+        let p='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">None</div>';
+        if(s.portrait){
+            if(s.portrait.startsWith('data:image')) p=`<img src="${s.portrait}" onclick="showP('${s.portrait}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;">`;
+            else p=`<div onclick="showP('${s.portrait}',true)" style="width:30px;height:30px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-size:10px;">PDF</div>`;
         }
+        let w='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">N/A</div>';
+        if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;
+        return `<tr>
+         <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
+         <td>${s.name}</td><td><span class="badge" style="background:rgba(255,255,255,0.1);">${s.role}</span></td>
+         <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
+         <td>
+            <select class="action-select" onchange="doAction(this,'${s.regNum}')">
+                <option value="">⚡ Actions</option>
+                ${s.status==='pending'?'<option value="accept">✔ Accept Registration</option>':''}
+                ${s.canVote==0&&s.status==='active'?'<option value="allow">✅ Allow Voting</option>':''}
+                ${s.canVote==1?'<option value="revoke">🚫 Revoke Voting</option>':''}
+                <option value="edit">✏️ Edit Details</option>
+                <option value="remove">🗑 Remove</option>
+            </select>
+         </td>
+        </tr>`;
+    }).join('');
+}
+
+function renderSAs(sas){
+    const tb=document.getElementById('sa-table');
+    if(!sas.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins found</td></tr>';return;}
+    tb.innerHTML = sas.map(s=>`<tr>
+        <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
+        <td>
+           <select class="action-select" onchange="doSaAction(this,'${s.regNum}')">
+             <option value="">⚡ Actions</option>
+             <option value="edit">✏️ Edit</option>
+             <option value="remove">🗑 Remove</option>
+           </select>
+        </td>
+    </tr>`).join('');
+}
+
+async function grantAllVoteAccess() {
+    if(!confirm('Grant voting access to ALL active students in the branch?')) return;
+    const act = branchStudents.filter(s=>s.status==='active'&&s.canVote==0);
+    if(!act.length) return toast('No active/unallowed students.', false);
+    try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:act.map(s=>s.regNum),canVote:true,institution:session.institution})});toast('Done!');loadAll();}catch(e){toast(e.message,false);}
+}
+
+async function doAction(sel, id) {
+    const act = sel.value; sel.value=''; if(!act) return;
+    if(act==='accept'){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify({status:'active'})});toast('Accepted');loadAll();}
+    if(act==='allow'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:true,institution:session.institution})});toast('Allowed');loadAll();}
+    if(act==='revoke'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:false,institution:session.institution})});toast('Revoked');loadAll();}
+    if(act==='remove'){if(confirm(`Remove ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
+    if(act==='edit'){
+        const s = branchStudents.find(x=>x.regNum===id); if(!s) return;
+        document.getElementById('edit-regnum').value=id; document.getElementById('edit-role').value=s.role;
+        document.getElementById('edit-name').value=s.name; document.getElementById('edit-email').value=s.email||'';
+        document.getElementById('edit-class').value=s.class||''; document.getElementById('edit-year').value=s.year||'1st';
+        document.getElementById('edit-pass').value='';
+        document.getElementById('edit-modal').classList.add('open');
+
     }
-    let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
-    if (s.webcamReg) {
-        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${id}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--cyan); cursor:pointer;" title="Click to View Live Capture">`;
+}
+async function doSaAction(sel, id) {
+    const act = sel.value; sel.value=''; if(!act) return;
+    if(act==='remove'){if(confirm(`Remove SubAdmin ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
+    if(act==='edit'){
+        const s = branchSAs.find(x=>x.regNum===id); if(!s) return;
+        document.getElementById('edit-regnum').value=id; document.getElementById('edit-role').value='subadmin';
+        document.getElementById('edit-name').value=s.name; document.getElementById('edit-email').value=s.email||'';
+        document.getElementById('edit-class').value=s.class||''; document.getElementById('edit-year').value=s.year||'1st';
+        document.getElementById('edit-pass').value=''; document.getElementById('edit-modal').classList.add('open');
     }
-    return `<tr>
-    <td>${portraitHtml}</td>
-    <td>${faceHtml}</td>
-    <td><strong>${s.regNum}</strong></td>
-    <td>
-        <div style="font-weight: 500;">${s.name}</div>
-        <div style="font-size: 0.8rem; color: var(--cyan); margin-top: 2px;">${s.email || 'No email provided'}</div>
-    </td>
-    <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${s.role === 'contestant' ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${s.role === 'contestant' ? 'Candidate' : 'Voter'}</span></td>
-    <td>${s.year||'-'}</td>
-    <td>${s.class||'-'}</td>
-    <td>${s.canVote==1?'<span class="badge ba">ACTIVE</span>':'<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">REVOKED</span>'}</td>
-    <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
-    <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
-    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
-      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${id}')">Accept</button>` : ''}
-      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="openEditStudentById('${id}')">Edit</button>
-      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${id}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
-      <button class="btn-sm btn-d" onclick="removeStudent('${id}')">Remove</button>
-    </td>
-  </tr>`;
-  }).join('');
 }
 
-async function acceptStudent(id) {
-  try {
-    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
-    toast(`Registration accepted for ${id}`);
-    loadAll();
-  } catch(e) { toast(e.message, false); }
+function closeEdit(){document.getElementById('edit-modal').classList.remove('open');}
+async function saveEdit(){
+    const id=document.getElementById('edit-regnum').value; const rl=document.getElementById('edit-role').value;
+    const upd={name:document.getElementById('edit-name').value,email:document.getElementById('edit-email').value,class:document.getElementById('edit-class').value.toUpperCase(),year:document.getElementById('edit-year').value};
+    const p=document.getElementById('edit-pass').value; if(p)upd.password=btoa(p);
+    try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(upd)});toast('Saved');closeEdit();loadAll();}catch(e){toast(e.message,false);}
+}
+async function createSubadmin(){
+    const id=document.getElementById('sa-id').value.toUpperCase(); const nm=document.getElementById('sa-name').value;
+    const em=document.getElementById('sa-email').value; const cl=document.getElementById('sa-class').value.toUpperCase();
+    const yr=document.getElementById('sa-year').value; const p=document.getElementById('sa-pass').value;
+    if(id.length!==9)return toast('ID must be 9 chars',false); if(!nm||!cl||!p)return toast('Fill fields',false);
+    try{await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(p),role:'subadmin',name:nm,email:em,branch:session.branch,class:cl,year:yr,institution:session.institution,managedBy:session.regNum,status:'active'})});toast('Subadmin created');loadAll();}catch(e){toast(e.message,false);}
+}
+function showP(s,isPdf){
+    if(isPdf){const w=window.open('','_blank');if(w)w.document.body.innerHTML=`<iframe src="${s}" width="100%" height="100%" style="border:none;"></iframe>`;return;}
+    document.getElementById('portrait-preview').src=s; document.getElementById('portrait-modal').style.display='flex';
 }
 
-function applyStudentFilters(){
-  const q = (document.getElementById('sf-search').value || '').toLowerCase();
-  const year = document.getElementById('sf-year').value;
-  const filtered = branchStudents.filter(s => {
-    const matchQ = !q || [s.regNum,s.name,s.class].join(' ').toLowerCase().includes(q);
-    const matchYear = !year || (s.year||'') === year || (s.class||'').toLowerCase().includes(year.toLowerCase());
-    return matchQ && matchYear;
-  });
-  renderStudents(filtered);
-}
-function filterStudents(q){ applyStudentFilters(); }
-
-async function grantAllVote(){
-  if(!confirm('Grant vote access to ALL ACTIVE students in this branch?')) return;
-  const eligible = branchStudents.filter(s => s.status === 'active');
-  if(eligible.length === 0) return toast('No active students to grant access to.', false);
-  try{
-    const ids=eligible.map(s=>s.regNum);
-    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:ids,canVote:true,institution:session.institution})});
-    toast(`Vote granted to ${eligible.length} active students!`); loadAll();
-  }catch(e){toast(e.message,false);}
-}
-
-async function toggleVote(regNum,val){
-  try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote granted!':'Vote revoked');loadAll();}
-  catch(e){toast(e.message,false);}
-}
-
-async function removeStudent(id){
-  if(!confirm(`Remove student ${id}?`)) return;
-  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
-  catch(e){toast(e.message,false);}
-}
-
-function renderSaTable(list){
-  const tb=document.getElementById('sa-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins found matching criteria</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
-    <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
-    <td style="display:flex;gap:0.4rem;">
-      <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editFullSAById('${s.regNum}')">Edit</button>
-      <button class="btn-sm btn-d" onclick="removeSA('${s.regNum}')">Remove</button>
-    </td>
-  </tr>`).join('');
-}
-
-function applySaFilter() {
-  const year = document.getElementById('sa-filter-year').value;
-  const filtered = year ? allBranchSubAdmins.filter(s => (s.year||'') === year) : allBranchSubAdmins;
-  renderSaTable(filtered);
-}
-
-function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
-
-// Safe lookup-based edit openers — uses regNum only in onclick, data from Map
-function openEditStudentById(id) {
-  const s = studentMap[id]; if (!s) return;
-  document.getElementById('edit-modal-title').textContent = '✏️ Edit Student Details';
-  document.getElementById('edit-role').value = 'student';
-  document.getElementById('edit-regnum').value = s.regNum;
-  document.getElementById('edit-regnum-display').textContent = s.regNum;
-  document.getElementById('edit-name').value = s.name || '';
-  document.getElementById('edit-email').value = s.email || '';
-  document.getElementById('edit-class').value = s.class || '';
-  document.getElementById('edit-password-group').style.display = 'none';
-  document.getElementById('edit-pass').value = '';
-  document.getElementById('edit-modal').classList.add('open');
-}
-
-function openEditStudent(id, name, email, cls) {
-  // Legacy wrapper - kept for backward compatibility
-  openEditStudentById(id);
-}
-
-function editFullSAById(id) {
-  const s = saMap[id]; if (!s) return;
-  document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin Details';
-  document.getElementById('edit-role').value = 'subadmin';
-  document.getElementById('edit-regnum').value = s.regNum;
-  document.getElementById('edit-regnum-display').textContent = s.regNum;
-  document.getElementById('edit-name').value = s.name || '';
-  document.getElementById('edit-email').value = s.email || '';
-  document.getElementById('edit-class').value = s.class || '';
-  document.getElementById('edit-password-group').style.display = 'block';
-  document.getElementById('edit-pass').value = '';
-  document.getElementById('edit-modal').classList.add('open');
-}
-
-function editFullSA(id, name, email, cls) {
-  // Legacy wrapper
-  editFullSAById(id);
-}
-
-function showPortrait(regNum, type) {
-  const s = studentMap[regNum];
-  if (!s) return;
-  const src = type === 'webcam' ? s.webcamReg : s.portrait;
-  if (!src) return;
-  if (src.startsWith('data:application/pdf')) { viewPdf(regNum, type); return; }
-  document.getElementById('portrait-preview').src = src;
-  document.getElementById('portrait-modal').style.display = 'flex';
-}
-
-function viewPdf(regNum, type) {
-  const s = studentMap[regNum];
-  if (!s) return;
-  const src = type === 'webcam' ? s.webcamReg : s.portrait;
-  if (!src) return;
-  const newWin = window.open('', '_blank');
-  if (newWin) {
-    newWin.document.title = 'ID Proof PDF';
-    newWin.document.body.style.margin = '0';
-    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
-  } else {
-    toast('Popup blocked! Please allow popups to view PDF.', false);
-  }
-}
-
-async function saveEdit() {
-  const role = document.getElementById('edit-role').value;
-  const id = document.getElementById('edit-regnum').value;
-  const name = document.getElementById('edit-name').value.trim();
-  const email = document.getElementById('edit-email').value.trim();
-  const cls = document.getElementById('edit-class').value.trim().toUpperCase();
-  const pass = document.getElementById('edit-pass').value;
-
-  if(!name) return toast('Name required', false);
-  
-  if (role === 'subadmin') {
-      if (!cls.startsWith(session.branch + '-')) {
-          return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
-      }
-  }
-
-  const updates = { name, email, class: cls };
-  
-  if (role === 'subadmin' && pass && pass.trim() !== '') {
-    const err = validatePassword(pass, 6, 6);
-    if (err) return toast("Sub-Admin: " + err, false);
-    updates.password = btoa(pass);
-  }
-
-  try {
-    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify(updates) });
-    toast(`${id} details updated successfully!`);
-    closeEditModal();
-    loadAll();
-  } catch(e) { toast(e.message, false); }
-}
-
-function validatePassword(pwd, minLen, maxLen) {
-  if (pwd.length < minLen || (maxLen && pwd.length > maxLen)) {
-    return maxLen === minLen ? `Password must be exactly ${minLen} characters.` : `Password must be ${minLen}-${maxLen} characters.`;
-  }
-  if ((pwd.match(/[a-zA-Z]/g)||[]).length < 3) return 'Must have at least 3 letters.';
-  if (!/[0-9]/.test(pwd)) return 'Must have at least 1 number.';
-  if (!/[^a-zA-Z0-9]/.test(pwd)) return 'Must have at least 1 special character.';
-  return null;
-}
-
-function renderCharts(total, accepted, pending, canVote) {
-  const notAccepted = total - accepted;
-  const notVoting   = total - canVote;
-
-  // Chart 1 — Registrations
-  if (chartReg) chartReg.destroy();
-  const ctx1 = document.getElementById('chart-registrations').getContext('2d');
-  chartReg = new Chart(ctx1, {
-    type: 'pie',
-    data: {
-      labels: ['Accepted', 'Not Accepted'],
-      datasets: [{ data: [accepted, notAccepted],
-        backgroundColor: ['rgba(255,42,77,0.8)','rgba(255,255,255,0.1)'],
-        borderColor: ['#ff2a4d','#333333'], borderWidth: 2 }]
-    },
-    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
-  });
-  document.getElementById('chart-reg-legend').innerHTML =
-    `<span style="color:#22c55e;">● Accepted: ${accepted}</span>
-     <span style="color:#f59e0b;">● Pending: ${pending}</span>
-     <span style="color:var(--muted);">Total: ${total}</span>`;
-
-  // Chart 2 — Voting eligibility
-  if (chartVote) chartVote.destroy();
-  const ctx2 = document.getElementById('chart-voting').getContext('2d');
-  chartVote = new Chart(ctx2, {
-    type: 'pie',
-    data: {
-      labels: ['Allowed to Vote', 'Not Yet Allowed'],
-      datasets: [{ data: [canVote, notVoting],
-        backgroundColor: ['rgba(255,255,255,0.8)','rgba(255,42,77,0.1)'],
-        borderColor: ['#ffffff','#ff2a4d'], borderWidth: 2 }]
-    },
-    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, animation: { duration: 600 } }
-  });
-  document.getElementById('chart-vote-legend').innerHTML =
-    `<span style="color:#06b6d4;">● Allowed: ${canVote}</span>
-     <span style="color:#64748b;">● Not Allowed: ${notVoting}</span>
-     <span style="color:var(--muted);">Total: ${total}</span>`;
-}
-
-async function createSubAdmin(){
-  const id = document.getElementById('sa-id').value.trim().toUpperCase();
-  const nameInput = document.getElementById('sa-name').value;
-  if (nameInput.startsWith(' ')) return toast('Name cannot start with a space.', false);
-  const name = nameInput.trim();
-  const email = document.getElementById('sa-email').value.trim();
-  const cls = document.getElementById('sa-class').value.trim().toUpperCase();
-  const year = document.getElementById('sa-year').value;
-  const pass = document.getElementById('sa-pass').value;
-  if(!id||!name||!cls||!year||!pass) return toast('Fill all required fields',false);
-  if(!cls.startsWith(session.branch + '-')) return toast(`Class must start with your branch prefix (e.g., ${session.branch}-5)`, false);
-  if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) return toast('Sub-Admin ID must be exactly 9 uppercase letters/numbers',false);
-  if (name.length > 30 || !/^[a-zA-Z\s.]+$/.test(name)) return toast('Name: max 30 chars, letters only',false);
-  const pwdErr = validatePassword(pass, 6, 6);
-  if (pwdErr) return toast('Sub-Admin: ' + pwdErr, false);
-  try{
-    await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(pass),role:'subadmin',name,email,branch:session.branch,class:cls,year:year,institution:session.institution,managedBy:session.regNum,status:'active'})});
-    toast(`Sub-Admin ${id} created for ${session.branch} — class ${cls} (${year})`);
-    ['sa-id','sa-name','sa-email','sa-class','sa-pass'].forEach(i=>document.getElementById(i).value='');
-    loadAll();
-  }catch(e){toast(e.message,false);}
-}
-
-async function removeSA(id){
-  if(!confirm(`Remove sub-admin ${id}?`)) return;
-  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
-  catch(e){toast(e.message,false);}
-}
-
-// Real-time input enforcement on sub-admin form
-document.getElementById('sa-id').addEventListener('input', function() {
-  this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);
-});
-document.getElementById('sa-name').addEventListener('input', function() {
-  if(this.value.startsWith(' ')) this.value=this.value.trimStart();
-  this.value = this.value.replace(/[^a-zA-Z\s.]/g,'').slice(0,30);
-});
-document.getElementById('sa-pass').addEventListener('input', function() {
-  this.value = this.value.replace(/\s/g,'').slice(0,6);
-});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')adminLogin();});
-
-// Initialize tsParticles Cyber Mesh Effect
-tsParticles.load("tsparticles", {
-    fpsLimit: 60,
-    particles: {
-        number: { value: 30, density: { enable: true, value_area: 800 } },
-        color: { value: ["#ffffff", "#ff2a4d"] },
-        shape: { type: "circle" },
-        opacity: { value: 0.2, random: true },
-        size: { value: 2, random: true },
-        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
-        move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
-    },
-    interactivity: {
-        detectsOn: "canvas",
-        events: {
-            onHover: { enable: true, mode: "grab" },
-            resize: true
-        },
-        modes: {
-            grab: { distance: 150, links: { opacity: 0.3 } }
+// === SCOPE HIERARCHY ===
+let branchClassMap = {};
+function buildScopeHierarchy(studs) {
+    branchClassMap = {};
+    const years = ['1st','2nd','3rd','4th'];
+    // Collect classes for each year dynamically based on students in the branch
+    studs.forEach(s => {
+        if(s.year && s.class) {
+            if(!branchClassMap[s.year]) branchClassMap[s.year] = new Set();
+            branchClassMap[s.year].add(s.class);
         }
-    },
-    retina_detect: true,
-    background: { color: "transparent" }
-});
+    });
+    const c = document.getElementById('br-scope-hierarchy');
+    let html = '';
+    years.forEach(yy => {
+        if(branchClassMap[yy] && branchClassMap[yy].size > 0) {
+            const classes = Array.from(branchClassMap[yy]).sort();
+            html += `<div class="hierarchy-group">
+                <div class="hierarchy-year" onclick="toggleHierarchy('${yy}')">
+                    <span id="icon-${yy}">▶</span> 
+                    <input type="checkbox" class="cb-year cb-all" data-year="${yy}" id="cb-y-${yy}" onclick="event.stopPropagation(); checkYear('${yy}')"> ${yy} Year
+                </div>
+                <div class="hierarchy-classes" id="hc-${yy}">
+                    ${classes.map(cl => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;color:var(--muted);text-transform:none;"><input type="checkbox" class="cb-class cb-all cb-y-${yy}" data-class="${cl}"> ${cl}</label>`).join('')}
+                </div>
+            </div>`;
+        }
+    });
+    c.innerHTML = html;
+}
+function toggleHierarchy(yy) {
+    const el = document.getElementById(`hc-${yy}`); const ic = document.getElementById(`icon-${yy}`);
+    if(el.classList.contains('open')){el.classList.remove('open');ic.textContent='▶';}else{el.classList.add('open');ic.textContent='▼';}
+}
+function checkYear(yy) {
+    const ycb = document.getElementById(`cb-y-${yy}`);
+    document.querySelectorAll(`.cb-y-${yy}`).forEach(cb => cb.checked = ycb.checked);
+}
+function toggleScopeAll() {
+    const sa = document.getElementById('br-scope-all').checked;
+    document.querySelectorAll('.cb-all').forEach(cb => cb.checked = sa);
+}
+
+// === MY ELECTION ===
+async function loadBranchElection() {
+    try{
+        const elecs = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch&createdBy=${encodeURIComponent(session.regNum)}`);
+        branchElection = elecs[0]||null;
+        if(branchElection) {
+            document.getElementById('br-create-election-card').style.display='none';
+            document.getElementById('br-election-active').style.display='block';
+            document.getElementById('br-elec-code').textContent = branchElection.electionCode;
+            if(branchElection.isActive){document.getElementById('br-elec-start-btn').style.display='none';document.getElementById('br-elec-stop-btn').style.display='inline-block';}
+            else{document.getElementById('br-elec-start-btn').style.display='inline-block';document.getElementById('br-elec-stop-btn').style.display='none';}
+            // analytics
+            const an = await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}/analytics`);
+            document.getElementById('br-v-total').textContent = an.total;
+            document.getElementById('br-v-allowed').textContent = an.allowed;
+            document.getElementById('br-v-voted').textContent = an.voted;
+            document.getElementById('br-v-pct').textContent = an.allowed>0?Math.round((an.voted/an.allowed)*100)+'%':'0%';
+
+            // Fetch and Render Results
+            const res = await StorageManager.fetchElectionResults(branchElection.id);
+            const rList = document.getElementById('br-elec-results-list');
+            const rCard = document.getElementById('br-elec-results-card');
+            
+            if (res.success && res.results.length > 0) {
+                rCard.style.display = 'block';
+                const totalV = res.results.reduce((s, r) => s + r.votes, 0);
+                rList.innerHTML = res.results.map((r, idx) => {
+                    const pct = totalV > 0 ? Math.round((r.votes / totalV) * 100) : 0;
+                    const isWin = idx === 0 && r.votes > 0;
+                    return `
+                        <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid ${isWin ? 'var(--gold)' : 'var(--border)'}; position:relative; overflow:hidden;">
+                            ${isWin ? '<div style="position:absolute; top:0; right:0; background:var(--gold); color:black; font-size:0.6rem; font-weight:bold; padding:2px 8px; border-bottom-left-radius:8px;">LEADING</div>' : ''}
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <img src="${r.portrait || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--border);">
+                                <div style="flex:1;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                                        <span style="font-weight:700; font-size:0.9rem;">${r.name} <span style="font-size:1.2rem; margin-left:0.5rem;">${r.symbol}</span></span>
+                                        <span style="color:var(--gold); font-weight:700;">${r.votes} Votes</span>
+                                    </div>
+                                    <div style="width:100%; background:rgba(255,255,255,0.05); height:8px; border-radius:4px; overflow:hidden;">
+                                        <div style="width:${pct}%; background:${isWin ? 'var(--gold)' : 'var(--cyan)'}; height:100%; transition:width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                rCard.style.display = 'none';
+            }
+        } else {
+            document.getElementById('br-create-election-card').style.display='block';
+            document.getElementById('br-election-active').style.display='none';
+        }
+    }catch(e){toast(e.message,false);}
+}
+
+async function createBranchElection() {
+    const nm = document.getElementById('br-elec-name').value;
+    if(!nm) return toast('Name required',false);
+    
+    const scopeAll = document.getElementById('br-scope-all').checked;
+    let classes = [];
+    if(!scopeAll) {
+        document.querySelectorAll('.cb-class').forEach(cb => { if(cb.checked) classes.push(cb.getAttribute('data-class')); });
+    }
+    
+    // Convert selected classes to year/class representation for backend scope
+    let scopeData = { branch: session.branch };
+    if(!scopeAll && classes.length > 0) {
+        scopeData.classes = classes; // Can use this logic in backend analytics
+        // For simplicity with existing backend we will just treat it as branch scope, but could be enhanced later natively.
+    }
+    
+    try{
+        await apiFetch('/elections',{method:'POST',body:JSON.stringify({
+            institution:session.institution, name:nm, type:'branch', scope:scopeData,
+            startTime:document.getElementById('br-elec-start').value||null,
+            endTime:document.getElementById('br-elec-end').value||null,
+            createdBy:session.regNum, createdByRole:'admin'
+        })});
+        toast('Branch Election Created!');
+        loadBranchElection();
+    }catch(e){toast(e.message,false);}
+}
+async function startBrElection(){if(branchElection&&confirm('Start branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:1,registrationOpen:0})});toast('Started');loadBranchElection();}}
+async function stopBrElection(){if(branchElection&&confirm('End branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:0,isCompleted:1})});toast('Ended');loadBranchElection();}}
+async function deleteBrElection(){if(branchElection&&confirm('Delete branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'DELETE'});toast('Deleted');loadBranchElection();}}
+function copyBrCode(){navigator.clipboard.writeText(branchElection.electionCode).then(()=>toast('Copied'));}
+
+// === COLLEGE HEAD ELECTION ===
+async function loadCollegeElection(){
+    try{
+        const elecs = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
+        const ce = elecs[0]||null;
+        const i = document.getElementById('col-elec-info');
+        if(ce){
+            i.innerHTML = `<h3 style="color:var(--text);margin-bottom:0.5rem;">College Election: <span style="color:var(--cyan)">${ce.name}</span></h3>
+            Status: ${ce.isActive?'<span class="pill-active">Running</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${ce.electionCode}</strong>`;
+        } else {
+            i.innerHTML = "No college election running.";
+        }
+        document.getElementById('col-br-total').textContent = branchStudents.length;
+        document.getElementById('col-br-allowed').textContent = branchStudents.filter(s=>s.canVote==1).length;
+        document.getElementById('col-br-voted').textContent = branchStudents.filter(s=>s.hasVoted==1).length;
+    }catch(e){toast(e.message,false);}
+}
+
+tsParticles.load("tsparticles",{fpsLimit:60,particles:{number:{value:25},color:{value:["#ffffff","#06b6d4"]},shape:{type:"circle"},opacity:{value:0.15,random:true},size:{value:2,random:true},links:{enable:true,distance:150,color:"#ffffff",opacity:0.08,width:1},move:{enable:true,speed:0.5}},retina_detect:true,background:{color:"transparent"}});
 </script>
 </body>
 </html>

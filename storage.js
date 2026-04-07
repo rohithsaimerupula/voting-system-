@@ -463,9 +463,14 @@ const StorageManager = {
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
         return await fetchApi(`/candidates?institution=${encodeURIComponent(inst)}`);
     },
-    async generateVoteHash(voterRegNum, candidateRegNum) {
+    async fetchMyElections(regNum, institution) {
+        try {
+            return await fetchApi(`/voters/my-elections?regNum=${encodeURIComponent(regNum)}&institution=${encodeURIComponent(institution)}`);
+        } catch (e) { return []; }
+    },
+    async generateVoteHash(voterRegNum, candidateRegNum, electionCode) {
         const cStr = typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum;
-        const str = voterRegNum + cStr + Date.now().toString() + Math.random().toString();
+        const str = voterRegNum + cStr + (electionCode||'') + Date.now().toString() + Math.random().toString();
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
@@ -474,24 +479,37 @@ const StorageManager = {
         }
         return "VOTE-RECEIPT-" + Math.abs(hash).toString(16).toUpperCase() + "-" + Date.now().toString().slice(-4);
     },
-    async vote(voterRegNum, candidateRegNum, webcamPhoto) {
+    async vote(voterRegNum, candidateRegNum, webcamPhoto, electionCode) {
         const finalVotePhoto = webcamPhoto ? await this.compressImage(webcamPhoto, 400, 400, 0.4) : null;
-        const secureHash = await this.generateVoteHash(voterRegNum, candidateRegNum);
+        const secureHash = await this.generateVoteHash(voterRegNum, candidateRegNum, electionCode);
         const fp = await this.checkAndLogFingerprint('vote', voterRegNum);
         const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
 
-        await fetchApi('/vote', {
+        const res = await fetchApi('/vote', {
             method: 'POST',
             body: JSON.stringify({
                 voterRegNum, candidateRegNum, votePhoto: finalVotePhoto,
-                secureHash, fp, institution: inst, timestamp: new Date().toISOString()
+                secureHash, fp, institution: inst, electionCode, timestamp: new Date().toISOString()
             })
         });
 
+        const receiptMatch = res.receipt || secureHash;
+
         let voterData = await fetchApi(`/users/${voterRegNum}?institution=${encodeURIComponent(inst)}`);
-        this.saveSession({ ...voterData, hasVoted: true, votedFor: candidateRegNum, voteReceiptHash: secureHash, voteStatus: 'pending' });
-        this.logAudit("Vote Cast (Pending)", voterRegNum, `Receipt: ${secureHash}`);
-        return secureHash;
+        // We no longer locally lock out the whole account by blindly setting hasVoted=true in storage if they play in multi-tiers.
+        // Wait, 'hasVoted' is still returned by backend `api/users` as 1. So it acts as a legacy lock if needed.
+        this.saveSession({ ...voterData, voteReceiptHash: receiptMatch });
+        this.logAudit("Vote Cast (Pending)", voterRegNum, `Receipt: ${receiptMatch} | Election: ${electionCode||'global'}`);
+        return receiptMatch;
+    },
+
+    async fetchElectionResults(electionId) {
+        try {
+            return await fetchApi(`/elections/${encodeURIComponent(electionId)}/results`);
+        } catch (e) {
+            console.error("Results Error:", e);
+            return { success: false, results: [] };
+        }
     },
 
     _processStatsSnapshot(users) {

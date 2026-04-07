@@ -347,10 +347,10 @@
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
         </select>
-        <button class="btn btn-green" onclick="grantAllInstitutionVote()" style="min-width:140px;margin:0;padding:0.6rem 1rem;font-size:0.85rem;border-radius:10px;font-weight:700;">Grant All Vote</button>
+        <button class="btn btn-purple" onclick="promoteSemester()" style="min-width:140px;margin:0;padding:0.6rem 1rem;font-size:0.85rem;border-radius:10px;font-weight:700;">📈 Promote Semester</button>
       </div>
       <div class="card" style="padding:0.5rem">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Role</th><th>Year</th><th>Branch</th><th>Class</th><th>Category</th><th>AI</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Student Count</th><th>Reg No</th><th>Name</th><th>Role</th><th>Year</th><th>Branch</th><th>Class</th><th>Access Type</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -409,8 +409,17 @@
               <label>End Date & Time</label>
               <input type="datetime-local" id="v-end">
             </div>
+
+            <h4 style="margin: 1rem 0 0.5rem; color:var(--text); font-size: 0.95rem;">🎛️ Select Voting Access Scope</h4>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:1rem;">
+               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:bold; color:var(--gold); margin-bottom:1rem; font-size:0.9rem; text-transform:none;">
+                  <input type="checkbox" id="sa-scope-all" onchange="toggleSaScopeAll()" checked> Select All Students (Entire Institution)
+               </label>
+               <div id="sa-scope-hierarchy"></div>
+            </div>
+
             <div style="display:flex; gap:0.5rem;">
-               <button class="btn btn-green" style="flex:2" id="v-start-btn" onclick="setElectionTimes()">▶ Start Election</button>
+               <button class="btn btn-green" style="flex:2" id="v-start-btn" onclick="createAdvancedElection()">▶ Create Advanced Election</button>
                <button class="btn-sm" id="v-cancel-edit" style="flex:1; display:none; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--border);" onclick="toggleScheduleMode(false)">Cancel</button>
             </div>
           </div>
@@ -453,19 +462,20 @@
           </div>
         </div>
 
-        <!-- Live Stats -->
-        <div class="card">
-          <h3>📊 Live Participation</h3>
-          <div class="stats-grid" style="margin-bottom:1rem;">
-            <div class="stat"><div class="num" id="v-total" style="color:var(--cyan)">-</div><div class="lbl">Total Voters</div></div>
-            <div class="stat"><div class="num" id="v-canvote" style="color:var(--gold)">-</div><div class="lbl">Can Vote</div></div>
-            <div class="stat"><div class="num" id="v-voted" style="color:var(--green)">-</div><div class="lbl">Voted</div></div>
-            <div class="stat"><div class="num" id="v-pct" style="color:var(--purple)">-</div><div class="lbl">Turnout %</div></div>
-          </div>
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
             <button class="btn btn-red" style="flex:1" onclick="stopElection()">⏹ End Election</button>
-            <button class="btn" style="flex:1; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.4);" onclick="resetElection()">🔄 Full Reset</button>
           </div>
+        </div>
+
+        <!-- 🏁 Multi-Tier Results Selector -->
+        <div class="card" id="multi-tier-results-card" style="grid-column: 1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0;">🏁 Institutional Multi-Tier Results</h3>
+                <button class="btn-sm btn-e" onclick="loadMultiTierElections()">🔄 Sync & Refresh Results</button>
+            </div>
+            <div id="multi-tier-elections-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
+                <p class="text-muted">Fetching institutional election data...</p>
+            </div>
         </div>
 
         <!-- Election Categories -->
@@ -969,6 +979,9 @@ async function loadAll() {
     renderAdminTable(admins);
     allSubAdmins = subadmins;
     renderSubAdminTable(subadmins);
+    
+    // Build scope UI for Advanced Election
+    buildSaScopeHierarchy();
   } catch(e) { toast(e.message, false); }
 }
 
@@ -1041,26 +1054,42 @@ function renderSubAdminTable(sas) {
 function renderStudents(list) {
   const tb = document.getElementById('student-table');
   if (!list.length) { tb.innerHTML = '<tr><td colspan="11" class="empty">No students found</td></tr>'; return; }
-  tb.innerHTML = list.map(s => `<tr>
+  tb.innerHTML = list.map((s, index) => `<tr>
+    <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">Total: ${list.length} / #${index+1}</span></td>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
     <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${(s && s.role === 'contestant') ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${(s && s.role === 'contestant') ? 'Candidate' : 'Voter'}</span></td>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--purple);">${s.year||'1st'}</span></td>
     <td>${s.branch||'-'}</td><td>${s.class||'-'}</td>
-    <td>${(s && s.role === 'contestant') 
-      ? `<span class="badge" style="background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.4);font-size:0.72rem;padding:0.3rem 0.7rem;">🏷️ ${s.category||'General'}</span>`
-      : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">–</span>'
-    }</td>
-    <td>${s.webcamReg ? '<span class="badge" style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); font-size:0.65rem;" title="AI Face Verified">🤖 ✅</span>' : '<span class="badge" style="font-size:0.65rem;" title="Manual Registration">👤</span>'}</td>
-    <td>${s.hasVoted==1 ? '<span class="badge badge-active">Voted</span>' : '<span class="badge">No</span>'}</td>
-    <td><span class="badge ${s.status==='active'?'badge-active':s.status==='pending'?'badge-pending':'badge-banned'}">${s.status}</span></td>
-    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-      ${s.status === 'active' 
-        ? `<button class="btn-sm ${s.canVote==1?'btn-danger-sm':'btn-success-sm'}" onclick="toggleCanVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke':'Grant Vote'}</button>` 
-        : `<button class="btn-sm" style="background:rgba(255,255,255,0.05);color:var(--muted);cursor:not-allowed;" title="Requires Admin Approval" disabled>Grant Vote</button>`
-      }
-      <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
+    <td>${s.webcamReg ? '<span class="badge" style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); font-size:0.75rem;" title="AI Face Verified">🤖 AI Verified</span>' : '<span class="badge" style="background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid rgba(100,116,139,0.3); font-size:0.75rem;" title="Manual Registration">👤 Manual</span>'}</td>
+    <td>
+      <select class="action-select" onchange="superAction(this,'${s.regNum}')" style="padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;cursor:pointer;min-width:110px;">
+        <option value="">⚡ Actions</option>
+        <option value="edit">✏️ Edit Details</option>
+        <option value="remove">🗑️ Remove</option>
+      </select>
     </td>
   </tr>`).join('');
+}
+
+window.superAction = function(sel, regNum) {
+  const action = sel.value; sel.value = '';
+  if (action === 'remove') removeUser(regNum);
+  if (action === 'edit') {
+      const s = allStudents.find(x => x.regNum === regNum);
+      if(!s) return;
+      document.getElementById('edit-modal-title').textContent = '✏️ Edit Student/Candidate';
+      document.getElementById('edit-role').value = s.role;
+      document.getElementById('edit-regnum').value = s.regNum;
+      document.getElementById('edit-regnum-display').textContent = s.regNum;
+      document.getElementById('edit-name').value = s.name;
+      document.getElementById('edit-email').value = s.email || '';
+      document.getElementById('edit-branch').value = s.branch || 'CSE';
+      document.getElementById('edit-class-group').style.display = 'flex';
+      document.getElementById('edit-class').value = s.class || '';
+      document.getElementById('edit-year').value = s.year || '1st';
+      document.getElementById('edit-pass').value = '';
+      document.getElementById('edit-modal').classList.add('open');
+  }
 }
 
 function filterStudents(q) {
@@ -1162,14 +1191,14 @@ async function saveEdit() {
   if(!name) return toast('Name required', false);
   
   const updates = { name, email, branch };
-  if (role === 'subadmin') {
+  if (role === 'subadmin' || role === 'voter' || role === 'contestant') {
     updates.class = cls;
     updates.year = year;
   }
   
   let validPwdFn = (pwd) => {
       // Validate password based on role length
-      let minLen = role === 'admin' ? 8 : 6;
+      let minLen = role === 'admin' ? 8 : (role === 'subadmin' ? 6 : 6);
       let minAlpha = 3; let minNum = 1; let minSpec = 1;
       return validateStrictPassword(pwd, minLen, minLen, minAlpha, minNum, minSpec);
   }
@@ -1623,6 +1652,9 @@ async function loadVoting() {
         winnerBanner.style.display = 'none';
     }
 
+    // --- Multi-Tier Results Rendering ---
+    loadMultiTierElections();
+
     if (chartInstance) chartInstance.destroy();
     const ctx = document.getElementById('results-chart').getContext('2d');
 
@@ -1773,6 +1805,185 @@ tsParticles.load("tsparticles", {
     retina_detect: true,
     background: { color: "transparent" }
 });
+window.promoteSemester = async function() {
+  const code = prompt('Type "PROMOTE" to advance students to next semester (Deletes 4Y Sem2)');
+  if (code !== 'PROMOTE') {
+    toast('Semester promotion cancelled.', false);
+    return;
+  }
+  try {
+    const r = await apiFetch('/students/promote-semester', { method: 'POST', body: JSON.stringify({ institution: saSession.institution }) });
+    toast(`Successfully promoted semester. Deleted ${r.deleted||0} graduated students.`);
+    loadAll();
+  } catch(e) {
+    toast(e.message, false);
+  }
+};
+
+window.buildSaScopeHierarchy = function() {
+    const years = ['1st','2nd','3rd','4th'];
+    let branchMap = {};
+    allStudents.forEach(s => {
+        if(s.year && s.branch) {
+            if(!branchMap[s.year]) branchMap[s.year] = new Set();
+            branchMap[s.year].add(s.branch);
+        }
+    });
+
+    const c = document.getElementById('sa-scope-hierarchy');
+    if(!c) return;
+    let html = '';
+    years.forEach(yy => {
+        if(branchMap[yy] && branchMap[yy].size > 0) {
+            const branches = Array.from(branchMap[yy]).sort();
+            html += `<div style="margin-bottom:0.5rem;">
+                <div style="font-weight:bold; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.5rem; cursor:pointer;" onclick="toggleSaY('${yy}')">
+                    <span id="sa-icon-${yy}">▶</span> 
+                    <input type="checkbox" class="cb-sa-year cb-sa-all" id="cb-sa-y-${yy}" onclick="event.stopPropagation(); checkSaY('${yy}')" checked> ${yy} Year
+                </div>
+                <div id="sa-hc-${yy}" style="margin-left: 2rem; display: none; flex-direction: column; gap: 0.2rem;">
+                    ${branches.map(br => `<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;color:var(--muted);text-transform:none;"><input type="checkbox" class="cb-sa-branch cb-sa-all cb-sa-y-${yy}" data-year="${yy}" data-branch="${br}" checked> ${br}</label>`).join('')}
+                </div>
+            </div>`;
+        }
+    });
+    c.innerHTML = html;
+};
+
+window.toggleSaY = function(yy) {
+    const el = document.getElementById(`sa-hc-${yy}`);
+    const ic = document.getElementById(`sa-icon-${yy}`);
+    if(el.style.display === 'flex') { el.style.display = 'none'; ic.textContent='▶'; }
+    else { el.style.display = 'flex'; ic.textContent='▼'; }
+};
+
+window.checkSaY = function(yy) {
+    const ycb = document.getElementById(`cb-sa-y-${yy}`);
+    document.querySelectorAll(`.cb-sa-y-${yy}`).forEach(cb => cb.checked = ycb.checked);
+};
+
+window.toggleSaScopeAll = function() {
+    const sa = document.getElementById('sa-scope-all').checked;
+    document.querySelectorAll('.cb-sa-all').forEach(cb => cb.checked = sa);
+};
+
+async function loadMultiTierElections() {
+    const list = document.getElementById('multi-tier-elections-list');
+    try {
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(saSession.institution)}`);
+        if (elections.length === 0) {
+            list.innerHTML = '<p class="text-muted" style="grid-column:1/-1; text-align:center;">No specialized elections found.</p>';
+            return;
+        }
+        
+        list.innerHTML = '';
+        elections.forEach(async (elec) => {
+            const card = document.createElement('div');
+            card.className = "card";
+            card.style.margin = "0";
+            card.style.background = "rgba(255,255,255,0.02)";
+            card.style.border = "1px solid rgba(255,255,255,0.05)";
+            
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+                    <div>
+                        <h4 style="color:white; margin:0;">${elec.name}</h4>
+                        <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">${elec.type} tier</span>
+                    </div>
+                    <span class="badge ${elec.isActive ? 'ba' : elec.isCompleted ? 'br' : 'bp'}">${elec.isActive ? 'LIVE' : elec.isCompleted ? 'ENDED' : 'PENDING'}</span>
+                </div>
+                <div id="results-mini-${elec.id}" style="display:flex; flex-direction:column; gap:0.6rem;">
+                    <div class="skeleton" style="height:20px; border-radius:4px;"></div>
+                    <div class="skeleton" style="height:20px; border-radius:4px; width:70%;"></div>
+                </div>
+            `;
+            list.appendChild(card);
+            
+            // Fetch scoped analytics & results
+            try {
+                const [stats, resultsObj] = await Promise.all([
+                    apiFetch(`/elections/${encodeURIComponent(elec.id)}/analytics`),
+                    StorageManager.fetchElectionResults(elec.id)
+                ]);
+                
+                const results = resultsObj.results || [];
+                const totalVotes = results.reduce((s, r) => s + r.votes, 0);
+                const resultsContainer = document.getElementById(`results-mini-${elec.id}`);
+                
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = '<p class="text-muted" style="font-size:0.8rem;">No votes cast yet.</p>';
+                } else {
+                    resultsContainer.innerHTML = results.slice(0, 3).map((r, idx) => {
+                        const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
+                        const isWin = idx === 0 && r.votes > 0;
+                        return `
+                            <div style="font-size:0.8rem;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
+                                    <span>${r.symbol} ${r.name}</span>
+                                    <span style="color:var(--gold); font-weight:bold;">${r.votes}</span>
+                                </div>
+                                <div style="width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                                    <div style="width:${pct}%; height:100%; background:${isWin ? 'var(--gold)' : 'var(--cyan)'};"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    if (results.length > 3) {
+                        resultsContainer.innerHTML += `<div style="text-align:center; font-size:0.7rem; color:var(--muted); margin-top:0.4rem;">+ ${results.length - 3} more candidates</div>`;
+                    }
+                }
+                
+                const footer = document.createElement('div');
+                footer.style.marginTop = '1.2rem';
+                footer.style.paddingTop = '1rem';
+                footer.style.borderTop = '1px solid rgba(255,255,255,0.05)';
+                footer.style.display = 'flex';
+                footer.style.justifyContent = 'space-between';
+                footer.style.alignItems = 'center';
+                footer.innerHTML = `
+                    <div style="font-size:0.75rem; color:var(--muted);">Turnout: <strong style="color:white;">${stats.voted}/${stats.allowed}</strong></div>
+                    <button class="btn-sm btn-e" style="font-size:0.65rem;" onclick="viewFullResults('${elec.id}')">Full Report 📊</button>
+                `;
+                card.appendChild(footer);
+            } catch (e) { console.error(e); }
+        });
+    } catch (e) { toast(e.message, false); }
+}
+
+function viewFullResults(elecId) {
+    toast("Opening detailed audit report for " + elecId);
+}
+
+async function createAdvancedElection() {
+    const nm = document.getElementById('v-name').value.trim();
+    const start = document.getElementById('v-start').value;
+    const end = document.getElementById('v-end').value;
+    if (!nm) return toast('Election Name Required', false);
+
+    const isAll = document.getElementById('sa-scope-all').checked;
+    const payload = {
+        institution: saSession.institution,
+        name: nm,
+        type: isAll ? 'college' : 'college',
+        scope: isAll ? { college: true } : getSaScopeData(),
+        startTime: start || null,
+        endTime: end || null,
+        createdBy: saSession.regNum,
+        createdByRole: 'superadmin'
+    };
+
+    try {
+        const res = await apiFetch('/elections', { method: 'POST', body: JSON.stringify(payload) });
+        toast(`Advanced Election created! Code: ${res.electionCode}`);
+        
+        await apiFetch(`/config/election_${saSession.institution}`, {
+            method: 'POST',
+            body: JSON.stringify({ isActive:true, isCompleted:false, name: nm, startTime: payload.startTime, endTime: payload.endTime })
+        });
+        loadAll();
+    } catch(e) { toast(e.message, false); }
+};
+
 </script>
 </body>
 </html>

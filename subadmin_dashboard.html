@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sub-Admin Dashboard — OVS</title>
+  <title>Class Admin Dashboard — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
       (function() {
@@ -11,12 +11,14 @@
           localStorage.setItem('ovs_theme', 'dark');
       })();
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    :root { 
-      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3); 
-      --purple:#ff2a4d; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --gold:#cccccc; 
-      --text:#f8fafc; --muted:#cbd5e1; 
+    :root {
+      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3);
+      --purple:#ff2a4d; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --gold:#cccccc;
+      --text:#f8fafc; --muted:#cbd5e1;
     }
     body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
     input,select{width:100%;padding:0.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-size:0.95rem;font-family:'Outfit',sans-serif;outline:none;transition:border 0.3s;}
@@ -25,23 +27,28 @@
     label{display:block;color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
     .btn{padding:0.75rem 1.5rem;border-radius:10px;border:none;cursor:pointer;font-size:0.95rem;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.3s;}
     .btn-purple{background:linear-gradient(135deg,var(--purple),#cc223e);color:white;}
-    .btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:white;}
+    .btn-green{background:linear-gradient(135deg,var(--green),#cc223e);color:white;}
+    .btn-red{background:linear-gradient(135deg,var(--red),#cc223e);color:white;}
     .btn:hover{transform:translateY(-2px);opacity:0.9;}
     .btn-sm{padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif;font-weight:600;}
     .btn-d{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
-    .btn-g{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
+    .btn-g{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);}
     .btn-e{background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);}
     .layout{display:flex;min-height:100vh;}
-    .sidebar{width:230px;background:rgba(255,42,77,0.05);border-right:1px solid rgba(255,42,77,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;}
+    .sidebar{width:240px;background:rgba(255,42,77,0.05);border-right:1px solid rgba(255,42,77,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
     .brand{font-size:1.4rem;font-weight:900;color:var(--purple);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
-    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:2rem;}
-    .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.25rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
+    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;}
+    .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.15rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
     .nav-item:hover,.nav-item.active{background:rgba(255,42,77,0.1);color:var(--purple);font-weight:600;}
-    .main{margin-left:230px;flex:1;padding:2rem;}
+    .nav-group-label{font-size:0.68rem;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.1em;padding:0.8rem 1rem 0.3rem;margin-top:0.5rem;}
+    .nav-sub-item{padding:0.55rem 1rem 0.55rem 2rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.1rem;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);}
+    .nav-sub-item:hover,.nav-sub-item.active{background:rgba(255,42,77,0.08);color:var(--purple);}
+    .sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
+    .main{margin-left:240px;flex:1;padding:2rem;}
     .page{display:none;}.page.active{display:block;}
     .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Playfair Display', serif;}
     .page-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:2rem;}
     .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem;text-align:center;}
     .stat .num{font-size:2rem;font-weight:900;}.stat .lbl{color:var(--muted);font-size:0.78rem;margin-top:0.2rem;}
     .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;}
@@ -53,7 +60,7 @@
     td{padding:0.7rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.88rem;vertical-align:middle;}
     tr:hover td{background:rgba(255,255,255,0.02);}
     .badge{padding:0.2rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:600;}
-    .ba{background:rgba(34,197,94,0.15);color:var(--green);}
+    .ba{background:rgba(34,197,94,0.15);color:#22c55e;}
     .bp{background:rgba(245,158,11,0.15);color:var(--gold);}
     .br{background:rgba(239,68,68,0.15);color:var(--red);}
     .empty{text-align:center;color:var(--muted);padding:2rem;}
@@ -61,23 +68,36 @@
     .toast.show{transform:translateY(0);opacity:1;}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
-    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:450px;position:relative;}
+    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:500px;position:relative;max-height:85vh;overflow-y:auto;}
     .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;}
     .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
+    /* Election Code Display */
+    .election-code-box{background:linear-gradient(135deg,rgba(255,42,77,0.15),rgba(255,42,77,0.05));border:2px solid rgba(255,42,77,0.5);border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;}
+    .election-code-box .code{font-size:2.5rem;font-weight:900;letter-spacing:0.3em;color:#fff;font-family:monospace;}
+    .election-code-box .code-label{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;}
+    /* Action Dropdown */
+    .action-select{padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;font-family:'Outfit',sans-serif;cursor:pointer;min-width:130px;}
+    .action-select:focus{border-color:var(--purple);outline:none;}
+    /* Analytics */
+    .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:1.5rem;}
+    .turnout-bar{background:rgba(255,255,255,0.05);border-radius:50px;height:8px;margin-top:0.5rem;overflow:hidden;}
+    .turnout-fill{height:100%;background:linear-gradient(90deg,#ff2a4d,#ff7a4d);border-radius:50px;transition:width 0.8s ease;}
+    /* Status pills */
+    .pill-active{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
+    .pill-pending{background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
+    .pill-completed{background:rgba(100,116,139,0.15);color:#64748b;border:1px solid rgba(100,116,139,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
   </style>
 </head>
 <body>
-    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
-    <script src="storage.js"></script>
-    <!-- Cyber Mesh Particles -->
-    <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
+  <script src="storage.js"></script>
+  <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
 <!-- AUTH -->
-<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(168,85,247,0.08) 0%,var(--bg) 70%)">
-  <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem; font-family: 'Playfair Display', serif;">VANGUARD Sub-Admin</div>
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
+  <div style="background:rgba(255,42,77,0.08);border:1px solid rgba(255,42,77,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Class Admin Portal</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
-    <div style="text-align:left;margin-bottom:1rem;"><label>Sub-Admin ID</label><input type="text" id="auth-id" placeholder="SADM01" maxlength="6"></div>
+    <div style="text-align:left;margin-bottom:1rem;"><label>Sub-Admin ID</label><input type="text" id="auth-id" placeholder="SADM01"></div>
     <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
     <button class="btn btn-purple" style="width:100%" onclick="saLogin()">Login</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
@@ -87,29 +107,42 @@
 <div class="layout" id="main-layout" style="display:none">
   <div class="sidebar">
     <div class="brand">👥 OVS</div>
-    <div class="role-tag" id="class-label">Sub-Admin</div>
-    <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
-    <div class="nav-item" onclick="showPage('students')">🎓 My Class</div>
-    <div style="border-top:1px solid var(--border);margin-top:auto;padding-top:1rem;">
+    <div class="role-tag" id="class-label">Class Admin</div>
+    <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)">📊 Overview</div>
+    <div class="nav-item" id="nav-students" onclick="showPage('students',this)">🎓 My Class</div>
+    <div class="nav-group-label">🗳️ Voting</div>
+    <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)">🏛️ My Election</div>
+    <div class="nav-sub-item" id="nav-voting-branch" onclick="showPage('voting-branch',this)">🏢 Branch Head Election</div>
+    <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)">🎓 College Head Election</div>
+    <div class="sidebar-footer">
       <div class="nav-item" onclick="refreshAll()" style="color:var(--purple)">🔄 Refresh Data</div>
       <div class="nav-item" onclick="saLogout()" style="color:var(--red)">🚪 Logout</div>
     </div>
   </div>
 
   <div class="main">
+
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
       <div class="page-title">📊 Class Overview</div>
       <div class="page-sub" id="class-sub">Your assigned class</div>
       <div class="stats-grid">
         <div class="stat"><div class="num" id="s-students" style="color:var(--purple)">-</div><div class="lbl">Students</div></div>
-        <div class="stat"><div class="num" id="s-canvote" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
+        <div class="stat"><div class="num" id="s-canvote" style="color:#22c55e">-</div><div class="lbl">Can Vote</div></div>
         <div class="stat"><div class="num" id="s-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
-        <div class="stat"><div class="num" id="s-not-granted" style="color:var(--red)">-</div><div class="lbl">Not Yet Granted</div></div>
+        <div class="stat"><div class="num" id="s-not-granted" style="color:var(--red)">-</div><div class="lbl">Not Granted</div></div>
       </div>
-      <div class="charts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem;">
-        <div class="card" style="margin-bottom:0;display:flex;justify-content:center;align-items:center;padding:2rem;"><canvas id="regChart" style="max-height:300px;"></canvas></div>
-        <div class="card" style="margin-bottom:0;display:flex;justify-content:center;align-items:center;padding:2rem;"><canvas id="voteChart" style="max-height:300px;"></canvas></div>
+      <div class="analytics-grid">
+        <div class="card" style="margin-bottom:0;padding:1.5rem;">
+          <h3>📋 Registration Status</h3>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;"><canvas id="regChart"></canvas></div>
+          <div id="reg-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+        </div>
+        <div class="card" style="margin-bottom:0;padding:1.5rem;">
+          <h3>🗳️ Voting Access</h3>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;"><canvas id="voteChart"></canvas></div>
+          <div id="vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+        </div>
       </div>
     </div>
 
@@ -118,14 +151,121 @@
       <div class="page-title">🎓 My Class Students</div>
       <div class="page-sub" id="class-students-sub">Students you are responsible for</div>
       <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
-        <input style="flex:1;min-width:200px;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;" placeholder="🔍 Search..." oninput="filterStudents(this.value)">
+        <input style="flex:1;min-width:200px;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;" placeholder="🔍 Search students..." oninput="filterStudents(this.value)">
         <button class="btn btn-green" onclick="grantAll()">✅ Grant All Vote Access</button>
       </div>
-      <div class="card" style="padding:0.5rem; overflow-x:auto;">
-        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Role</th><th>Can Vote</th><th>Voted</th><th>Status</th><th>Actions</th></tr></thead>
+      <div class="card" style="padding:0.5rem;overflow-x:auto;">
+        <table><thead><tr><th>ID Proof</th><th>Live Face</th><th>Reg No</th><th>Name</th><th>Role</th><th>Actions</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
+
+    <!-- MY ELECTION -->
+    <div class="page" id="page-voting-my">
+      <div class="page-title">🏛️ My Election</div>
+      <div class="page-sub">Create and manage class-level elections</div>
+
+      <!-- Create Election Card -->
+      <div class="card" id="create-election-card">
+        <h3>➕ Create Class Election</h3>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.2rem;">Only students from your class can register and vote. A dynamic election code will be generated automatically.</p>
+        <div class="form-grid">
+          <div class="form-field"><label>Election Name</label><input type="text" id="my-elec-name" placeholder="e.g. CR Elections 2026"></div>
+          <div class="form-field"><label>Start Date & Time</label><input type="datetime-local" id="my-elec-start"></div>
+          <div class="form-field"><label>End Date & Time</label><input type="datetime-local" id="my-elec-end"></div>
+        </div>
+        <button class="btn btn-purple" style="margin-top:1rem" onclick="createMyElection()">🚀 Create Election & Generate Code</button>
+      </div>
+
+      <!-- Active Election Card -->
+      <div id="my-election-active" style="display:none;">
+        <div class="election-code-box">
+          <div class="code-label">🔑 Dynamic Election Code</div>
+          <div class="code" id="my-elec-code">------</div>
+          <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-sm btn-e" onclick="copyElectionCode()">📋 Copy Code</button>
+            <button class="btn-sm btn-g" onclick="startMyElection()" id="my-elec-start-btn">▶ Start Election</button>
+            <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End Election</button>
+            <button class="btn-sm" style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);" onclick="deleteMyElection()">🗑️ Delete</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
+          <div class="stat"><div class="num" id="my-v-total" style="color:var(--purple)">-</div><div class="lbl">Total Eligible</div></div>
+          <div class="stat"><div class="num" id="my-v-allowed" style="color:#22c55e">-</div><div class="lbl">Can Vote</div></div>
+          <div class="stat"><div class="num" id="my-v-voted" style="color:var(--gold)">-</div><div class="lbl">Votes Cast</div></div>
+          <div class="stat"><div class="num" id="my-v-pct" style="color:var(--red)">-</div><div class="lbl">Turnout %</div></div>
+        </div>
+
+        <div class="analytics-grid">
+          <div class="card" style="margin-bottom:0;">
+            <h3>📊 Vote Distribution</h3>
+            <div style="position:relative;height:220px;"><canvas id="my-vote-chart"></canvas></div>
+            <div id="my-vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
+          </div>
+          </div>
+        </div>
+
+        <!-- 🏆 Live Election Results -->
+        <div class="card" id="my-elec-results-card" style="margin-top:1.5rem; display:none;">
+            <h3>🏆 Live Election Results</h3>
+            <div id="my-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
+                <p class="text-muted">Calculating leads...</p>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANCH HEAD ELECTION -->
+    <div class="page" id="page-voting-branch">
+      <div class="page-title">🏢 Branch Head Election</div>
+      <div class="page-sub">Approve/revoke voting access for your class students in branch-level elections</div>
+      <div id="branch-elec-info" class="card" style="color:var(--muted);">Loading branch election data...</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="margin:0;">🎓 Class Students — Branch Election Access</h3>
+          <button class="btn-sm btn-g" onclick="grantAllBranch()">✅ Grant All</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Reg No</th><th>Name</th><th>Branch Vote Access</th><th>Actions</th></tr></thead>
+          <tbody id="branch-student-table"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📊 Branch Election Analytics (My Class)</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1rem;">
+          <div class="stat"><div class="num" id="br-total" style="color:var(--purple)">-</div><div class="lbl">Class Students</div></div>
+          <div class="stat"><div class="num" id="br-allowed" style="color:#22c55e">-</div><div class="lbl">Allowed</div></div>
+          <div class="stat"><div class="num" id="br-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLLEGE HEAD ELECTION -->
+    <div class="page" id="page-voting-college">
+      <div class="page-title">🎓 College Head Election</div>
+      <div class="page-sub">Approve/revoke voting access for your class students in college-level elections</div>
+      <div id="college-elec-info" class="card" style="color:var(--muted);">Loading college election data...</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="margin:0;">🎓 Class Students — College Election Access</h3>
+          <button class="btn-sm btn-g" onclick="grantAllCollege()">✅ Grant All</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Reg No</th><th>Name</th><th>College Vote Access</th><th>Actions</th></tr></thead>
+          <tbody id="college-student-table"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📊 College Election Analytics (My Class)</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
+          <div class="stat"><div class="num" id="col-total" style="color:var(--purple)">-</div><div class="lbl">Class Students</div></div>
+          <div class="stat"><div class="num" id="col-allowed" style="color:#22c55e">-</div><div class="lbl">Allowed</div></div>
+          <div class="stat"><div class="num" id="col-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -134,66 +274,54 @@
   <div class="modal">
     <button class="modal-close" onclick="closeEdit()">✕</button>
     <h3>✏️ Edit Student Details</h3>
-    <p style="color:var(--muted); font-size:0.8rem; margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--purple);"></strong></p>
+    <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--purple);"></strong></p>
     <input type="hidden" id="edit-regnum">
-    
     <div class="form-grid" style="margin-bottom:1rem;">
       <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
       <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
     </div>
-    
     <div class="form-grid" style="margin-bottom:1rem;">
-      <div class="form-field">
-          <label>Year</label>
-          <select id="edit-year">
-              <option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option>
-              <option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option>
-          </select>
-      </div>
-      <div class="form-field">
-          <label>Branch</label>
-          <select id="edit-branch">
-              <option>CIVIL</option><option>EEE</option><option>MECH</option><option>ECE</option>
-              <option>CSE</option><option>IT</option><option>CAI</option><option>CSD</option>
-              <option>CSC</option><option>AIDS</option>
-          </select>
+      <div class="form-field"><label>Year</label>
+        <select id="edit-year"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
       </div>
       <div class="form-field"><label>Section (1-9)</label><input type="text" id="edit-section" maxlength="1"></div>
     </div>
-    
     <div class="form-field" style="margin-bottom:1.5rem;">
       <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
       <input type="password" id="edit-pass" placeholder="Enter new password to change">
     </div>
-    
     <button class="btn btn-purple" style="width:100%" onclick="saveEdit()">Save Changes</button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
-<!-- Portrait Preview Modal -->
-<div id="portrait-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center;">
-  <img id="portrait-preview" src="" style="max-height: 80vh; max-width: 90%; border-radius: 8px; border: 2px solid white;">
-  <button class="btn btn-purple" style="margin-top: 1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+<!-- PORTRAIT PREVIEW -->
+<div id="portrait-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;background:rgba(0,0,0,0.9);flex-direction:column;align-items:center;justify-content:center;">
+  <img id="portrait-preview" src="" style="max-height:80vh;max-width:90%;border-radius:8px;border:2px solid white;">
+  <button class="btn btn-purple" style="margin-top:1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="toast" id="toast"></div>
+
 <script>
-const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-let session = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+const API = (location.hostname==='localhost'?'http://localhost:3001':'')+'/api';
+let session = JSON.parse(localStorage.getItem('ovs_currentUser')||'null');
 let classStudents = [];
+let studentMap = {};
+let myElection = null;
+let myElecChartInstance = null;
+let regChartInstance = null;
+let voteChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (session && session.role === 'subadmin') {
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`${session.year || ''} ${session.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${session.year || ''} ${session.class} — ${session.branch} — ${session.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${session.year || ''} ${session.class}`;
+    document.getElementById('class-label').textContent=`${session.year||''} ${session.class||'-'}`;
+    document.getElementById('class-sub').textContent=`Managing ${session.year||''} ${session.class} — ${session.branch} — ${session.institution}`;
+    document.getElementById('class-students-sub').textContent=`Students in ${session.year||''} ${session.class}`;
     loadAll();
   } else {
-    window.location.href = 'login.html?admin=true';
+    window.location.href='login.html?admin=true';
   }
 });
 
@@ -202,7 +330,7 @@ async function apiFetch(path,opts={}){
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
   return r.json();
 }
-function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
 async function saLogin(){
   const id=document.getElementById('auth-id').value.trim();
@@ -210,267 +338,391 @@ async function saLogin(){
   const err=document.getElementById('auth-err');
   const btn=document.querySelector('#auth-overlay button');
   err.textContent='';
-  
-  if(!id || !pass) {
-    err.textContent = "Please enter both Sub-Admin ID and Password.";
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerText = "Authenticating...";
-
+  if(!id||!pass){err.textContent='Please enter both ID and Password.';return;}
+  btn.disabled=true;btn.innerText='Authenticating...';
   try{
-    // Use the central StorageManager.login for consistency and security
-    const user = await StorageManager.login(id, pass);
-    
-    if(!user) {
-        throw new Error('Invalid credentials');
-    }
-    
-    if(user.role !== 'subadmin') {
-        StorageManager.logout();
-        throw new Error('Not a Sub-Admin account. Use the correct login portal.');
-    }
-
-    // Success - UI already handled status checks inside StorageManager.login
+    const user=await StorageManager.login(id,pass);
+    if(!user)throw new Error('Invalid credentials');
+    if(user.role!=='subadmin'){StorageManager.logout();throw new Error('Not a Class Admin account.');}
     session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`${user.year || ''} ${user.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${user.year || ''} ${user.class} — ${user.branch} — ${user.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${user.year || ''} ${user.class}`;
+    document.getElementById('class-label').textContent=`${user.year||''} ${user.class||'-'}`;
+    document.getElementById('class-sub').textContent=`Managing ${user.year||''} ${user.class} — ${user.branch} — ${user.institution}`;
+    document.getElementById('class-students-sub').textContent=`Students in ${user.year||''} ${user.class}`;
     loadAll();
-  }catch(e){
-    err.textContent=e.message;
-    btn.disabled = false;
-    btn.innerText = "Login";
-  }
+  }catch(e){err.textContent=e.message;btn.disabled=false;btn.innerText='Login';}
 }
-function saLogout(){
-  session=null;
-  localStorage.removeItem('ovs_currentUser');
-  window.location.href='login.html?admin=true';
-}
+function saLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
 
-function showPage(id){
+function showPage(id,navEl){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  event.currentTarget.classList.add('active');
-  if(id==='students') renderStudents(classStudents);
+  if(navEl) navEl.classList.add('active');
+  if(id==='voting-my') loadMyElection();
+  if(id==='voting-branch') loadBranchElectionPage();
+  if(id==='voting-college') loadCollegeElectionPage();
 }
 
-async function refreshAll() {
-  toast('🔄 Refreshing...');
-  await loadAll();
-  toast('✅ Data refreshed!');
-}
+async function refreshAll(){toast('🔄 Refreshing...');await loadAll();toast('Data refreshed!');}
 
 async function loadAll(){
   try{
     const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year||'1st')}`);
     classStudents=students;
+    studentMap={};students.forEach(s=>{studentMap[s.regNum]=s;});
+    const active=students.filter(s=>s.status==='active').length;
+    const allowed=students.filter(s=>s.canVote==1).length;
+    const voted=students.filter(s=>s.hasVoted==1).length;
     document.getElementById('s-students').textContent=students.length;
-    document.getElementById('s-canvote').textContent=students.filter(s=>s.canVote==1).length;
-    document.getElementById('s-voted').textContent=students.filter(s=>s.hasVoted==1).length;
-    document.getElementById('s-not-granted').textContent=students.filter(s=>s.canVote!=1).length;
+    document.getElementById('s-canvote').textContent=allowed;
+    document.getElementById('s-voted').textContent=voted;
+    document.getElementById('s-not-granted').textContent=students.length-allowed;
     renderStudents(students);
-    updateCharts(students);
+    updateCharts(students.length,active,allowed,voted);
   }catch(e){toast(e.message,false);}
 }
 
-let regChartInstance = null;
-let voteChartInstance = null;
-
-function updateCharts(students) {
-  const totalReg = students.length;
-  const accepted = students.filter(s => s.status === 'active').length;
-  const pending = totalReg - accepted;
-
-  const allowed = students.filter(s => s.canVote == 1).length;
-  const notAllowed = totalReg - allowed;
-
-  const chartOpts = {
-    responsive: true,
-    plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0', font: { family: 'Outfit' } } } }
-  };
-
-  const regCtx = document.getElementById('regChart').getContext('2d');
-  if(regChartInstance) regChartInstance.destroy();
-  regChartInstance = new Chart(regCtx, {
-    type: 'pie',
-    data: {
-      labels: ['Accepted Details', 'Pending/Rejected'],
-      datasets: [{ data: [accepted, pending], backgroundColor: ['#ff2a4d', '#333333'], borderWidth: 0 }]
-    },
-    options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Total Registrations Data', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
-  });
-
-  const voteCtx = document.getElementById('voteChart').getContext('2d');
-  if(voteChartInstance) voteChartInstance.destroy();
-  voteChartInstance = new Chart(voteCtx, {
-    type: 'pie',
-    data: {
-      labels: ['Allowed to Vote', 'Not Allowed'],
-      datasets: [{ data: [allowed, notAllowed], backgroundColor: ['#ffffff', '#ff2a4d'], borderWidth: 0 }]
-    },
-    options: { ...chartOpts, plugins: { ...chartOpts.plugins, title: { display: true, text: 'Voting Allowed vs Present', color: '#e2e8f0', font: { family: 'Outfit', size: 16 } } } }
-  });
+function updateCharts(total,accepted,allowed,voted){
+  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+  // Reg chart
+  if(regChartInstance)regChartInstance.destroy();
+  const r1=document.getElementById('regChart').getContext('2d');
+  regChartInstance=new Chart(r1,{type:'pie',data:{labels:['Accepted','Pending'],datasets:[{data:[accepted,total-accepted],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.1)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:opts});
+  document.getElementById('reg-legend').innerHTML=`<span style="color:#ff2a4d">● Accepted: ${accepted}</span> <span style="color:#cbd5e1">● Pending: ${total-accepted}</span> <span style="color:var(--muted)">Total: ${total}</span>`;
+  // Vote chart
+  if(voteChartInstance)voteChartInstance.destroy();
+  const r2=document.getElementById('voteChart').getContext('2d');
+  voteChartInstance=new Chart(r2,{type:'pie',data:{labels:['Can Vote','Not Allowed'],datasets:[{data:[allowed,total-allowed],backgroundColor:['rgba(34,197,94,0.8)','rgba(255,255,255,0.08)'],borderColor:['#22c55e','#333'],borderWidth:2}]},options:opts});
+  document.getElementById('vote-legend').innerHTML=`<span style="color:#22c55e">● Allowed: ${allowed}</span> <span style="color:#cbd5e1">● Not Allowed: ${total-allowed}</span>`;
 }
 
 function renderStudents(list){
   const tb=document.getElementById('student-table');
-  if(!list.length){tb.innerHTML='<tr><td colspan="9" class="empty">No students in your class</td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" class="empty">No students in your class</td></tr>';return;}
   tb.innerHTML=list.map(s=>{
-    let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
-    if (s.portrait) {
-        if (s.portrait.startsWith('data:image')) {
-            portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.portrait}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="Click to View">`;
-        } else if (s.portrait.startsWith('data:application/pdf')) {
-            portraitHtml = `<div onclick="viewPdf('${s.portrait}')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;" title="Click to View PDF">PDF</div>`;
-        }
-    }
-    let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
-    if (s.webcamReg) {
-        faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.webcamReg}')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--purple); cursor:pointer;" title="Click to View Live Capture">`;
-    }
+    let portraitHtml='<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+    if(s.portrait&&s.portrait.startsWith('data:image'))portraitHtml=`<img src="${s.portrait}" onclick="showPortrait('${s.regNum}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">`;
+    else if(s.portrait&&s.portrait.startsWith('data:application/pdf'))portraitHtml=`<div onclick="showPortrait('${s.regNum}','pdf')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;">PDF</div>`;
+    let faceHtml='<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+    if(s.webcamReg)faceHtml=`<img src="${s.webcamReg}" onclick="showPortrait('${s.regNum}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--purple);cursor:pointer;">`;
     return `<tr>
-    <td>${portraitHtml}</td>
-    <td>${faceHtml}</td>
-    <td><strong>${s.regNum}</strong></td>
-    <td>
-        <div style="font-weight: 500;">${s.name}</div>
-        <div style="font-size: 0.8rem; color: var(--purple); margin-top: 2px;">${s.email || 'No email provided'}</div>
-    </td>
-    <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${s.role === 'contestant' ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${s.role === 'contestant' ? 'Candidate' : 'Voter'}</span></td>
-    <td>${s.canVote==1?'<span class="badge ba">✅ Yes</span>':'<span class="badge bp">❌ No</span>'}</td>
-    <td>${s.hasVoted==1?'<span class="badge ba">Voted</span>':'<span class="badge">No</span>'}</td>
-    <td><span class="badge ${s.status==='active'?'ba':s.status==='pending'?'bp':'br'}">${s.status}</span></td>
-    <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:200px;">
-      ${s.status==='pending' ? `<button class="btn-sm btn-g" onclick="acceptStudent('${s.regNum}')">Accept</button>` : ''}
-      <button class="btn-sm btn-e" onclick="openEdit('${s.regNum}','${s.name}','${s.email||''}','${s.year||''}','${s.branch||''}','${s.class||''}')">Edit</button>
-      ${s.status === 'active' ? `<button class="btn-sm ${s.canVote==1?'btn-d':'btn-g'}" onclick="toggleVote('${s.regNum}',${s.canVote==1?0:1})">${s.canVote==1?'Revoke Vote':'Grant Vote'}</button>` : `<button class="btn-sm" style="background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" title="Approve registration first" disabled>Grant Vote</button>`}
-      <button class="btn-sm btn-d" onclick="removeStudent('${s.regNum}')">Remove</button>
-    </td>
-  </tr>`;
+      <td>${portraitHtml}</td><td>${faceHtml}</td>
+      <td><strong>${s.regNum}</strong></td>
+      <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--purple);">${s.email||'No email'}</div></td>
+      <td><span class="badge" style="background:rgba(255,255,255,0.1);color:${s.role==='contestant'?'#c084fc':'#cbd5e1'}">${s.role==='contestant'?'Candidate':'Voter'}</span></td>
+      <td>
+        <select class="action-select" onchange="handleStudentAction(this,'${s.regNum}')">
+          <option value="">⚡ Actions</option>
+          ${s.status==='pending'?'<option value="accept">✔ Accept</option>':''}
+          ${s.status==='active'&&s.canVote==0?'<option value="allow-vote">✅ Allow Voting</option>':''}
+          ${s.status==='active'&&s.canVote==1?'<option value="revoke-vote">🚫 Revoke Voting</option>':''}
+          <option value="view-details">👁️ View Details</option>
+          <option value="edit">✏️ Edit</option>
+          <option value="remove">🗑️ Remove</option>
+        </select>
+      </td>
+    </tr>`;
   }).join('');
 }
 
-async function acceptStudent(id) {
-  try {
-    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method:'PATCH', body:JSON.stringify({ status: 'active' }) });
-    toast(`Registration accepted for ${id}`);
-    loadAll();
-  } catch(e) { toast(e.message, false); }
+async function handleStudentAction(sel,regNum){
+  const action=sel.value;
+  sel.value='';
+  if(!action)return;
+  const s=studentMap[regNum];if(!s)return;
+  if(action==='accept')return acceptStudent(regNum);
+  if(action==='allow-vote')return toggleVote(regNum,1);
+  if(action==='revoke-vote')return toggleVote(regNum,0);
+  if(action==='edit')return openEdit(regNum);
+  if(action==='remove')return removeStudent(regNum);
+  if(action==='view-details'){
+    document.getElementById('edit-regnum').value=regNum;
+    document.getElementById('edit-regnum-display').textContent=regNum;
+    document.getElementById('edit-name').value=s.name||'';
+    document.getElementById('edit-email').value=s.email||'';
+    document.getElementById('edit-year').value=s.year||'1st Year';
+    const sec=s.class&&s.class.includes('-')?s.class.split('-')[1]:'1';
+    document.getElementById('edit-section').value=sec;
+    document.getElementById('edit-pass').value='';
+    document.getElementById('edit-modal').classList.add('open');
+  }
 }
+
+async function acceptStudent(id){try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify({status:'active'})});toast(`Accepted ${id}`);loadAll();}catch(e){toast(e.message,false);}}
+async function toggleVote(regNum,val){try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote access granted!':'Vote access revoked');loadAll();}catch(e){toast(e.message,false);}}
+async function removeStudent(id){if(!confirm(`Remove ${id}?`))return;try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}catch(e){toast(e.message,false);}}
 
 function filterStudents(q){renderStudents(classStudents.filter(s=>[s.regNum,s.name].join(' ').toLowerCase().includes(q.toLowerCase())));}
 
 async function grantAll(){
-  if(!confirm('Grant vote access to ALL ACTIVE students in your class?')) return;
-  const eligible = classStudents.filter(s => s.status === 'active');
-  if(eligible.length === 0) return toast('No active students to grant access to.', false);
-  try{
-    await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});
-    toast(`Vote granted to ${eligible.length} active students!`);loadAll();
-  }catch(e){toast(e.message,false);}
+  if(!confirm('Grant vote access to ALL ACTIVE students?'))return;
+  const eligible=classStudents.filter(s=>s.status==='active');
+  if(!eligible.length)return toast('No active students.',false);
+  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Vote granted to ${eligible.length} students!`);loadAll();}catch(e){toast(e.message,false);}
 }
 
-async function toggleVote(regNum,val){
-  try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote granted!':'Vote revoked');loadAll();}
-  catch(e){toast(e.message,false);}
-}
-
-async function removeStudent(id){
-  if(!confirm(`Remove student ${id}?`)) return;
-  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}
-  catch(e){toast(e.message,false);}
-}
-
-function showPortrait(src) {
-  document.getElementById('portrait-preview').src = src;
-  document.getElementById('portrait-modal').style.display = 'flex';
-}
-
-function viewPdf(src) {
-  const newWin = window.open('', '_blank');
-  if (newWin) {
-    newWin.document.title = 'ID Proof PDF';
-    newWin.document.body.style.margin = '0';
-    newWin.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;
-  } else {
-    toast('Popup blocked! Please allow popups to view PDF.', false);
-  }
-}
-
-function openEdit(id,name,email,year,branch,cls){
+function openEdit(id){
+  const s=studentMap[id];if(!s)return;
   document.getElementById('edit-regnum').value=id;
   document.getElementById('edit-regnum-display').textContent=id;
-  document.getElementById('edit-name').value=name;
-  document.getElementById('edit-email').value=email;
-  document.getElementById('edit-year').value=year || '1st Year';
-  document.getElementById('edit-branch').value=branch || 'CSE';
-  
-  let section = cls && cls.includes('-') ? cls.split('-')[1] : '1';
-  document.getElementById('edit-section').value=section;
-  
+  document.getElementById('edit-name').value=s.name||'';
+  document.getElementById('edit-email').value=s.email||'';
+  document.getElementById('edit-year').value=s.year||'1st Year';
+  const sec=s.class&&s.class.includes('-')?s.class.split('-')[1]:'1';
+  document.getElementById('edit-section').value=sec;
   document.getElementById('edit-pass').value='';
   document.getElementById('edit-modal').classList.add('open');
 }
 function closeEdit(){document.getElementById('edit-modal').classList.remove('open');}
-
 async function saveEdit(){
   const id=document.getElementById('edit-regnum').value;
   const name=document.getElementById('edit-name').value.trim();
   const email=document.getElementById('edit-email').value.trim();
   const year=document.getElementById('edit-year').value;
-  const branch=document.getElementById('edit-branch').value;
   const section=document.getElementById('edit-section').value.trim();
   const pass=document.getElementById('edit-pass').value;
+  if(!name)return toast('Name required',false);
+  if(section&&!/^[1-9]$/.test(section))return toast('Section must be 1-9',false);
+  const updates={name,email,year,class:session.branch+'-'+section};
+  if(pass){if(pass.length<6)return toast('Password too short',false);updates.password=btoa(pass);}
+  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(updates)});toast('Updated!');closeEdit();loadAll();}catch(e){toast(e.message,false);}
+}
 
-  if(!name) return toast('Name cannot be empty',false);
-  if(section && !/^[1-9]$/.test(section)) return toast('Section must be a single digit (1-9)',false);
-  
-  const updates = { name, email, year, branch, section, class: branch+'-'+section };
-  
-  if (pass) {
-     if (pass.length < 6) return toast('Password too short', false);
-     updates.password = btoa(pass);
-  }
+function showPortrait(regNum,type){
+  const s=studentMap[regNum];if(!s)return;
+  const src=type==='webcam'?s.webcamReg:s.portrait;
+  if(!src)return;
+  if(src.startsWith('data:application/pdf')){const w=window.open('','_blank');if(w){w.document.body.innerHTML=`<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;}return;}
+  document.getElementById('portrait-preview').src=src;
+  document.getElementById('portrait-modal').style.display='flex';
+}
 
+// ─── MY ELECTION ───────────────────────────────────────────────
+async function loadMyElection(){
   try{
-    await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(updates)});
-    toast('Student details updated!');closeEdit();loadAll();
+    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class&createdBy=${encodeURIComponent(session.regNum)}`);
+    myElection=elections.length>0?elections[0]:null;
+    renderMyElection();
   }catch(e){toast(e.message,false);}
 }
 
-  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')saLogin();});
+function renderMyElection(){
+  const createCard=document.getElementById('create-election-card');
+  const activeDiv=document.getElementById('my-election-active');
+  if(!myElection){
+    createCard.style.display='block';
+    activeDiv.style.display='none';
+    return;
+  }
+  createCard.style.display='none';
+  activeDiv.style.display='block';
+  document.getElementById('my-elec-code').textContent=myElection.electionCode||'------';
+  const startBtn=document.getElementById('my-elec-start-btn');
+  const stopBtn=document.getElementById('my-elec-stop-btn');
+  if(myElection.isActive){startBtn.style.display='none';stopBtn.style.display='inline-block';}
+  else{startBtn.style.display='inline-block';stopBtn.style.display='none';}
+  // Info
+  const status=myElection.isActive?'🟢 Running':myElection.isCompleted?'✅ Completed':'⏳ Pending';
+  document.getElementById('my-elec-info').innerHTML=`
+    <div><strong>Name:</strong> ${myElection.name}</div>
+    <div><strong>Status:</strong> ${status}</div>
+    <div><strong>Scope:</strong> ${session.class} (${session.year})</div>
+    <div><strong>Start:</strong> ${myElection.startTime?new Date(myElection.startTime).toLocaleString():'Not set'}</div>
+    <div><strong>End:</strong> ${myElection.endTime?new Date(myElection.endTime).toLocaleString():'Not set'}</div>
+    <div><strong>Registration:</strong> ${myElection.registrationOpen?'🟢 Open':'🔴 Closed'}</div>
+  `;
+  loadMyElectionAnalytics();
+}
 
-// Initialize tsParticles Cyber Mesh Effect
-tsParticles.load("tsparticles", {
-    fpsLimit: 60,
-    particles: {
-        number: { value: 30, density: { enable: true, value_area: 800 } },
-        color: { value: ["#ffffff", "#ff2a4d"] },
-        shape: { type: "circle" },
-        opacity: { value: 0.2, random: true },
-        size: { value: 2, random: true },
-        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
-        move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
-    },
-    interactivity: {
-        detectsOn: "canvas",
-        events: {
-            onHover: { enable: true, mode: "grab" },
-            resize: true
-        },
-        modes: {
-            grab: { distance: 150, links: { opacity: 0.3 } }
-        }
-    },
-    retina_detect: true,
-    background: { color: "transparent" }
-});
+async function loadMyElectionAnalytics(){
+  if(!myElection)return;
+  try{
+    const stats=await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/analytics`);
+    document.getElementById('my-v-total').textContent=stats.total;
+    document.getElementById('my-v-allowed').textContent=stats.allowed;
+    document.getElementById('my-v-voted').textContent=stats.voted;
+    const pct=stats.allowed>0?Math.round((stats.voted/stats.allowed)*100):0;
+    document.getElementById('my-v-pct').textContent=pct+'%';
+    document.getElementById('my-turnout-fill').style.width=pct+'%';
+    // Chart
+    myElecChartInstance=new Chart(ctx,{type:'pie',data:{labels:['Voted','Not Yet'],datasets:[{data:[stats.voted,stats.allowed-stats.voted],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.08)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    document.getElementById('my-vote-legend').innerHTML=`<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${stats.allowed-stats.voted}</span>`;
+    
+    // Fetch and Render Results
+    const res = await StorageManager.fetchElectionResults(myElection.id);
+    const resultsList = document.getElementById('my-elec-results-list');
+    const resultsCard = document.getElementById('my-elec-results-card');
+    
+    if (res.success && res.results.length > 0) {
+        resultsCard.style.display = 'block';
+        const totalVotes = res.results.reduce((sum, r) => sum + r.votes, 0);
+        resultsList.innerHTML = res.results.map((r, idx) => {
+            const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
+            const isWinner = idx === 0 && r.votes > 0;
+            return `
+                <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid ${isWinner ? 'var(--gold)' : 'var(--border)'}; position:relative; overflow:hidden;">
+                    ${isWinner ? '<div style="position:absolute; top:0; right:0; background:var(--gold); color:black; font-size:0.6rem; font-weight:bold; padding:2px 8px; border-bottom-left-radius:8px;">LEADING</div>' : ''}
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <img src="${r.portrait || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--border);">
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                                <span style="font-weight:700; font-size:0.9rem;">${r.name} <span style="font-size:1.2rem; margin-left:0.5rem;">${r.symbol}</span></span>
+                                <span style="color:var(--gold); font-weight:700;">${r.votes} Votes</span>
+                            </div>
+                            <div style="width:100%; background:rgba(255,255,255,0.05); height:8px; border-radius:4px; overflow:hidden;">
+                                <div style="width:${pct}%; background:${isWinner ? 'var(--gold)' : 'var(--purple)'}; height:100%; transition:width 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        resultsCard.style.display = 'none';
+    }
+  }catch(e){console.error(e);}
+}
+
+async function createMyElection(){
+  const name=document.getElementById('my-elec-name').value.trim();
+  const start=document.getElementById('my-elec-start').value;
+  const end=document.getElementById('my-elec-end').value;
+  if(!name)return toast('Election name required',false);
+  try{
+    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year},startTime:start?new Date(start).toISOString():null,endTime:end?new Date(end).toISOString():null,createdBy:session.regNum,createdByRole:'subadmin'})});
+    toast(`Election created! Code: ${result.electionCode}`);
+    loadMyElection();
+  }catch(e){toast(e.message,false);}
+}
+
+async function startMyElection(){
+  if(!myElection)return;
+  if(!confirm('Start election? Registration will be locked.'))return;
+  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:1,registrationOpen:0})});toast('Election started!');loadMyElection();}catch(e){toast(e.message,false);}
+}
+async function stopMyElection(){
+  if(!myElection||!confirm('End this election?'))return;
+  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:0,isCompleted:1})});toast('Election ended!');loadMyElection();}catch(e){toast(e.message,false);}
+}
+async function deleteMyElection(){
+  if(!myElection||!confirm('Delete this election permanently?'))return;
+  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'DELETE'});toast('Election deleted');myElection=null;renderMyElection();}catch(e){toast(e.message,false);}
+}
+function copyElectionCode(){
+  if(!myElection)return;
+  navigator.clipboard.writeText(myElection.electionCode||'').then(()=>toast('Election code copied!')).catch(()=>toast('Copy failed',false));
+}
+
+// ─── BRANCH HEAD ELECTION PAGE ────────────────────────────────
+async function loadBranchElectionPage(){
+  try{
+    // Load branch elections
+    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch`);
+    const branchElec=elections.find(e=>e.scope&&e.scope.branch===session.branch)||elections[0]||null;
+    const infoDiv=document.getElementById('branch-elec-info');
+    if(branchElec){
+      infoDiv.innerHTML=`<h3>🏢 Active Branch Election: <span style="color:var(--purple)">${branchElec.name}</span></h3>
+        <p style="color:var(--muted);margin-top:0.5rem;">Status: ${branchElec.isActive?'<span class="pill-active">Running</span>':branchElec.isCompleted?'<span class="pill-completed">Completed</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${branchElec.electionCode}</strong></p>`;
+    }else{
+      infoDiv.innerHTML='<p style="color:var(--muted);">No branch-level election is currently active. The Branch Admin hasn\'t created one yet.</p>';
+    }
+    // Load class students for branch election access control
+    renderBranchStudents(classStudents);
+    // Analytics
+    const allowed=classStudents.filter(s=>s.canVote==1).length;
+    const voted=classStudents.filter(s=>s.hasVoted==1).length;
+    document.getElementById('br-total').textContent=classStudents.length;
+    document.getElementById('br-allowed').textContent=allowed;
+    document.getElementById('br-voted').textContent=voted;
+  }catch(e){toast(e.message,false);}
+}
+
+function renderBranchStudents(list){
+  const tb=document.getElementById('branch-student-table');
+  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No students in class</td></tr>';return;}
+  tb.innerHTML=list.map(s=>`<tr>
+    <td><strong>${s.regNum}</strong></td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
+    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>
+      <select class="action-select" onchange="handleBranchVoteAction(this,'${s.regNum}',${s.canVote==1?1:0})">
+        <option value="">⚡ Actions</option>
+        ${s.canVote==0?'<option value="allow">✅ Allow Voting</option>':''}
+        ${s.canVote==1?'<option value="revoke">🚫 Revoke Voting</option>':''}
+      </select>
+    </td>
+  </tr>`).join('');
+}
+
+async function handleBranchVoteAction(sel,regNum,current){
+  const action=sel.value;sel.value='';
+  if(!action)return;
+  await toggleVote(regNum,action==='allow'?1:0);
+  await loadAll();
+  loadBranchElectionPage();
+}
+async function grantAllBranch(){
+  if(!confirm('Grant branch election voting access to all active class students?'))return;
+  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
+  if(!eligible.length)return toast('All students already have access.',false);
+  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length} students!`);loadAll();loadBranchElectionPage();}catch(e){toast(e.message,false);}
+}
+
+// ─── COLLEGE HEAD ELECTION PAGE ───────────────────────────────
+async function loadCollegeElectionPage(){
+  try{
+    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
+    const collegeElec=elections[0]||null;
+    const infoDiv=document.getElementById('college-elec-info');
+    if(collegeElec){
+      infoDiv.innerHTML=`<h3>🎓 Active College Election: <span style="color:var(--purple)">${collegeElec.name}</span></h3>
+        <p style="color:var(--muted);margin-top:0.5rem;">Status: ${collegeElec.isActive?'<span class="pill-active">Running</span>':collegeElec.isCompleted?'<span class="pill-completed">Completed</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${collegeElec.electionCode}</strong></p>`;
+    }else{
+      infoDiv.innerHTML='<p style="color:var(--muted);">No college-level election is currently active.</p>';
+    }
+    renderCollegeStudents(classStudents);
+    const allowed=classStudents.filter(s=>s.canVote==1).length;
+    const voted=classStudents.filter(s=>s.hasVoted==1).length;
+    document.getElementById('col-total').textContent=classStudents.length;
+    document.getElementById('col-allowed').textContent=allowed;
+    document.getElementById('col-voted').textContent=voted;
+  }catch(e){toast(e.message,false);}
+}
+
+function renderCollegeStudents(list){
+  const tb=document.getElementById('college-student-table');
+  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No students in class</td></tr>';return;}
+  tb.innerHTML=list.map(s=>`<tr>
+    <td><strong>${s.regNum}</strong></td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
+    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>
+      <select class="action-select" onchange="handleCollegeVoteAction(this,'${s.regNum}')">
+        <option value="">⚡ Actions</option>
+        ${s.canVote==0?'<option value="allow">✅ Allow Voting</option>':''}
+        ${s.canVote==1?'<option value="revoke">🚫 Revoke Voting</option>':''}
+      </select>
+    </td>
+  </tr>`).join('');
+}
+
+async function handleCollegeVoteAction(sel,regNum){
+  const action=sel.value;sel.value='';if(!action)return;
+  await toggleVote(regNum,action==='allow'?1:0);
+  await loadAll();loadCollegeElectionPage();
+}
+async function grantAllCollege(){
+  if(!confirm('Grant college election voting access to all active class students?'))return;
+  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
+  if(!eligible.length)return toast('All students already have access.',false);
+  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length}!`);loadAll();loadCollegeElectionPage();}catch(e){toast(e.message,false);}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')saLogin();});
+
+tsParticles.load("tsparticles",{fpsLimit:60,particles:{number:{value:25,density:{enable:true,value_area:800}},color:{value:["#ffffff","#ff2a4d"]},shape:{type:"circle"},opacity:{value:0.15,random:true},size:{value:2,random:true},links:{enable:true,distance:150,color:"#ffffff",opacity:0.08,width:1},move:{enable:true,speed:0.5,direction:"none",random:false,straight:false,outModes:{default:"out"}}},interactivity:{detectsOn:"canvas",events:{onHover:{enable:true,mode:"grab"},resize:true},modes:{grab:{distance:150,links:{opacity:0.25}}}},retina_detect:true,background:{color:"transparent"}});
 </script>
 </body>
 </html>
