@@ -380,7 +380,9 @@
 
             try {
                 // Use the voter-specific "My Elections" endpoint for better targeting
+                console.log("[LOBBY] currentUser:", currentUser);
                 const elections = await apiFetch(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
+                console.log("[LOBBY] Raw API Response:", elections);
                 // We keep the ledger check for legacy or double-safety, but the backend also handles hasVoted
                 const ledger = await apiFetch(`/ledger?institution=${encodeURIComponent(currentUser.institution)}&voterRegNum=${currentUser.regNum}`);
                 const votedCodes = ledger.map(l => l.electionCode);
