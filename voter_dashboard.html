@@ -302,6 +302,18 @@
     </div>
 
     <script>
+        async function apiFetch(path, opts = {}) {
+            const res = await fetch('/api' + path, {
+                ...opts,
+                headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: res.statusText }));
+                throw new Error(err.error || 'Request failed');
+            }
+            return res.json();
+        }
+
         const currentUser = StorageManager.getCurrentUser();
         if (!currentUser || (currentUser.role !== 'voter' && currentUser.role !== 'contestant')) {
             window.location.href = 'login.html';
@@ -367,7 +379,9 @@
             lobbyGrid.innerHTML = '<p class="text-center text-muted">Scanning frequencies...</p>';
 
             try {
-                const elections = await apiFetch(`/elections?institution=${encodeURIComponent(currentUser.institution)}`);
+                // Use the voter-specific "My Elections" endpoint for better targeting
+                const elections = await apiFetch(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
+                // We keep the ledger check for legacy or double-safety, but the backend also handles hasVoted
                 const ledger = await apiFetch(`/ledger?institution=${encodeURIComponent(currentUser.institution)}&voterRegNum=${currentUser.regNum}`);
                 const votedCodes = ledger.map(l => l.electionCode);
 
@@ -380,12 +394,22 @@
 
                 lobbyGrid.innerHTML = eligible.map(e => {
                     const hasVoted = votedCodes.includes(e.electionCode);
+                    const isActive = e.isActive === 1 || e.isActive === true || e.status === 'active';
+                    
                     return `
-                        <div class="glass-panel card animate-fade-in" style="padding:2rem;">
+                        <div class="glass-panel card animate-fade-in" style="padding:2rem; border-color: ${isActive ? 'var(--neon-cyan)' : 'var(--glass-border)'};">
                             <div style="font-size:0.7rem; color:var(--neon-cyan); text-transform:uppercase; margin-bottom:0.5rem;">${e.type} election</div>
                             <h3>${e.name}</h3>
-                            <p>${e.isActive ? '🟢 Open' : '⏳ Soon'}</p>
-                            ${hasVoted ? '<button class="submit-btn" disabled>✓ Voted</button>' : `<button class="submit-btn" onclick="openElectionGateway('${e.id}', '${e.name.replace(/'/g, "\\'")}', '${e.electionCode}')">Enter Gateway ➔</button>`}
+                            <div style="margin-bottom:1.5rem;">
+                                ${isActive ? '<span style="color:var(--success); font-weight:bold;">🟢 ACTIVE</span>' : '<span style="color:var(--text-dim);">⏳ UPCOMING</span>'}
+                            </div>
+                            
+                            ${hasVoted ? 
+                                '<button class="submit-btn" disabled style="background:rgba(255,255,255,0.05); color:var(--text-dim);">✓ VOTED</button>' : 
+                                `<button class="submit-btn" ${isActive ? '' : 'disabled'} onclick="openElectionGateway('${e.id}', '${e.name.replace(/'/g, "\\'")}', '${e.electionCode}')">
+                                    ${isActive ? 'Enter Gateway ➔' : 'Waiting for Start...'}
+                                </button>`
+                            }
                         </div>
                     `;
                 }).join('');

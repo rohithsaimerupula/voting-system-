@@ -924,7 +924,7 @@ app.get('/api/voters/my-elections', async (req, res) => {
         if (uRes.rows.length === 0) return res.status(404).json({ error: "User not found" });
         const { branch, year, cls } = uRes.rows[0];
 
-        const electionsRes = await db.execute({ sql: "SELECT * FROM elections WHERE institution = ? AND status = 'active'", args: [institution] });
+        const electionsRes = await db.execute({ sql: "SELECT * FROM elections WHERE institution = ? AND isCompleted = 0", args: [institution] });
         const eligible = [];
         
         for (const e of electionsRes.rows) {
@@ -1042,6 +1042,15 @@ app.post('/api/elections', async (req, res) => {
             args: [id, institution, name, type, JSON.stringify(scope || {}), electionCode, 0, 0, 1, startTime || null, endTime || null, createdBy, createdByRole || '', createdAt]
         });
         res.json({ success: true, id, electionCode });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Get election by its ACCESS CODE (Voter Gateway)
+app.get('/api/elections/code/:code', async (req, res) => {
+    try {
+        const result = await db.execute({ sql: 'SELECT * FROM elections WHERE electionCode = ?', args: [req.params.code] });
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Invalid Election Code' });
+        res.json({ ...result.rows[0], scope: JSON.parse(result.rows[0].scope || '{}') });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
