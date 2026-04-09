@@ -286,7 +286,10 @@
             <button class="btn-sm btn-d" style="background:rgba(2ef,44,44,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
           </div>
         </div>
-        
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+          <div class="stat"><div class="num" id="br-v-total" style="color:var(--cyan)">-</div><div class="lbl">Eligible</div></div>
+          <div class="stat"><div class="num" id="br-v-allowed" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
+          <div class="stat"><div class="num" id="br-v-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
           <div class="stat"><div class="num" id="br-v-pct" style="color:var(--purple)">-</div><div class="lbl">Turnout %</div></div>
         </div>
 

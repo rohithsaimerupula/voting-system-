@@ -143,6 +143,10 @@
           <div class="num" id="s-not-granted" style="color:var(--muted)">-</div>
           <div class="lbl">Not Granted</div>
         </div>
+        <div class="stat" style="border-bottom: 4px solid var(--gold);">
+            <div class="num" id="s-pending" style="color:var(--gold)">-</div>
+            <div class="lbl">Pending Reg</div>
+        </div>
       </div>
 
       <!-- Quick Summary Header Requested by User -->
@@ -154,6 +158,8 @@
           <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;" id="sum-voted">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span></div>
           <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
           <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;" id="sum-not">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not Granted</span></div>
+          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;" id="sum-pending">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Pending</span></div>
       </div>
 
       <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
@@ -250,6 +256,14 @@
             <button class="btn-sm" style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);" onclick="deleteMyElection()">🗑️ Delete</button>
           </div>
         </div>
+        
+        <div class="card" style="margin-top:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border);">
+          <h3 style="margin-bottom:1rem;">🛰️ Election Control Hub</h3>
+          <div id="my-elec-info" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; font-size:0.9rem; color:var(--text-muted);">
+            Loading election parameters...
+          </div>
+        </div>
+
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
           <div class="stat"><div class="num" id="my-v-total" style="color:var(--purple)">-</div><div class="lbl">Total Eligible</div></div>
@@ -441,12 +455,14 @@ async function loadAll(){
     document.getElementById('s-canvote').textContent=allowed;
     document.getElementById('s-voted').textContent=voted;
     document.getElementById('s-not-granted').textContent=students.length-allowed;
+    document.getElementById('s-pending').textContent=students.length-active;
 
     // Update Summary Bar
     document.getElementById('sum-total').textContent = students.length;
     document.getElementById('sum-can').textContent = allowed;
     document.getElementById('sum-voted').textContent = voted;
     document.getElementById('sum-not').textContent = students.length - allowed;
+    document.getElementById('sum-pending').textContent = students.length - active;
 
     renderStudents(students);
     updateCharts(students.length,active,allowed,voted);
