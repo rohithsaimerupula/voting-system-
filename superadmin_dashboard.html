@@ -227,11 +227,37 @@
       <div class="page-title">📊 Overview</div>
       <div class="page-sub" id="inst-name-sub">Your Institution Dashboard</div>
       <div class="stats-grid">
-        <div class="stat"><div class="num" id="s-students" style="color:var(--cyan)">-</div><div class="lbl">Students</div></div>
-        <div class="stat"><div class="num" id="s-admins" style="color:var(--gold)">-</div><div class="lbl">Admins</div></div>
-        <div class="stat"><div class="num" id="s-subadmins" style="color:var(--purple)">-</div><div class="lbl">Sub-Admins</div></div>
-        <div class="stat"><div class="num" id="s-voted" style="color:var(--green)">-</div><div class="lbl">Voted</div></div>
-        <div class="stat"><div class="num" id="s-canvote" style="color:var(--gold)">-</div><div class="lbl">Can Vote</div></div>
+        <div class="stat" style="border-bottom: 4px solid var(--cyan);">
+          <div class="num" id="s-students" style="color:var(--cyan)">-</div>
+          <div class="lbl">Students</div>
+        </div>
+        <div class="stat" style="border-bottom: 4px solid var(--gold);">
+          <div class="num" id="s-admins" style="color:var(--gold)">-</div>
+          <div class="lbl">Admins</div>
+        </div>
+        <div class="stat" style="border-bottom: 4px solid var(--purple);">
+          <div class="num" id="s-subadmins" style="color:var(--purple)">-</div>
+          <div class="lbl">Sub-Admins</div>
+        </div>
+        <div class="stat" style="border-bottom: 4px solid var(--green);">
+          <div class="num" id="s-voted" style="color:var(--green)">-</div>
+          <div class="lbl">Voted</div>
+        </div>
+        <div class="stat" style="border-bottom: 4px solid var(--gold);">
+          <div class="num" id="s-canvote" style="color:var(--gold)">-</div>
+          <div class="lbl">Can Vote</div>
+        </div>
+      </div>
+
+      <!-- Quick Summary Header Requested by User -->
+      <div id="overview-summary-bar" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.4rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.15rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--cyan); font-weight:900;" id="sum-total">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Global Students</span></div>
+          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
+          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--gold); font-weight:900;" id="sum-can">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Eligibility</span></div>
+          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
+          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--green); font-weight:900;" id="sum-voted">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span></div>
+          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
+          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--red); font-weight:900;" id="sum-not">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not Granted</span></div>
       </div>
       <div class="card" style="background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(168,85,247,0.1)); border: 1px solid var(--glass-border);">
         <h3 style="color:white; display:flex; align-items:center; gap:0.5rem;">🏛️ Institution Access Code</h3>
@@ -959,11 +985,20 @@ async function loadAll() {
     const subadmins = instUsers.filter(u => u && u.role === 'subadmin');
     allStudents = students;
 
+    const votedCount = students.filter(u=>u.hasVoted==1).length;
+    const canVoteCount = students.filter(u=>u.canVote==1).length;
+
     document.getElementById('s-students').textContent = students.length;
     document.getElementById('s-admins').textContent = admins.length;
     document.getElementById('s-subadmins').textContent = subadmins.length;
-    document.getElementById('s-voted').textContent = students.filter(u=>u.hasVoted==1).length;
-    document.getElementById('s-canvote').textContent = students.filter(u=>u.canVote==1).length;
+    document.getElementById('s-voted').textContent = votedCount;
+    document.getElementById('s-canvote').textContent = canVoteCount;
+
+    // Update Summary Bar
+    document.getElementById('sum-total').textContent = students.length;
+    document.getElementById('sum-can').textContent = canVoteCount;
+    document.getElementById('sum-voted').textContent = votedCount;
+    document.getElementById('sum-not').textContent = students.length - canVoteCount;
 
     loadInstitutionCode();
 
