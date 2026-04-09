@@ -314,6 +314,18 @@
           </div>
         </div>
 
+        <!-- Class Students Election Access (Added) -->
+        <div id="my-elec-students-card" class="card" style="padding:0; overflow:hidden; margin-top:1.5rem; margin-bottom:1.5rem;">
+          <div style="padding:1rem 1.5rem; background:rgba(168,85,247,0.05); border-bottom:1px solid rgba(168,85,247,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0;">🎓 Class Students — Election Access</h3>
+            <button class="btn-sm btn-g" onclick="grantAllMyElec()">✅ Grant All</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table><thead><tr><th style="width:22%;">Reg No</th><th>Name</th><th style="width:20%;">Vote Status</th><th style="width:17%;">Action</th></tr></thead>
+            <tbody id="my-elec-student-table"></tbody></table>
+          </div>
+        </div>
+
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
           <div class="stat"><div class="num" id="my-v-total" style="color:var(--purple)">-</div><div class="lbl">Total Eligible</div></div>
@@ -854,6 +866,10 @@ function renderMyElection(){
     <div><strong>End:</strong> ${myElection.endTime?new Date(myElection.endTime).toLocaleString():'Not set'}</div>
     <div><strong>Registration:</strong> ${myElection.registrationOpen?'🟢 Open':'🔴 Closed'}</div>
   `;
+  
+  const acceptedStudents = classStudents.filter(s => s.status === 'active');
+  renderMyElecStudents(acceptedStudents);
+  
   loadMyElectionAnalytics();
 }
 
@@ -1119,6 +1135,37 @@ async function grantAllBranch(){
 
 // ─── COLLEGE HEAD ELECTION PAGE ───────────────────────────────
 let collegeCountdownInterval = null;
+
+async function toggleVoteThenRefresh(regNum,val,page){
+  await toggleVote(regNum,val);
+  await loadAll();
+  if(page==='branch')loadBranchElectionPage();
+  else if(page==='college')loadCollegeElectionPage();
+  else if(page==='class')loadMyElection();
+}
+
+function renderMyElecStudents(list){
+  const tb=document.getElementById('my-elec-student-table');
+  if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
+  tb.innerHTML=list.map(s=>`<tr>
+    <td><strong>${s.regNum}</strong></td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
+    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>
+      ${s.canVote==0?
+        `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
+        `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
+    </td>
+  </tr>`).join('');
+}
+
+async function grantAllMyElec(){
+  if(!confirm('Grant class election voting access to all accepted class students?'))return;
+  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
+  if(!eligible.length)return toast('All accepted students already have access.',false);
+  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length} students!`);loadAll();loadMyElection();}catch(e){toast(e.message,false);}
+}
 
 async function loadCollegeElectionPage(){
   try{
