@@ -962,7 +962,10 @@ function renderCategoryBuilder() {
         `).join('')}
         ${cat.candidates.length < 2 ? `<div style="font-size:0.75rem;color:#f59e0b;padding:0.3rem 0;">⚠️ Need at least 2 candidates</div>` : ''}
       </div>
-      <button onclick="syncCategoryData();addCandidateToCategory(${ci})" style="padding:0.35rem 0.8rem;border-radius:6px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:#22c55e;cursor:pointer;font-size:0.82rem;">+ Add Candidate</button>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button onclick="syncCategoryData();addCandidateToCategory(${ci})" style="padding:0.35rem 0.8rem;border-radius:6px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:#22c55e;cursor:pointer;font-size:0.82rem;">+ Add Candidate</button>
+        <button onclick="syncCategoryData();toast('💾 Category & Candidates saved locally!')" style="padding:0.35rem 1rem;border-radius:6px;border:1px solid rgba(56,189,248,0.3);background:rgba(56,189,248,0.1);color:#38bdf8;cursor:pointer;font-size:0.82rem;font-weight:bold;">💾 Save Category</button>
+      </div>
     </div>
   `).join('');
 }
