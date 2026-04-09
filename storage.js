@@ -395,7 +395,7 @@ const StorageManager = {
              console.error("[EmailSystem] Backend Error:", error);
              // Special handling for quota/error messages from backend
              if (error.message && error.message.includes("Failed to send email")) {
-                 throw new Error("Local email service failed. Please check backend logs or dashboard console for OTP.");
+                 throw new Error("SMTP Email service not configured on backend. Falling back to Developer Mode OTP.");
              }
              throw error;
          }

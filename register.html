@@ -832,9 +832,11 @@
                 console.error('[OVS OTP] Email send failed:', err);
                 btn.disabled = false;
                 btn.innerText = "Retry";
-                // Still show OTP group so user can use fallback (dev mode)
                 document.getElementById('otp-group').classList.remove('hidden');
-                showError(`⚠️ Email delivery failed: ${err.message || 'Unknown error'}. Check console for details. If testing, OTP is in browser console.`);
+                
+                // For Developer Testing on Vercel without SMTP configured:
+                const devOtpWarning = `⚠️ Email failed (${err.message}).<br><strong style="color:var(--gold); font-size:1.1rem;">DEV BYPASS OTP: ${generatedOtp}</strong>`;
+                showError(devOtpWarning);
                 console.warn('[OVS OTP] FALLBACK: Generated OTP for manual entry:', generatedOtp);
             }
         }
