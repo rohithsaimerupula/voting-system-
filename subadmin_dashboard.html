@@ -156,35 +156,51 @@
           <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;" id="sum-not">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not Granted</span></div>
       </div>
 
-      <div class="analytics-grid">
-        <!-- Registration Card -->
+      <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
+        <!-- Funnel 1: Registration (Base) -->
         <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(255,42,77,0.05), transparent);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-            <h3 style="margin:0;">📋 Registration Status</h3>
+            <h3 style="margin:0;">📋 1. Registration</h3>
             <div id="reg-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Total: -</div>
           </div>
           <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="position:relative; width:180px; height:180px; flex-shrink:0;">
+            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
               <canvas id="regChart"></canvas>
             </div>
             <div id="reg-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-              <div class="text-muted">Analyzing registration data...</div>
+              <div class="text-muted">Loading...</div>
             </div>
           </div>
         </div>
 
-        <!-- Voting Access Card -->
+        <!-- Funnel 2: Access (Subset of Accepted) -->
         <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(34,197,94,0.05), transparent);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-            <h3 style="margin:0;">🗳️ Voting Access</h3>
-            <div id="vote-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Can Vote: -</div>
+            <h3 style="margin:0;">🗳️ 2. Voting Access</h3>
+            <div id="vote-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Accepted: -</div>
           </div>
           <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="position:relative; width:180px; height:180px; flex-shrink:0;">
+            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
               <canvas id="voteChart"></canvas>
             </div>
             <div id="vote-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-              <div class="text-muted">Analyzing voting rights...</div>
+              <div class="text-muted">Waiting for Accepted...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Funnel 3: Participation (Subset of Allowed) -->
+        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(245,158,11,0.05), transparent);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+            <h3 style="margin:0;">🏁 3. Participation</h3>
+            <div id="part-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Allowed: -</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:1.5rem;">
+            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
+              <canvas id="participationChart"></canvas>
+            </div>
+            <div id="part-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
+              <div class="text-muted">Waiting for Allowed...</div>
             </div>
           </div>
         </div>
@@ -356,6 +372,7 @@ let myElection = null;
 let myElecChartInstance = null;
 let regChartInstance = null;
 let voteChartInstance = null;
+let partChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (session && session.role === 'subadmin') {
@@ -455,7 +472,7 @@ function updateCharts(total,accepted,allowed,voted){
     cutout:'65%'
   };
 
-  // Reg chart
+  // Funnel 1: Registration Status (All Students)
   if(regChartInstance)regChartInstance.destroy();
   const r1=document.getElementById('regChart').getContext('2d');
   regChartInstance=new Chart(r1,{
@@ -479,7 +496,7 @@ function updateCharts(total,accepted,allowed,voted){
         <span style="color:var(--muted)">✅ Accepted:</span>
         <strong style="color:white">${accepted}</strong>
     </div>
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
         <span style="color:var(--muted)">⏳ Pending:</span>
         <strong style="color:white">${total-accepted}</strong>
     </div>
@@ -488,15 +505,17 @@ function updateCharts(total,accepted,allowed,voted){
     </div>
   `;
 
-  // Vote chart
+  // Funnel 2: Voting Access (Subset of Accepted Students Only)
+  // Per user request: Allowed/Not Allowed only shown for registration completed students
   if(voteChartInstance)voteChartInstance.destroy();
   const r2=document.getElementById('voteChart').getContext('2d');
+  const deniedAccess = accepted - allowed;
   voteChartInstance=new Chart(r2,{
     type:'doughnut',
     data:{
-      labels:['Allowed','Restricted'],
+      labels:['Allowed','Not Allowed'],
       datasets:[{
-        data:[allowed,total-allowed],
+        data:[allowed,deniedAccess],
         backgroundColor:['#22c55e','rgba(255,255,255,0.05)'],
         borderColor:['#22c55e','rgba(255,255,255,0.1)'],
         borderWidth:1,
@@ -506,18 +525,52 @@ function updateCharts(total,accepted,allowed,voted){
     options:opts
   });
 
-  document.getElementById('vote-total-pill').textContent = `Can Vote: ${allowed}`;
+  document.getElementById('vote-total-pill').textContent = `Accepted: ${accepted}`;
   document.getElementById('vote-legend').innerHTML=`
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">🗳️ Allowed:</span>
         <strong style="color:white">${allowed}</strong>
     </div>
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
         <span style="color:var(--muted)">🚫 Not Allowed:</span>
-        <strong style="color:white">${total-allowed}</strong>
+        <strong style="color:white">${deniedAccess}</strong>
     </div>
     <div style="margin-top:0.5rem; font-size:0.75rem; color:#22c55e; font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${total > 0 ? Math.round((allowed/total)*100) : 0}% Eligibility
+        ${accepted > 0 ? Math.round((allowed/accepted)*100) : 0}% Eligibility
+    </div>
+  `;
+
+  // Funnel 3: Voting Participation (Subset of Allowed Students Only)
+  if(partChartInstance)partChartInstance.destroy();
+  const r3=document.getElementById('participationChart').getContext('2d');
+  const notVoted = allowed - voted;
+  partChartInstance=new Chart(r3,{
+    type:'doughnut',
+    data:{
+      labels:['Voted','Waiting'],
+      datasets:[{
+        data:[voted,notVoted],
+        backgroundColor:['var(--gold)','rgba(255,255,255,0.05)'],
+        borderColor:['var(--gold)','rgba(255,255,255,0.1)'],
+        borderWidth:1,
+        hoverOffset:4
+      }]
+    },
+    options:opts
+  });
+
+  document.getElementById('part-total-pill').textContent = `Allowed: ${allowed}`;
+  document.getElementById('part-legend').innerHTML=`
+    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <span style="color:var(--muted)">🏁 Voted:</span>
+        <strong style="color:white">${voted}</strong>
+    </div>
+    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
+        <span style="color:var(--muted)">⏳ Not Voted:</span>
+        <strong style="color:white">${notVoted}</strong>
+    </div>
+    <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
+        ${allowed > 0 ? Math.round((voted/allowed)*100) : 0}% Turned Out
     </div>
   `;
 }
