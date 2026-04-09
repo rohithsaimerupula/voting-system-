@@ -306,6 +306,12 @@
             <button class="btn-sm" style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);" onclick="deleteMyElection()">🗑️ Delete</button>
           </div>
         </div>
+
+        <!-- Timer Card (Class Election) -->
+        <div id="class-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(168,85,247,0.08),transparent); border:1px solid rgba(168,85,247,0.2); margin-top:1.5rem;">
+          <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Class Election Running — Ends In</div>
+          <div id="class-cd-display" style="font-size:2.2rem; font-weight:900; color:#c084fc; font-family:monospace;">--:--:--</div>
+        </div>
         
         <div class="card" style="margin-top:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border);">
           <h3 style="margin-bottom:1rem;">🛰️ Election Control Hub</h3>
@@ -867,25 +873,62 @@ function renderMyElection(){
     <div><strong>Registration:</strong> ${myElection.registrationOpen?'🟢 Open':'🔴 Closed'}</div>
   `;
   
+  const cdCard = document.getElementById('class-countdown-card');
+  if(cdCard) {
+    if(myElection.isActive && myElection.endTime) {
+      cdCard.style.display = 'block';
+      startClassCountdown(myElection.endTime);
+    } else {
+      cdCard.style.display = 'none';
+      if(window.classCountdownInterval) clearInterval(window.classCountdownInterval);
+    }
+  }
+
   const acceptedStudents = classStudents.filter(s => s.status === 'active');
   renderMyElecStudents(acceptedStudents);
   
   loadMyElectionAnalytics();
 }
 
+function startClassCountdown(endTime){
+  if(window.classCountdownInterval)clearInterval(window.classCountdownInterval);
+  const disp = document.getElementById('class-cd-display');
+  function tick(){
+    const diff = new Date(endTime) - new Date();
+    if(!disp)return;
+    if(diff<=0){disp.textContent='00:00:00';clearInterval(window.classCountdownInterval);return;}
+    const h=Math.floor(diff/3600000).toString().padStart(2,'0');
+    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
+    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+    disp.textContent=`${h}:${m}:${s}`;
+  }
+  tick();
+  window.classCountdownInterval = setInterval(tick, 1000);
+}
+
 async function loadMyElectionAnalytics(){
   if(!myElection)return;
   try{
     const stats=await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/analytics`);
-    document.getElementById('my-v-total').textContent=stats.total;
-    document.getElementById('my-v-allowed').textContent=stats.allowed;
+    
+    const acceptedStudents = classStudents.filter(s => s.status === 'active');
+    const allowed = acceptedStudents.filter(s=>s.canVote==1).length;
+    const totalEligible = acceptedStudents.length;
+    
+    document.getElementById('my-v-total').textContent=totalEligible;
+    document.getElementById('my-v-allowed').textContent=allowed;
     document.getElementById('my-v-voted').textContent=stats.voted;
-    const pct=stats.allowed>0?Math.round((stats.voted/stats.allowed)*100):0;
+    const pct=allowed>0?Math.round((stats.voted/allowed)*100):0;
     document.getElementById('my-v-pct').textContent=pct+'%';
-    document.getElementById('my-turnout-fill').style.width=pct+'%';
+    
     // Chart
-    myElecChartInstance=new Chart(ctx,{type:'pie',data:{labels:['Voted','Not Yet'],datasets:[{data:[stats.voted,stats.allowed-stats.voted],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.08)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-    document.getElementById('my-vote-legend').innerHTML=`<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${stats.allowed-stats.voted}</span>`;
+    const canvas = document.getElementById('my-vote-chart');
+    if(canvas) {
+      const ctx = canvas.getContext('2d');
+      if(window.myElecChartInstance) window.myElecChartInstance.destroy();
+      window.myElecChartInstance=new Chart(ctx,{type:'pie',data:{labels:['Voted','Not Yet'],datasets:[{data:[stats.voted,Math.max(0,allowed-stats.voted)],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.08)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    }
+    document.getElementById('my-vote-legend').innerHTML=`<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0,allowed-stats.voted)}</span>`;
     
     // Fetch and Render Results
     const res = await StorageManager.fetchElectionResults(myElection.id);
