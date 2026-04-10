@@ -345,6 +345,16 @@
         let liveFaceDescriptor = null;
         let idFaceImg = null;
 
+        // Safe DOM Utilities
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', async () => {
             const inst = localStorage.getItem('ovs_inst_name');
@@ -354,7 +364,7 @@
                 return;
             }
             
-            document.getElementById('inst-badge').textContent = `⛩️ ${inst}`;
+            setText('inst-badge', `⛩️ ${inst}`);
             loadCategories(inst);
             initRegistrationTimer();
         });
@@ -363,8 +373,8 @@
             const container = document.getElementById('reg-timer-container');
             const formContent = document.getElementById('registration-form-content');
             const overlay = document.getElementById('hard-close-overlay');
-            const overlayTitle = document.getElementById('overlay-title');
-            const overlayDesc = document.getElementById('overlay-desc');
+            const titleEl = document.getElementById('overlay-title');
+            const descEl = document.getElementById('overlay-desc');
 
             let currentStatus = null;
 
@@ -381,10 +391,10 @@
                 // Admin manually stopped registration (isActive=false)
                 if (!regStatus || regStatus.isActive === false) {
                     if (currentStatus !== 'admin-closed') {
-                        overlayTitle.innerText = "Registration Stopped";
-                        overlayDesc.innerText = "The administrator has stopped the registration portal. Please try again later or contact your institution.";
-                        overlay.classList.remove('hidden');
-                        formContent.classList.add('hidden');
+                        setText('overlay-title', "Registration Stopped");
+                        setText('overlay-desc', "The administrator has stopped the registration portal. Please try again later or contact your institution.");
+                        if(overlay) overlay.classList.remove('hidden');
+                        if(formContent) formContent.classList.add('hidden');
                         currentStatus = 'admin-closed';
                         // Stop webcam if running
                         if (typeof webcamStream !== 'undefined' && webcamStream) {
@@ -397,10 +407,10 @@
                 // No schedule set at all
                 if (!regStatus.startTime || !regStatus.endTime) {
                     if (currentStatus !== 'no-schedule') {
-                        overlayTitle.innerText = "Portal Closed";
-                        overlayDesc.innerText = "The administration has not yet scheduled a registration period for this institution.";
-                        overlay.classList.remove('hidden');
-                        formContent.classList.add('hidden');
+                        setText('overlay-title', "Portal Closed");
+                        setText('overlay-desc', "Registration schedule has not been configured yet.");
+                        if(overlay) overlay.classList.remove('hidden');
+                        if(formContent) formContent.classList.add('hidden');
                         currentStatus = 'no-schedule';
                     }
                     return;
@@ -430,10 +440,10 @@
 
                 if (isClosed) {
                     if (currentStatus !== 'closed') {
-                        overlayTitle.innerText = "Registration Closed";
-                        overlayDesc.innerText = "The registration period has ended. No new registrations are being accepted.";
-                        overlay.classList.remove('hidden');
-                        formContent.classList.add('hidden');
+                        setText('overlay-title', "Registration Closed");
+                        setText('overlay-desc', "The registration period has ended. No new registrations are being accepted.");
+                        if(overlay) overlay.classList.remove('hidden');
+                        if(formContent) formContent.classList.add('hidden');
                         currentStatus = 'closed';
                     }
                     return;
@@ -441,23 +451,22 @@
 
                 if (isUpcoming) {
                     if (currentStatus !== 'upcoming') {
-                        overlayTitle.innerText = "Registration Upcoming";
-                        overlayDesc.innerText = `Registration is scheduled to open soon. Please return on ${new Date(regStatus.startTime).toLocaleString()}.`;
-                        overlay.classList.remove('hidden');
-                        formContent.classList.add('hidden');
+                        setText('overlay-title', "Registration Upcoming");
+                        setText('overlay-desc', `Registration is scheduled to open soon. Please return on ${new Date(regStatus.startTime).toLocaleString()}.`);
+                        if(overlay) overlay.classList.remove('hidden');
+                        if(formContent) formContent.classList.add('hidden');
                         currentStatus = 'upcoming';
                     }
                 } else {
                     // LIVE — show form
-                    overlay.classList.add('hidden');
-                    formContent.classList.remove('hidden');
-                    const badge = document.getElementById('inst-badge');
-                    if (badge) badge.innerText = "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution");
+                    if(overlay) overlay.classList.add('hidden');
+                    if(formContent) formContent.classList.remove('hidden');
+                    setText('inst-badge', "⛩️ " + (localStorage.getItem('ovs_inst_name') || "Institution"));
                 }
 
                 // Update countdown display
                 if (currentStatus !== statusKey) {
-                    container.innerHTML = `
+                    setHTML('reg-timer-container', `
                         <div class="reg-timer-banner">
                             <div class="timer-label">
                                 <h4>${labelText}</h4>
@@ -470,7 +479,7 @@
                                 <div class="time-block"><div id="reg-secs" class="time-value">0</div><div class="time-unit">S</div></div>
                             </div>
                         </div>
-                    `;
+                    `);
                     currentStatus = statusKey;
                 }
 
@@ -479,13 +488,11 @@
                 const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
                 const mins  = Math.floor((diff % (1000*60*60)) / (1000*60));
                 const secs  = Math.floor((diff % (1000*60)) / 1000);
-                const dEl = document.getElementById('reg-days');
-                if (dEl) {
-                    dEl.textContent = days;
-                    document.getElementById('reg-hours').textContent = hours;
-                    document.getElementById('reg-mins').textContent = mins;
-                    document.getElementById('reg-secs').textContent = secs;
-                }
+                
+                setText('reg-days', days);
+                setText('reg-hours', hours);
+                setText('reg-mins', mins);
+                setText('reg-secs', secs);
             }
 
             // Run immediately, then every second for countdown display
@@ -500,18 +507,18 @@
                     const mEl = document.getElementById('reg-mins');
                     const sEl = document.getElementById('reg-secs');
                     if (!hEl || !mEl || !sEl) return;
-                    let secs = parseInt(sEl.textContent) - 1;
-                    let mins = parseInt(mEl.textContent);
-                    let hours = parseInt(hEl.textContent);
-                    let days = curDays;
-                    if (secs < 0) { secs = 59; mins--; }
-                    if (mins < 0) { mins = 59; hours--; }
-                    if (hours < 0) { hours = 23; days--; }
-                    if (days < 0) days = 0;
-                    dEl.textContent = days;
-                    hEl.textContent = hours;
-                    mEl.textContent = mins;
-                    sEl.textContent = secs;
+                    let s_val = parseInt(sEl.textContent) - 1;
+                    let m_val = parseInt(mEl.textContent);
+                    let h_val = parseInt(hEl.textContent);
+                    let d_val = curDays;
+                    if (s_val < 0) { s_val = 59; m_val--; }
+                    if (m_val < 0) { m_val = 59; h_val--; }
+                    if (h_val < 0) { h_val = 23; d_val--; }
+                    if (d_val < 0) d_val = 0;
+                    setText('reg-days', d_val);
+                    setText('reg-hours', h_val);
+                    setText('reg-mins', m_val);
+                    setText('reg-secs', s_val);
                 }
             }, 1000);
 
@@ -529,24 +536,26 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.categories && data.categories.length > 0) {
-                        sel.innerHTML = '';
-                        data.categories.forEach(c => {
-                            const opt = document.createElement('option');
-                            opt.value = c;
-                            opt.textContent = c;
-                            sel.appendChild(opt);
-                        });
+                        if(sel) {
+                            sel.innerHTML = '';
+                            data.categories.forEach(c => {
+                                const opt = document.createElement('option');
+                                opt.value = c;
+                                opt.textContent = c;
+                                sel.appendChild(opt);
+                            });
+                        }
                         // Enable contestant option
                         if (contestantOpt) {
                             contestantOpt.disabled = false;
-                            contestantOpt.textContent = 'Candidate';
+                            setText(contestantOpt, 'Candidate');
                         }
                     } else {
-                        sel.innerHTML = '<option value="">⚠️ No categories defined yet</option>';
+                        setHTML('category', '<option value="">⚠️ No categories defined yet</option>');
                         // Disable contestant option with a visible indicator
                         if (contestantOpt) {
                             contestantOpt.disabled = true;
-                            contestantOpt.textContent = 'Candidate (Unavailable — No categories set by Admin)';
+                            setText(contestantOpt, 'Candidate (Unavailable — No categories set by Admin)');
                         }
                         // Show a non-blocking warning below the role selector
                         const roleGroup = document.querySelector('#role').closest('.form-group');
@@ -561,10 +570,12 @@
                 }
             } catch(e) {
                 console.error("Categories fetch fail", e);
-                const sel = document.getElementById('category');
-                sel.innerHTML = '<option value="">⚠️ Failed to load categories</option>';
+                setHTML('category', '<option value="">⚠️ Failed to load categories</option>');
                 const contestantOpt = document.querySelector('#role option[value="contestant"]');
-                if (contestantOpt) { contestantOpt.disabled = true; contestantOpt.textContent = 'Candidate (Unavailable)'; }
+                if (contestantOpt) { 
+                    contestantOpt.disabled = true; 
+                    setText(contestantOpt, 'Candidate (Unavailable)'); 
+                }
             }
         }
 
@@ -600,15 +611,14 @@
         }
         
         function lockRegistrationGate(msg) {
-            const formContent = document.getElementById('registration-form-content');
-            formContent.innerHTML = `
+            setHTML('registration-form-content', `
                 <div style="text-align:center; padding: 3rem 1rem;">
                     <div style="font-size:3.5rem; margin-bottom:1rem;">🛑</div>
                     <h2 style="font-size: 2rem; font-weight: 900; color: var(--danger); font-family:'Playfair Display', serif; margin-bottom:1rem;">REGISTRATIONS CLOSED</h2>
                     <p style="color:var(--text-muted); line-height:1.6; max-width:400px; margin:0 auto;">${msg}</p>
                     <button class="btn-outline" style="margin-top:2rem;" onclick="window.location.href='index.html'">Return to Home</button>
                 </div>
-            `;
+            `);
         }
 
         // Initialize Face API Models
@@ -694,10 +704,11 @@
                 idFaceImg = base64; // Store original for final submit if needed
 
                 // UI Success state
-                statusText.innerText = "ID Scanned ✅";
-                statusText.style.color = "#22c55e";
-                msgText.innerText = "Portrait extracted successfully.";
-                spinner.classList.add('hidden');
+                setText('id-scan-status', "ID Scanned ✅");
+                const stEl = document.getElementById('id-scan-status');
+                if(stEl) stEl.style.color = "#22c55e";
+                setText('id-scan-msg', "Portrait extracted successfully.");
+                if(spinner) spinner.classList.add('hidden');
                 
                 // Show a small crop of detected face in preview area
                 const regions = detection.detection.box;
@@ -736,25 +747,31 @@
             
             if (score >= 40) {
                 aiVerified = true;
-                progress.style.background = "#22c55e";
-                badge.innerText = "Verified ✅";
-                badge.style.background = "rgba(34,197,94,0.15)";
-                badge.style.color = "#22c55e";
-                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`;
+                if(progress) progress.style.background = "#22c55e";
+                setText('ai-badge', "Verified ✅");
+                if(badge) {
+                    badge.style.background = "rgba(34,197,94,0.15)";
+                    badge.style.color = "#22c55e";
+                }
+                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`);
             } else if (score >= 25) {
                 aiVerified = false;
-                progress.style.background = "#f59e0b";
-                badge.innerText = "Partial Match ⏳";
-                badge.style.background = "rgba(245,158,11,0.15)";
-                badge.style.color = "#f59e0b";
-                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Confidence is a bit low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`;
+                if(progress) progress.style.background = "#f59e0b";
+                setText('ai-badge', "Partial Match ⏳");
+                if(badge) {
+                    badge.style.background = "rgba(245,158,11,0.15)";
+                    badge.style.color = "#f59e0b";
+                }
+                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Confidence is a bit low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`);
             } else {
                 aiVerified = false;
-                progress.style.background = "#ff2a4d";
-                badge.innerText = "Mismatch 🚫";
-                badge.style.background = "rgba(239,68,68,0.15)";
-                badge.style.color = "#ff2a4d";
-                msg.innerHTML = `<strong>Confidence: ${score}%</strong><br>Biometric data does not match the ID card portrait. Please retake the photo or use a clearer ID image.`;
+                if(progress) progress.style.background = "#ff2a4d";
+                setText('ai-badge', "Mismatch 🚫");
+                if(badge) {
+                    badge.style.background = "rgba(239,68,68,0.15)";
+                    badge.style.color = "#ff2a4d";
+                }
+                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Biometric data does not match the ID card portrait. Please retake the photo or use a clearer ID image.`);
             }
         }
 
