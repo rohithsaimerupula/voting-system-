@@ -750,10 +750,10 @@ function startRegCountdown(endTimeStr) {
         
         if (distance < 0) {
             clearInterval(regCountdownInterval);
-            document.getElementById('r-cd-days').textContent = '00';
-            document.getElementById('r-cd-hours').textContent = '00';
-            document.getElementById('r-cd-mins').textContent = '00';
-            document.getElementById('r-cd-secs').textContent = '00';
+            setText('r-cd-days', '00');
+            setText('r-cd-hours', '00');
+            setText('r-cd-mins', '00');
+            setText('r-cd-secs', '00');
             
             apiFetch(`/config/registration_${saSession.institution}`, {
                 method: 'POST',
@@ -813,9 +813,9 @@ let _sv_o = null;
 let _sv_u = null;
 
 function toast(msg, ok=true) {
+  setText('toast', (ok ? '✅ ' : '❌ ') + msg);
   const t = document.getElementById('toast');
   if(!t)return;
-  t.textContent = (ok?'✅ ':'❌ ') + msg;
   t.style.borderColor = ok ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
 }
@@ -833,7 +833,7 @@ async function saStep1() {
   if (!/[0-9]/.test(pass)) { setText('auth-err', 'Password must contain at least 1 number.'); return; }
   if (!/[^a-zA-Z0-9]/.test(pass)) { setText('auth-err', 'Password must contain at least 1 special character.'); return; }
 
-  btn.textContent = 'Verifying...';
+  setText('auth-btn-step1', 'Verifying...');
   btn.disabled = true;
   try {
     const user = await apiFetch(`/users/${id}?institution=${encodeURIComponent(saSession.institution)}`);
@@ -850,7 +850,7 @@ async function saStep1() {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     _sv_o = otp;
     _sv_u = user;
-    btn.textContent = 'Sending OTP...';
+    setText('auth-btn-step1', 'Sending OTP...');
     try {
       await StorageManager.sendEmailOtp(user.email, "Super Admin", otp, "Super Admin 2FA Login");
       // Show Step 2
@@ -861,12 +861,12 @@ async function saStep1() {
       document.getElementById('auth-otp').focus();
       setText('auth-err', `✅ OTP sent to your email! Enter it below.`);
     } catch(emailErr) {
-      btn.textContent = '📧 Send OTP & Continue';
+      setText('auth-btn-step1', '📧 Send OTP & Continue');
       btn.disabled = false;
       setText('auth-err', 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error'));
     }
   } catch(e) {
-    btn.textContent = '📧 Send OTP & Continue';
+    setText('auth-btn-step1', '📧 Send OTP & Continue');
     btn.disabled = false;
     setText('auth-err', e.message);
   }
@@ -880,7 +880,7 @@ async function saStep2() {
   if (!enteredOtp || enteredOtp.length !== 6) { setText('auth-err', 'Enter the 6-digit OTP from your email.'); return; }
   if (enteredOtp !== _sv_o) { setText('auth-err', '❌ Invalid OTP. Please try again.'); return; }
 
-  btn.textContent = 'Logging in...';
+  setText('auth-btn-step2', 'Logging in...');
   btn.disabled = true;
   const user = _sv_u;
   saSession = user;
@@ -926,7 +926,7 @@ async function saForgotSendOtp() {
   setText('sa-forgot-err', '');
   if (id.length !== 9) { setText('sa-forgot-err', 'Super Admin ID must be exactly 9 characters.'); return; }
 
-  btn.textContent = 'Looking up account...';
+  setText('sa-forgot-btn1', 'Looking up account...');
   btn.disabled = true;
   try {
     const user = await apiFetch(`/users/${id}`);
@@ -938,7 +938,7 @@ async function saForgotSendOtp() {
     // Generate & send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     _saForgotOtp = otp;
-    btn.textContent = 'Sending OTP...';
+    setText('sa-forgot-btn1', 'Sending OTP...');
     await StorageManager.sendEmailOtp(user.email, user.name || 'Super Admin', otp, 'Master Password Recovery');
     
     const masked = user.email.replace(/^(.{2})(.*)(@.*)$/, '$1***$3');
@@ -948,7 +948,7 @@ async function saForgotSendOtp() {
     setText('sa-forgot-err', '✅ OTP sent! Check your email inbox.');
   } catch(e) {
     setText('sa-forgot-err', e.message || 'Failed to send OTP');
-    btn.textContent = '📧 Send Recovery OTP';
+    setText('sa-forgot-btn1', '📧 Send Recovery OTP');
     btn.disabled = false;
   }
 }
@@ -979,8 +979,8 @@ async function saForgotReset() {
     _saForgotOtp = null;
     setTimeout(closeSAForgotModal, 2500);
   } catch(e) {
-    err.textContent = 'Reset failed: ' + e.message;
-    btn.textContent = '🔒 Reset Password';
+    setText('sa-forgot-err', 'Reset failed: ' + e.message);
+    setText('sa-forgot-btn2', '🔒 Reset Password');
     btn.disabled = false;
   }
 }
@@ -1037,11 +1037,11 @@ async function loadAll() {
 
     const eInfo = document.getElementById('election-status-info');
     if (election && election.isActive) {
-      eInfo.innerHTML = `<span style="color:var(--green);font-weight:700;">🟢 Election is ACTIVE</span><br><small style="color:var(--muted)">End: ${election.endTime || 'No end time set'}</small>`;
+      setHTML('election-status-info', `<span style="color:var(--green);font-weight:700;">🟢 Election is ACTIVE</span><br><small style="color:var(--muted)">End: ${election.endTime || 'No end time set'}</small>`);
     } else if (election && election.isCompleted) {
-      eInfo.innerHTML = `<span style="color:var(--red);font-weight:700;">🔴 Election COMPLETED</span>`;
+      setHTML('election-status-info', `<span style="color:var(--red);font-weight:700;">🔴 Election COMPLETED</span>`);
     } else {
-      eInfo.innerHTML = `<span style="color:var(--muted);">⚪ Election not started</span>`;
+      setHTML('election-status-info', `<span style="color:var(--muted);">⚪ Election not started</span>`);
     }
 
     renderAdminTable(admins);
@@ -1094,9 +1094,8 @@ async function updateInstitutionCode() {
 }
 
 function renderAdminTable(admins) {
-  const tb = document.getElementById('admin-table');
-  if (!admins.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No admins yet</td></tr>'; return; }
-  tb.innerHTML = admins.map(a => `<tr>
+  if (!admins.length) { setHTML('admin-table', '<tr><td colspan="6" class="empty">No admins yet</td></tr>'); return; }
+  setHTML('admin-table', admins.map(a => `<tr>
     <td><strong>${a.regNum}</strong></td><td>${a.name}</td>
     <td><span class="badge badge-active">${a.branch||'-'}</span></td>
     <td>${a.email||'-'}</td>
@@ -1105,14 +1104,12 @@ function renderAdminTable(admins) {
       <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);" onclick="editAdmin('${a.regNum}','${a.name}','${a.email||''}','${a.branch||''}')">Edit</button>
       <button class="btn-sm btn-danger-sm" onclick="removeUser('${a.regNum}')">Remove</button>
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 function renderSubAdminTable(sas) {
-  const tb = document.getElementById('subadmin-table');
-  if (!tb) return;
-  if (!sas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">No sub-admins yet</td></tr>'; return; }
-  tb.innerHTML = sas.map(s => `<tr>
+  if (!sas.length) { setHTML('subadmin-table', '<tr><td colspan="7" class="empty">No sub-admins yet</td></tr>'); return; }
+  setHTML('subadmin-table', sas.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
     <td>${s.branch||'-'}</td><td>${s.class||'-'}</td><td>${s.year||'-'}</td>
     <td>${s.managedBy||'-'}</td>
@@ -1120,14 +1117,12 @@ function renderSubAdminTable(sas) {
       <button class="btn-sm" style="background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);" onclick="editSubAdmin('${s.regNum}','${s.name}','${s.email||''}','${s.branch||''}','${s.class||''}','${s.year||''}')">Edit</button>
       <button class="btn-sm btn-danger-sm" onclick="removeUser('${s.regNum}')">Remove</button>
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 function renderStudents(list) {
-  const tb = document.getElementById('student-table');
-  if (!tb) return;
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="11" class="empty">No students found</td></tr>'; return; }
-  tb.innerHTML = list.map((s, index) => `<tr>
+  if (!list.length) { setHTML('student-table', '<tr><td colspan="11" class="empty">No students found</td></tr>'); return; }
+  setHTML('student-table', list.map((s, index) => `<tr>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">Total: ${list.length} / #${index+1}</span></td>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
     <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${(s && s.role === 'contestant') ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${(s && s.role === 'contestant') ? 'Candidate' : 'Voter'}</span></td>
@@ -1141,7 +1136,7 @@ function renderStudents(list) {
         <option value="remove">🗑️ Remove</option>
       </select>
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 window.superAction = function(sel, regNum) {
@@ -1513,12 +1508,13 @@ async function loadElectionCategories() {
 }
 
 function renderCategoriesList() {
-    const list = document.getElementById('categories-list');
-    list.innerHTML = '';
     if(electionCategories.length === 0) {
-        list.innerHTML = '<div style="color:var(--muted); text-align:center; padding:1rem; font-size:0.85rem;">No categories defined.</div>';
+        setHTML('categories-list', '<div style="color:var(--muted); text-align:center; padding:1rem; font-size:0.85rem;">No categories defined.</div>');
         return;
     }
+    const list = document.getElementById('categories-list');
+    if(!list) return;
+    list.innerHTML = '';
     electionCategories.forEach((cat, idx) => {
         const div = document.createElement('div');
         div.style.display = 'flex';
@@ -1591,10 +1587,10 @@ async function loadVoting() {
       banner.style.background = 'rgba(34,197,94,0.1)';
       banner.style.borderColor = 'rgba(34,197,94,0.4)';
       banner.style.color = 'var(--green)';
-      banner.innerHTML = `🟢 <span><strong>${election.electionName || 'Election'}</strong> is <strong>ACTIVE</strong></span>
+      setHTML('election-banner', `🟢 <span><strong>${election.electionName || 'Election'}</strong> is <strong>ACTIVE</strong></span>
         <span style="margin-left:auto;font-size:0.85rem;font-weight:400;color:var(--muted);">
           Ends: ${election.endTime ? new Date(election.endTime).toLocaleString() : 'No end time set'}
-        </span>`;
+        </span>`);
       
       // Auto-switch to countdown mode if active
       toggleScheduleMode(false);
@@ -1609,23 +1605,23 @@ async function loadVoting() {
       banner.style.background = 'rgba(239,68,68,0.08)';
       banner.style.borderColor = 'rgba(239,68,68,0.3)';
       banner.style.color = 'var(--red)';
-      banner.innerHTML = '🔴 <span>Election is <strong>COMPLETED</strong> — Use Reset to start a new election</span>';
+      setHTML('election-banner', '🔴 <span>Election is <strong>COMPLETED</strong> — Use Reset to start a new election</span>');
       
       schInner.style.display = 'flex';
       countContainer.style.display = 'none';
-      title.textContent = '⏱️ Election Schedule';
-      startBtn.textContent = '▶ Start Election';
+      setText('schedule-card-title', '⏱️ Election Schedule');
+      setText('v-start-btn', '▶ Start Election');
       if (countdownInterval) clearInterval(countdownInterval);
     } else {
       banner.style.background = 'var(--surface)';
       banner.style.borderColor = 'var(--border)';
       banner.style.color = 'var(--muted)';
-      banner.innerHTML = '⚪ <span>Election <strong>not started</strong> — Set schedule and click Start Election</span>';
+      setHTML('election-banner', '⚪ <span>Election <strong>not started</strong> — Set schedule and click Start Election</span>');
       
       schInner.style.display = 'flex';
       countContainer.style.display = 'none';
-      title.textContent = '⏱️ Election Schedule';
-      startBtn.textContent = '▶ Start Election';
+      setText('schedule-card-title', '⏱️ Election Schedule');
+      setText('v-start-btn', '▶ Start Election');
       if (countdownInterval) clearInterval(countdownInterval);
     }
 
@@ -1742,9 +1738,7 @@ async function loadVoting() {
     const ctx = document.getElementById('results-chart').getContext('2d');
 
     if (candidates.length === 0) {
-      if(ctx && ctx.canvas && ctx.canvas.parentElement) {
-        ctx.canvas.parentElement.innerHTML = '<p style="text-align:center;color:var(--muted);padding:2rem;">No candidates registered yet.</p>';
-      }
+      setHTML('results-chart-container', '<p style="text-align:center;color:var(--muted);padding:2rem;">No candidates registered yet.</p>');
     } else {
       chartInstance = new Chart(ctx, {
         type: 'bar',
@@ -1773,11 +1767,11 @@ async function loadVoting() {
     // ── Candidate Tally Table ────────────────────
     const tallyEl = document.getElementById('candidate-tally');
     if (candidates.length === 0) {
-      tallyEl.innerHTML = '';
+      setHTML('candidate-tally', '');
     } else {
       // Sort by votes desc
       const ranked = candidates.map((c, i) => ({ ...c, votes: votes[i] })).sort((a, b) => b.votes - a.votes);
-      tallyEl.innerHTML = `
+      setHTML('candidate-tally', `
         <table>
           <thead><tr>
             <th>#</th><th>Candidate</th><th>Reg No</th><th>Category</th><th>Branch</th>

@@ -1036,13 +1036,11 @@ function syncCategoryData() {
   });
 }
 function renderCategoryBuilder() {
-  const el = document.getElementById('category-builder');
-  if (!el) return;
   if (myCategories.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;"><p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:#c084fc;">+ Add Category</strong>.</p></div>';
+    setHTML('category-builder', '<div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;"><p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:#c084fc;">+ Add Category</strong>.</p></div>');
     return;
   }
-  el.innerHTML = myCategories.map((cat, ci) => `
+  setHTML('category-builder', myCategories.map((cat, ci) => `
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(168,85,247,0.2);border-radius:12px;padding:1.2rem;">
       <div style="display:flex;gap:0.8rem;align-items:center;margin-bottom:1rem;">
         <input class="cat-name-input" value="${cat.name}" placeholder="Category name (e.g. Boys' CR)" style="flex:1;padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);color:white;font-family:'Outfit';outline:none;">

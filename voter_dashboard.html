@@ -337,10 +337,7 @@
 
                 const news = await StorageManager.getAnnouncement();
                 if (news) {
-                    const marquee = document.createElement('div');
-                    marquee.style.cssText = "background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); color:black; font-weight:bold; width:100%; position:fixed; top:0; left:0; z-index:9999; padding:0.5rem; white-space:nowrap; overflow:hidden;";
-                    marquee.innerHTML = `<marquee behavior='scroll' direction='left'>📢 IMPORTANT: ${news}</marquee>`;
-                    document.body.prepend(marquee);
+                    setHTML('news-ticker', `<marquee behavior='scroll' direction='left' style="background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); color:black; font-weight:bold; width:100%; position:fixed; top:0; left:0; z-index:9999; padding:0.5rem;">📢 IMPORTANT: ${news}</marquee>`);
                     document.querySelector('nav').style.marginTop = "2rem";
                 }
 
@@ -388,7 +385,6 @@
             setHTML('elections-lobby-grid', '<p class="text-center text-muted" style="padding:2rem;">🔍 Scanning for active elections...</p>');
 
             try {
-                // Use scoped my-elections endpoint — respects branch/class/year access
                 const elections = await apiFetch(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
                 lobbyElections = elections || [];
 
@@ -402,7 +398,7 @@
                     return;
                 }
 
-                lobbyGrid.innerHTML = lobbyElections.map(e => {
+                setHTML('elections-lobby-grid', lobbyElections.map(e => {
                     const isActive  = e.isActive == 1 || e.status === 'active';
                     const isCompleted = e.isCompleted == 1;
                     const hasVoted  = !!e.hasVoted;
@@ -435,8 +431,7 @@
                             </div>
                             ${btnHtml}
                         </div>`;
-                }).join('');
-                setHTML('elections-lobby-grid', html);
+                }).join(''));
             } catch (err) {
                 console.error('Lobby error:', err);
                 setHTML('elections-lobby-grid', '<p class="text-danger" style="padding:2rem; text-align:center;">⚠️ Failed to load elections. Please refresh.</p>');
@@ -444,7 +439,6 @@
         }
 
         function openElectionGateway(id, name, electionCode) {
-            // Store the actual election code for verification
             currentElectionCode = electionCode;
             currentElectionObj  = lobbyElections.find(e => e.id === id) || null;
             setText('unlock-election-name', name);
@@ -465,7 +459,6 @@
                 return;
             }
 
-            // Direct comparison: the voter must enter the exact election code
             if (inputVal === String(currentElectionCode).trim().toUpperCase()) {
                 enterBallot(currentElectionObj || { electionCode: currentElectionCode });
             } else {
@@ -489,7 +482,7 @@
         }
 
         async function loadCandidates(elecObj) {
-            candidatesGrid.innerHTML = '<div class="text-center" style="padding:2rem;"><p class="text-muted animate-pulse">Scanning candidates...</p></div>';
+            setHTML('candidates-grid', '<div class="text-center" style="padding:2rem;"><p class="text-muted animate-pulse">Scanning candidates...</p></div>');
             try {
                 const fetchedCandidates = await StorageManager.getCandidates();
                 candidates = fetchedCandidates.filter(c => c.institution === currentUser.institution);
@@ -510,49 +503,53 @@
                     grouped[cat].push(c);
                 });
 
-                candidatesGrid.innerHTML = '';
                 const cats = new Set([...definedCategories, ...Object.keys(grouped)]);
-                
-                cats.forEach(cat => {
-                    const catCandidates = grouped[cat] || [];
-                    if(catCandidates.length === 0) return;
+                if (cats.size === 0) {
+                    setHTML('candidates-grid', '<div class="text-center" style="padding:2rem;"><p class="text-muted">No candidates registered in this category yet.</p></div>');
+                } else {
+                    setHTML('candidates-grid', '');
+                    cats.forEach(cat => {
+                        const catCandidates = grouped[cat] || [];
+                        if(catCandidates.length === 0) return;
 
-                    const section = document.createElement('div');
-                    section.innerHTML = `<h2 class="title" style="margin-top:2.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem; margin-bottom:1.5rem;"><span style="color:var(--neon-cyan)">${cat}</span> Category</h2>`;
-                    const grid = document.createElement('div');
-                    grid.style.display = 'grid';
-                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(310px, 1fr))';
-                    grid.style.gap = '2rem';
+                        const section = document.createElement('div');
+                        section.className = 'category-section';
+                        setHTML(section, `<h2 class="title" style="margin-top:2.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem; margin-bottom:1.5rem;"><span style="color:var(--neon-cyan)">${cat}</span> Category</h2>`);
+                        const grid = document.createElement('div');
+                        grid.style.display = 'grid';
+                        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(310px, 1fr))';
+                        grid.style.gap = '2rem';
 
-                    catCandidates.forEach(c => {
-                        const card = document.createElement('div');
-                        card.className = 'candidate-card';
-                        card.id = `card-${c.regNum}`;
-                        card.innerHTML = `
-                            <img src="${c.portrait || 'https://via.placeholder.com/150'}" class="candidate-photo">
-                            <div class="candidate-info">
-                                <h3>${c.name}</h3>
-                                <p style="margin:1rem 0;">Symbol: <span style="font-size:1.8rem;">${c.symbol}</span></p>
-                                <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
-                                    <button class="btn-sm" onclick='showManifesto(${JSON.stringify(c).replace(/'/g, "&apos;")})'>📜 Manifesto</button>
+                        catCandidates.forEach(c => {
+                            const card = document.createElement('div');
+                            card.className = 'candidate-card glass-panel';
+                            card.id = `card-${c.regNum}`;
+                            setHTML(card, `
+                                <img src="${c.portrait || 'https://via.placeholder.com/150'}" class="candidate-photo">
+                                <div class="candidate-info">
+                                    <h3>${c.name}</h3>
+                                    <p style="margin:1rem 0;">Symbol: <span style="font-size:1.8rem;">${c.symbol}</span></p>
+                                    <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+                                        <button class="btn-sm" onclick='showManifesto(${JSON.stringify(c).replace(/'/g, "&apos;")})'>📜 Manifesto</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <button class="vote-btn btn-outline" id="btn-vote-${c.regNum}" style="width:100%;" onclick="queueVote('${c.regNum}', '${c.name.replace(/'/g, "\\'")}', '${cat.replace(/'/g, "\\'")}')">Select for ${cat}</button>
-                            <div class="debate-section">
-                                <p style="font-weight:700; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Vision Board</p>
-                                <div id="qa-list-${c.regNum}" style="max-height:110px; overflow-y:auto; margin-bottom:1rem; font-size:0.8rem;"></div>
-                                <div style="display:flex; gap:0.5rem;">
-                                    <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.5rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:8px; color:white;">
-                                    <button class="btn-sm" style="padding:0 1rem;" onclick="askQuestion('${c.regNum}')">Ask</button>
+                                <button class="vote-btn btn-outline" id="btn-vote-${c.regNum}" style="width:100%;" onclick="queueVote('${c.regNum}', '${c.name.replace(/'/g, "\\'")}', '${cat.replace(/'/g, "\\'")}')">Select for ${cat}</button>
+                                <div class="debate-section">
+                                    <p style="font-weight:700; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Vision Board</p>
+                                    <div id="qa-list-${c.regNum}" style="max-height:110px; overflow-y:auto; margin-bottom:1rem; font-size:0.8rem;"></div>
+                                    <div style="display:flex; gap:0.5rem;">
+                                        <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.5rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+                                        <button class="btn-sm" style="padding:0 1rem;" onclick="askQuestion('${c.regNum}')">Ask</button>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
-                        grid.appendChild(card);
-                        loadQuestions(c.regNum);
+                            `);
+                            grid.appendChild(card);
+                            loadQuestions(c.regNum);
+                        });
+                        section.appendChild(grid);
+                        candidatesGrid.appendChild(section);
                     });
-                    section.appendChild(grid);
-                    candidatesGrid.appendChild(section);
-                });
+                }
                 updateCartUI();
             } catch(e){ console.error(e); }
         }
@@ -561,7 +558,6 @@
             ballotCart[cat] = { id, name };
             showToast(`Selected ${name} for ${cat}`, "success");
             
-            // Visual Update
             document.querySelectorAll(`button[id^="btn-vote-"]`).forEach(b => {
                 if(b.innerText.includes(`for ${cat}`)) {
                     b.innerText = `Select for ${cat}`;
@@ -599,7 +595,8 @@
             const list = document.getElementById(`qa-list-${id}`);
             if(!list) return;
             const qs = await StorageManager.getQuestions(id);
-            list.innerHTML = qs.length === 0 ? '<p class="text-muted">No entries yet.</p>' : qs.map(q => `<div class="q-box"><strong>${q.voterName}:</strong> ${q.question}</div>`).join('');
+            const html = qs.length === 0 ? '<p class="text-muted">No entries yet.</p>' : qs.map(q => `<div class="q-box"><strong>${q.voterName}:</strong> ${q.question}</div>`).join('');
+            setHTML(list, html);
         }
 
         async function askQuestion(id) {

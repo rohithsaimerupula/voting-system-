@@ -543,9 +543,8 @@ function filterStudents(){
     const q=document.getElementById('search-students').value.toLowerCase();
     const y=document.getElementById('sf-year').value;
     const f=branchStudents.filter(s=>(!q||(s.regNum+' '+s.name).toLowerCase().includes(q))&&(!y||s.year===y));
-    const tb=document.getElementById('student-table');
-    if(!f.length){tb.innerHTML='<tr><td colspan="8" class="empty">No students found</td></tr>';return;}
-    tb.innerHTML = f.map(s=>{
+    if(!f.length){setHTML('student-table', '<tr><td colspan="8" class="empty">No students found</td></tr>');return;}
+    setHTML('student-table', f.map(s=>{
         let p='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">None</div>';
         if(s.portrait){
             if(s.portrait.startsWith('data:image')) p=`<img src="${s.portrait}" onclick="showP('${s.portrait}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;">`;
@@ -568,13 +567,12 @@ function filterStudents(){
             </select>
          </td>
         </tr>`;
-    }).join('');
+    }).join(''));
 }
 
 function renderSAs(sas){
-    const tb=document.getElementById('sa-table');
-    if(!sas.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sub-admins found</td></tr>';return;}
-    tb.innerHTML = sas.map(s=>`<tr>
+    if(!sas.length){setHTML('sa-table', '<tr><td colspan="6" class="empty">No sub-admins found</td></tr>');return;}
+    setHTML('sa-table', sas.map(s=>`<tr>
         <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
         <td>
            <select class="action-select" onchange="doSaAction(this,'${s.regNum}')">
@@ -583,7 +581,7 @@ function renderSAs(sas){
              <option value="remove">🗑 Remove</option>
            </select>
         </td>
-    </tr>`).join('');
+    </tr>`).join(''));
 }
 
 async function grantAllVoteAccess() {
@@ -652,7 +650,6 @@ function buildScopeHierarchy(studs) {
             branchClassMap[s.year].add(s.class);
         }
     });
-    const c = document.getElementById('br-scope-hierarchy');
     let html = '';
     years.forEach(yy => {
         if(branchClassMap[yy] && branchClassMap[yy].size > 0) {
@@ -668,7 +665,7 @@ function buildScopeHierarchy(studs) {
             </div>`;
         }
     });
-    c.innerHTML = html;
+    setHTML('br-scope-hierarchy', html);
 }
 function toggleHierarchy(yy) {
     const el = document.getElementById(`hc-${yy}`); const ic = document.getElementById(`icon-${yy}`);

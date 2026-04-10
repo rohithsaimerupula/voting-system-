@@ -367,11 +367,11 @@
                 // Pure Voter Mode: show Manage Profile, Register, and Back button
                 const nr = document.getElementById('nav-right');
                 if(nr) {
-                    nr.innerHTML = `
+                    setHTML('nav-right', `
                         <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
                         <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
                         <button onclick="window.location.href='register.html'">New? Register</button>
-                    `;
+                    `);
                 }
                 const tc = document.getElementById('login-tabs');
                 if(tc) tc.style.display = 'none';
@@ -398,17 +398,16 @@
                     fpContainer.style.marginBottom = '1rem';
                 }
                 // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
-                const nr = document.getElementById('nav-right');
-                if(nr) nr.innerHTML = `<a href="index.html" class="btn-outline">🏠 Home</a>`;
+                setHTML('nav-right', `<a href="index.html" class="btn-outline">🏠 Home</a>`);
                 const tc = document.getElementById('login-tabs');
                 if(tc) {
                     tc.style.display = 'flex';
-                    tc.innerHTML = `
+                    setHTML('login-tabs', `
                         <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Branch Admin</button>
                         <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Class Admin</button>
-                    `;
+                    `);
                 }
-
+ Riverside:
                 const tabA = document.getElementById('tab-admin');
                 const tabS = document.getElementById('tab-subadmin');
                 if(tabA) tabA.addEventListener('click', () => {
@@ -420,7 +419,7 @@
                         tabS.style.border = '1px solid var(--glass-border)';
                     }
                     setText('login-title', 'Branch Admin Login');
-                    regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
+                    setText('reg-label', 'Admin ID (7 chars · A-Z & 0-9)');
                     regInput.placeholder = 'e.g. ADMCSE01';
                     regInput.maxLength = 7;
                     passInput.placeholder = 'e.g. Admin@12';
@@ -433,8 +432,8 @@
                     document.getElementById('tab-subadmin').style.border = 'none';
                     document.getElementById('tab-admin').style.background = 'rgba(255,255,255,0.05)';
                     document.getElementById('tab-admin').style.border = '1px solid var(--glass-border)';
-                    loginTitle.innerText = 'Class Admin Login';
-                    regLabel.innerText = 'Sub-Admin ID (9 chars · A-Z & 0-9)';
+                    setText('login-title', 'Class Admin Login');
+                    setText('reg-label', 'Sub-Admin ID (9 chars · A-Z & 0-9)');
                     regInput.placeholder = 'e.g. SADMIN101';
                     regInput.maxLength = 9;
                     passInput.placeholder = 'e.g. Sa@ab1';
@@ -457,8 +456,8 @@
                     }
                 });
 
-                loginTitle.innerText = 'Admin Login';
-                regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
+                setText('login-title', 'Admin Login');
+                setText('reg-label', 'Admin ID (7 chars · A-Z & 0-9)');
                 regInput.placeholder = 'e.g. ADMCSE01';
                 regInput.maxLength = 7;
                 passInput.placeholder = 'e.g. Admin@12';
@@ -534,7 +533,7 @@
             }
 
             errorMsg.classList.add('hidden');
-            submitBtn.innerText = "Verifying...";
+            setText('login-btn', "Verifying...");
             submitBtn.disabled = true;
 
             try {
@@ -557,7 +556,7 @@
                             showError("⚠️ " + userObj.warning);
                         }
                         
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
                     
@@ -567,23 +566,23 @@
                     const staffRoles = ['admin','subadmin','superadmin','developer'];
                     if (isStaffMode && !staffRoles.includes(user.role)) {
                         showError("Access Denied. This portal is for Staff only.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
                     if (!isStaffMode && staffRoles.includes(user.role)) {
                         showError("Staff members: use the Admin Access button on the homepage.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
                     // Sub-admin tab guard: if sub-admin tab is selected, only allow subadmin role
                     if (isSubAdmin && user.role !== 'subadmin') {
                         showError("Not a Sub-Admin account. Try the Admin tab.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
                     if (!isSubAdmin && isStaffMode && user.role === 'subadmin') {
                         showError("Sub-Admins: please use the Sub-Admin tab.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
 
@@ -591,13 +590,13 @@
                     const isStaffRole = ['admin', 'subadmin', 'superadmin'].includes(user.role);
                     if (user.status === 'pending' && isStaffRole) {
                         showError("Account Pending Approval. Please contact Admin.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
 
                     if (user.status === 'rejected') {
                         showError("Registration Rejected. Please register again.");
-                        submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                         return;
                     }
 
@@ -610,27 +609,26 @@
 
                 } else {
                     showError("Invalid credentials found.");
-                    submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                    setText('login-btn', "Secure Login"); submitBtn.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
                 alert("Login Error: " + err.message);
                 showError("Connection Error: " + err.message);
-                submitBtn.innerText = "Secure Login"; submitBtn.disabled = false;
+                setText('login-btn', "Secure Login"); submitBtn.disabled = false;
             }
         });
 
         function showError(msg) {
-            const el = document.getElementById('error-msg');
-            el.innerText = msg;
-            el.classList.remove('hidden');
+            setText('error-msg', msg);
+            document.getElementById('error-msg')?.classList.remove('hidden');
         }
 
         // BFCache fix: Reset button state if user navigates back to this page
         window.addEventListener('pageshow', function (event) {
             const submitBtn = document.getElementById('login-btn');
             if (submitBtn && submitBtn.innerText === "Verifying...") {
-                submitBtn.innerText = "Secure Login";
+                setText('login-btn', "Secure Login");
                 submitBtn.disabled = false;
             }
         });
@@ -678,23 +676,23 @@
             if (forcedRole) displayRole = forcedRole;
 
             if (displayRole === 'voter') {
-                title.innerText = "Voter Password Recovery";
-                desc.innerText = "Enter registration number to receive reset code";
+                setText('rec-title', "Voter Password Recovery");
+                setText('rec-desc', "Enter registration number to receive reset code");
                 recIdInput.placeholder = "Enter registration number";
                 recNewPassInput.placeholder = "6-10 chars (3 letters, 1 number, 1 special)";
             } else if (displayRole === 'subadmin') {
-                title.innerText = "Sub-Admin Recovery";
-                desc.innerText = "Enter Sub-Admin ID to receive reset code";
+                setText('rec-title', "Sub-Admin Recovery");
+                setText('rec-desc', "Enter Sub-Admin ID to receive reset code");
                 recIdInput.placeholder = "e.g. SADMIN101";
                 recNewPassInput.placeholder = "Exactly 6 chars (3 letters, 1 number, 1 special)";
             } else if (displayRole === 'superadmin') {
-                title.innerText = "Super-Admin Recovery";
-                desc.innerText = "Enter Super Admin ID to receive reset code";
+                setText('rec-title', "Super-Admin Recovery");
+                setText('rec-desc', "Enter Super Admin ID to receive reset code");
                 recIdInput.placeholder = "e.g. SADMIN001";
                 recNewPassInput.placeholder = "Exactly 10 chars (3 letters, 1 number, 1 special)";
             } else {
-                title.innerText = "Admin Recovery";
-                desc.innerText = "Enter Admin ID to receive reset code";
+                setText('rec-title', "Admin Recovery");
+                setText('rec-desc', "Enter Admin ID to receive reset code");
                 recIdInput.placeholder = "e.g. ADMCSE01";
                 recNewPassInput.placeholder = "Exactly 8 chars (3 letters, 1 number, 1 special)";
             }
@@ -722,7 +720,7 @@
             const regNum = recIdInput.value.trim();
             if (!regNum) return alert("Please enter your Registration ID");
 
-            btn.innerText = "Processing...";
+            setText('rec-btn-1', "Processing...");
             btn.disabled = true;
             console.log(`[UI] Initiating password reset for ${regNum}...`);
 
@@ -748,7 +746,7 @@
                         }
                     } catch(e) {
                         alert("Error: " + e.message);
-                        btn.innerText = "Send Code";
+                        setText('rec-btn-1', "Send Code");
                         btn.disabled = false;
                         return;
                     }
@@ -769,10 +767,10 @@
                     document.getElementById('rec-step-2').classList.remove('hidden');
                     
                     const hintEl = document.getElementById('rec-email-hint');
-                    hintEl.innerText = `Enter code sent to ${res.maskedEmail}`;
+                    setText('rec-email-hint', `Enter code sent to ${res.maskedEmail}`);
                     
                     if (res.warning) {
-                        const warn = document.getElementById('rec-email-warn') || document.createElement('div');
+                        const warn = document.createElement('div');
                         warn.id = 'rec-email-warn';
                         warn.style.color = 'var(--warning)';
                         warn.style.fontSize = '0.8rem';
@@ -786,7 +784,7 @@
             } catch (e) {
                 alert("System Error: " + e.message);
             }
-            btn.innerText = "Send Code";
+            setText('rec-btn-1', "Send Code");
             btn.disabled = false;
         }
 
@@ -826,7 +824,7 @@
                 if (pwdError) return alert("Super-Admin: " + pwdError);
             }
 
-            btn.innerText = "Resetting...";
+            setText('rec-btn-2', "Resetting...");
             btn.disabled = true;
 
             try {
@@ -836,7 +834,7 @@
             } catch (e) {
                 alert("Reset Failed: " + e.message);
             }
-            btn.innerText = "Reset Password";
+            setText('rec-btn-2', "Reset Password");
             btn.disabled = false;
         }
 
@@ -852,7 +850,7 @@
 
             if (otpIn === current2faState.otpRequired) {
                 err.classList.add('hidden');
-                btn.innerText = "Logging in...";
+                setText('twofa-btn', "Logging in...");
                 btn.disabled = true;
 
                 try {
@@ -860,15 +858,15 @@
                 await StorageManager.login(regInput.value, passInput.value, true);
                 window.location.href = 'admin_dashboard.html';
                 } catch (e) {
-                    btn.innerText = "Verify Login";
+                    setText('twofa-btn', "Verify Login");
                     btn.disabled = false;
                     alert("Verification Error: " + e.message);
-                    err.innerText = "Error: " + e.message;
-                    err.classList.remove('hidden');
+                    setText('twofa-error', "Error: " + e.message);
+                    document.getElementById('twofa-error')?.classList.remove('hidden');
                 }
             } else {
-                err.innerText = "Invalid OTP";
-                err.classList.remove('hidden');
+                setText('twofa-error', "Invalid OTP");
+                document.getElementById('twofa-error')?.classList.remove('hidden');
             }
         }
 
@@ -908,27 +906,23 @@
                         const maxVotes = Math.max(...votes);
                         const winners = candidates.filter((c, i) => votes[i] === maxVotes);
                         
-                        const nameEl = document.getElementById('vw-name');
-                        const statsEl = document.getElementById('vw-stats');
-                        const badgeEl = winnerCard.querySelector('.winner-badge');
-
                         if (winners.length > 1) {
-                            nameEl.textContent = "TIE RESULT";
-                            statsEl.innerHTML = `Election tied between <strong>${winners.length}</strong> candidates.`;
-                            badgeEl.textContent = '⚖️';
+                            setText('vw-name', "TIE RESULT");
+                            setHTML('vw-stats', `Election tied between <strong>${winners.length}</strong> candidates.`);
+                            setText('vw-badge', '⚖️');
                         } else {
                             const w = winners[0];
-                            nameEl.textContent = (w.symbol || '') + ' ' + (w.name).toUpperCase();
-                            statsEl.innerHTML = `Winner of the <strong>${status.electionName || 'Election'}</strong> with <strong>${maxVotes}</strong> votes.`;
-                            badgeEl.textContent = '🏆';
+                            setText('vw-name', (w.symbol || '') + ' ' + (w.name).toUpperCase());
+                            setHTML('vw-stats', `Winner of the <strong>${status.electionName || 'Election'}</strong> with <strong>${maxVotes}</strong> votes.`);
+                            setText('vw-badge', '🏆');
                         }
                     }
                 } else if (status && status.isActive && status.endTime) {
                     winnerCard.style.display = 'none';
                     countdownCard.style.display = 'block';
                     if (status.electionName) {
-                        document.getElementById('login-title').innerText = status.electionName;
-                        document.getElementById('login-header-icon').textContent = '🗳️';
+                        setText('login-title', status.electionName);
+                        setText('login-header-icon', '🗳️');
                     }
                     startVoterCountdown(status.endTime);
                 } else {
@@ -958,15 +952,10 @@
                 const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const s = Math.floor((distance % (1000 * 60)) / 1000);
                 
-                const dEl = document.getElementById('vd-days');
-                const hEl = document.getElementById('vd-hours');
-                const mEl = document.getElementById('vd-mins');
-                const sEl = document.getElementById('vd-secs');
-                
-                if(dEl) dEl.textContent = String(d).padStart(2, '0');
-                if(hEl) hEl.textContent = String(h).padStart(2, '0');
-                if(mEl) mEl.textContent = String(m).padStart(2, '0');
-                if(sEl) sEl.textContent = String(s).padStart(2, '0');
+                setText('vd-days', String(d).padStart(2, '0'));
+                setText('vd-hours', String(h).padStart(2, '0'));
+                setText('vd-mins', String(m).padStart(2, '0'));
+                setText('vd-secs', String(s).padStart(2, '0'));
             }
             update();
             voterCountdownInterval = setInterval(update, 1000);
@@ -996,7 +985,7 @@
 
         function closeSAModal() {
             document.getElementById('sa-login-modal').style.display = 'none';
-            document.getElementById('sa-modal-err').textContent = '';
+            setText('sa-modal-err', '');
             // Reset back to step 1
             document.getElementById('sa-step-1').style.display = 'block';
             document.getElementById('sa-step-2').style.display = 'none';
