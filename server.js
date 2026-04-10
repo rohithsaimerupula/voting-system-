@@ -18,6 +18,7 @@ const turso = createClient({
 });
 
 const transporter = nodemailer.createTransport({
+    pool: true, // Maintain persistent connections
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true',
@@ -25,6 +26,9 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    maxConnections: 5,
+    maxMessages: 100,
+    connectionTimeout: 20000, // 20s timeout
 });
 
 if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username') {
@@ -65,6 +69,7 @@ async function initDb() {
             `CREATE TABLE IF NOT EXISTS publicLedger (receiptHash TEXT PRIMARY KEY, voterRegNum TEXT, electionCode TEXT, candidateStr TEXT, institution TEXT, timestamp TEXT, status TEXT)`,
             `CREATE TABLE IF NOT EXISTS questions (id INTEGER PRIMARY KEY AUTOINCREMENT, candidateId TEXT, voterName TEXT, question TEXT, answer TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS globalChat (id INTEGER PRIMARY KEY AUTOINCREMENT, voterName TEXT, text TEXT, timestamp TEXT, institution TEXT)`,
+            `CREATE TABLE IF NOT EXISTS system_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`
         ], "write");
         console.log("Database initialized.");
@@ -117,18 +122,48 @@ app.patch('/api/users/:id', async (req, res) => {
 
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
-        const { email, name, otp, context } = req.body;
+        const { email, name, otp, context, institution } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
-        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username') return res.json({ success: true, warning: "Dev Mode" });
+        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username') {
+            console.log(`[DEV_OTP] ${email}: ${otp}`);
+            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console." });
+        }
+        
         const mailOptions = {
             from: `"Vanguard Security" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
             to: email,
             subject: `${context || 'Verification Code'} — OVS`,
-            html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name||'User'}</strong>,</p><p>Your code is: <strong style="font-size:24px;">${otp}</strong></p></div>`
+            html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name||'User'}</strong>,</p><p>Your verification code for <strong>${context||'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
         };
-        await transporter.sendMail(mailOptions);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: `Failed to send email: ${e.message}` }); }
+
+        let lastError = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                await transporter.sendMail(mailOptions);
+                return res.json({ success: true });
+            } catch (err) {
+                lastError = err;
+                console.warn(`[SMTP] Attempt ${attempt} failed: ${err.message}`);
+                if (attempt < 3) await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+            }
+        }
+
+        // Final failure: Log to DB for Super Admin visibility
+        await db.execute({
+            sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+            args: ["SMTP_FAILURE", `Failed to delivery OTP to ${email}`, lastError.message, new Date().toISOString(), institution || "Global"]
+        });
+
+        res.status(500).json({ error: `SMTP_FAIL: ${lastError.message}` });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/system-health', async (req, res) => {
+    try {
+        const inst = req.query.institution;
+        const alerts = await db.execute({ sql: "SELECT * FROM system_alerts WHERE institution = ? OR institution = 'Global' ORDER BY timestamp DESC LIMIT 20", args: [inst] });
+        res.json({ alerts: alerts.rows, smtpStatus: !!process.env.SMTP_USER });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/vote', async (req, res) => {

@@ -695,6 +695,17 @@ const StorageManager = {
         poll();
         const interval = setInterval(poll, 3000);
         return () => clearInterval(interval);
+    },
+    
+    // --- SYSTEM HEALTH ---
+    async fetchSystemHealth() {
+        try {
+            const inst = localStorage.getItem('ovs_inst_name') || 'Global';
+            return await fetchApi(`/admin/system-health?institution=${encodeURIComponent(inst)}`);
+        } catch (e) {
+            console.error("Health Fetch Error:", e);
+            throw e;
+        }
     }
 };
 
