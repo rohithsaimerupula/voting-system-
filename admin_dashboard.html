@@ -367,8 +367,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if(session&&session.role==='admin'){
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('branch-label').textContent=`Branch Admin (${session.branch})`;
-    document.getElementById('branch-sub').textContent=`Managing ${session.branch} — ${session.institution}`;
+
+    // Safe DOM Utilities
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+    function setHTML(id, html) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    }
+
+    setText('branch-label', `Branch Admin (${session.branch})`);
+    setText('branch-sub', `Managing ${session.branch} — ${session.institution}`);
     loadAll();
   }else{
     window.location.href='login.html?admin=true';
@@ -380,7 +391,14 @@ async function apiFetch(path,opts={}){
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
   return r.json();
 }
-function toast(m,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+m;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function toast(m,ok=true){
+    const t=document.getElementById('toast');
+    if(!t) return;
+    t.textContent=(ok?'✅ ':'❌ ')+m;
+    t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),3000);
+}
 
 async function adminLogin(){
   const id=document.getElementById('auth-id').value.trim();
@@ -392,8 +410,8 @@ async function adminLogin(){
     session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('branch-label').textContent=`Branch Admin (${user.branch})`;
-    document.getElementById('branch-sub').textContent=`Managing ${user.branch} — ${user.institution}`;
+    setText('branch-label', `Branch Admin (${user.branch})`);
+    setText('branch-sub', `Managing ${user.branch} — ${user.institution}`);
     loadAll();
   }catch(e){toast(e.message,false);}
 }
@@ -418,20 +436,20 @@ async function loadAll(){
         branchStudents=studs; branchSAs=sas;
         const allowed=studs.filter(s=>s.canVote==1).length;
         const voted=studs.filter(s=>s.hasVoted==1).length;
-        document.getElementById('o-students').textContent=studs.length;
-        document.getElementById('o-canvote').textContent=allowed;
-        document.getElementById('o-voted').textContent=voted;
-        document.getElementById('o-subadmins').textContent=sas.length;
+        setText('o-students', studs.length);
+        setText('o-canvote', allowed);
+        setText('o-voted', voted);
+        setText('o-subadmins', sas.length);
 
         // Update Summary Bar
-        document.getElementById('sum-total').textContent = studs.length;
-        document.getElementById('sum-can').textContent = allowed;
-        document.getElementById('sum-voted').textContent = voted;
-        document.getElementById('sum-not').textContent = studs.length - allowed;
+        setText('sum-total', studs.length);
+        setText('sum-can', allowed);
+        setText('sum-voted', voted);
+        setText('sum-not', studs.length - allowed);
 
         // Update Pills
-        document.getElementById('reg-total-pill').textContent = `${studs.length} Total`;
-        document.getElementById('vote-total-pill').textContent = `${studs.length} Total`;
+        setText('reg-total-pill', `${studs.length} Total`);
+        setText('vote-total-pill', `${studs.length} Total`);
 
         filterStudents();
         renderSAs(sas);
@@ -441,10 +459,10 @@ async function loadAll(){
         const activeS=studs.filter(s=>s.status==='active').length;
         const pendingS=studs.length-activeS;
         const regRate = studs.length ? Math.round((activeS/studs.length)*100) : 0;
-        document.getElementById('reg-rate-badge').textContent = `${regRate}%`;
+        setText('reg-rate-badge', `${regRate}%`);
         
         // Custom Legend for Registration
-        document.getElementById('reg-legend').innerHTML = `
+        setHTML('reg-legend', `
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.3rem;">
                 <span style="font-size:0.85rem; color:white;"><span style="color:var(--cyan); margin-right:5px;">●</span> Accepted</span>
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--cyan);">${activeS}</span>
@@ -453,10 +471,12 @@ async function loadAll(){
                 <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Pending</span>
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted);">${pendingS}</span>
             </div>
-        `;
+        `);
 
         if(cReg)cReg.destroy();
-        const crCtx=document.getElementById('chart-reg').getContext('2d');
+        const crEl=document.getElementById('chart-reg');
+        if(!crEl) return;
+        const crCtx=crEl.getContext('2d');
         cReg=new Chart(crCtx,{
             type:'doughnut',
             data:{
@@ -479,10 +499,10 @@ async function loadAll(){
         // Chart 2: Voting
         const denied=studs.length-allowed;
         const voteRate = studs.length ? Math.round((allowed/studs.length)*100) : 0;
-        document.getElementById('vote-rate-badge').textContent = `${voteRate}%`;
+        setText('vote-rate-badge', `${voteRate}%`);
 
         // Custom Legend for Voting
-        document.getElementById('vote-legend').innerHTML = `
+        setHTML('vote-legend', `
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.3rem;">
                 <span style="font-size:0.85rem; color:white;"><span style="color:var(--green); margin-right:5px;">●</span> Allowed</span>
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--green);">${allowed}</span>
@@ -491,10 +511,12 @@ async function loadAll(){
                 <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Resticted</span>
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted);">${denied}</span>
             </div>
-        `;
+        `);
 
         if(cVote)cVote.destroy();
-        const cvCtx=document.getElementById('chart-vote').getContext('2d');
+        const cvEl=document.getElementById('chart-vote');
+        if(!cvEl) return;
+        const cvCtx=cvEl.getContext('2d');
         cVote=new Chart(cvCtx,{
             type:'doughnut',
             data:{
@@ -667,17 +689,27 @@ async function loadBranchElection() {
         const elecs = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch&createdBy=${encodeURIComponent(session.regNum)}`);
         branchElection = elecs[0]||null;
         if(branchElection) {
-            document.getElementById('br-create-election-card').style.display='none';
-            document.getElementById('br-election-active').style.display='block';
-            document.getElementById('br-elec-code').textContent = branchElection.electionCode;
-            if(branchElection.isActive){document.getElementById('br-elec-start-btn').style.display='none';document.getElementById('br-elec-stop-btn').style.display='inline-block';}
-            else{document.getElementById('br-elec-start-btn').style.display='inline-block';document.getElementById('br-elec-stop-btn').style.display='none';}
+            const createCard = document.getElementById('br-create-election-card');
+            if(createCard) createCard.style.display='none';
+            const activeEl = document.getElementById('br-election-active');
+            if(activeEl) activeEl.style.display='block';
+            setText('br-elec-code', branchElection.electionCode);
+            const startBtn = document.getElementById('br-elec-start-btn');
+            const stopBtn = document.getElementById('br-elec-stop-btn');
+            if(branchElection.isActive){
+                if(startBtn) startBtn.style.display='none';
+                if(stopBtn) stopBtn.style.display='inline-block';
+            }
+            else{
+                if(startBtn) startBtn.style.display='inline-block';
+                if(stopBtn) stopBtn.style.display='none';
+            }
             // analytics
             const an = await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}/analytics`);
-            document.getElementById('br-v-total').textContent = an.total;
-            document.getElementById('br-v-allowed').textContent = an.allowed;
-            document.getElementById('br-v-voted').textContent = an.voted;
-            document.getElementById('br-v-pct').textContent = an.allowed>0?Math.round((an.voted/an.allowed)*100)+'%':'0%';
+            setText('br-v-total', an.total);
+            setText('br-v-allowed', an.allowed);
+            setText('br-v-voted', an.voted);
+            setText('br-v-pct', an.allowed>0?Math.round((an.voted/an.allowed)*100)+'%':'0%');
 
             // Fetch and Render Results
             const res = await StorageManager.fetchElectionResults(branchElection.id);
@@ -685,9 +717,9 @@ async function loadBranchElection() {
             const rCard = document.getElementById('br-elec-results-card');
             
             if (res.success && res.results.length > 0) {
-                rCard.style.display = 'block';
+                if(rCard) rCard.style.display = 'block';
                 const totalV = res.results.reduce((s, r) => s + r.votes, 0);
-                rList.innerHTML = res.results.map((r, idx) => {
+                setHTML('br-elec-results-list', res.results.map((r, idx) => {
                     const pct = totalV > 0 ? Math.round((r.votes / totalV) * 100) : 0;
                     const isWin = idx === 0 && r.votes > 0;
                     return `
@@ -707,13 +739,15 @@ async function loadBranchElection() {
                             </div>
                         </div>
                     `;
-                }).join('');
+                }).join(''));
             } else {
-                rCard.style.display = 'none';
+                if(rCard) rCard.style.display = 'none';
             }
         } else {
-            document.getElementById('br-create-election-card').style.display='block';
-            document.getElementById('br-election-active').style.display='none';
+            const createCard = document.getElementById('br-create-election-card');
+            if(createCard) createCard.style.display='block';
+            const activeEl = document.getElementById('br-election-active');
+            if(activeEl) activeEl.style.display='none';
         }
     }catch(e){toast(e.message,false);}
 }
@@ -758,14 +792,14 @@ async function loadCollegeElection(){
         const ce = elecs[0]||null;
         const i = document.getElementById('col-elec-info');
         if(ce){
-            i.innerHTML = `<h3 style="color:var(--text);margin-bottom:0.5rem;">College Election: <span style="color:var(--cyan)">${ce.name}</span></h3>
-            Status: ${ce.isActive?'<span class="pill-active">Running</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${ce.electionCode}</strong>`;
+            setHTML('col-elec-info', `<h3 style="color:var(--text);margin-bottom:0.5rem;">College Election: <span style="color:var(--cyan)">${ce.name}</span></h3>
+            Status: ${ce.isActive?'<span class="pill-active">Running</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${ce.electionCode}</strong>`);
         } else {
-            i.innerHTML = "No college election running.";
+            setText('col-elec-info', "No college election running.");
         }
-        document.getElementById('col-br-total').textContent = branchStudents.length;
-        document.getElementById('col-br-allowed').textContent = branchStudents.filter(s=>s.canVote==1).length;
-        document.getElementById('col-br-voted').textContent = branchStudents.filter(s=>s.hasVoted==1).length;
+        setText('col-br-total', branchStudents.length);
+        setText('col-br-allowed', branchStudents.filter(s=>s.canVote==1).length);
+        setText('col-br-voted', branchStudents.filter(s=>s.hasVoted==1).length);
     }catch(e){toast(e.message,false);}
 }
 
