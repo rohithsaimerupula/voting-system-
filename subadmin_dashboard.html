@@ -724,19 +724,27 @@ function switchStudentTab(tab) {
   const btnApproved = document.getElementById('tab-approved');
 
   if (tab === 'pending') {
-    pendingTab.style.display = 'block';
-    approvedTab.style.display = 'none';
-    btnPending.style.background = 'rgba(255,42,77,0.15)';
-    btnPending.style.color = '#ff2a4d';
-    btnApproved.style.background = 'transparent';
-    btnApproved.style.color = 'var(--muted)';
+    if(pendingTab) pendingTab.style.display = 'block';
+    if(approvedTab) approvedTab.style.display = 'none';
+    if(btnPending) {
+        btnPending.style.background = 'rgba(255,42,77,0.15)';
+        btnPending.style.color = '#ff2a4d';
+    }
+    if(btnApproved) {
+        btnApproved.style.background = 'transparent';
+        btnApproved.style.color = 'var(--muted)';
+    }
   } else {
-    pendingTab.style.display = 'none';
-    approvedTab.style.display = 'block';
-    btnPending.style.background = 'transparent';
-    btnPending.style.color = 'var(--muted)';
-    btnApproved.style.background = 'rgba(34,197,94,0.1)';
-    btnApproved.style.color = '#22c55e';
+    if(pendingTab) pendingTab.style.display = 'none';
+    if(approvedTab) approvedTab.style.display = 'block';
+    if(btnPending) {
+        btnPending.style.background = 'transparent';
+        btnPending.style.color = 'var(--muted)';
+    }
+    if(btnApproved) {
+        btnApproved.style.background = 'rgba(34,197,94,0.1)';
+        btnApproved.style.color = '#22c55e';
+    }
   }
   const q = (document.getElementById('student-search')||{}).value || '';
   filterStudentsByTab(q);
@@ -758,12 +766,13 @@ function _makeImgCells(s) {
 }
 
 function renderPendingStudents(list) {
-  const tb = document.getElementById('pending-student-table');
-  if(!tb) return;
   const pending = list.filter(s => s.status !== 'active');
   setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
-  if (!pending.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'; return; }
-  tb.innerHTML = pending.map(s => {
+  if (!pending.length) { 
+      setHTML('pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'); 
+      return; 
+  }
+  setHTML('pending-student-table', pending.map(s => {
     const { portraitHtml, faceHtml } = _makeImgCells(s);
     const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
     return `<tr>
@@ -776,16 +785,17 @@ function renderPendingStudents(list) {
         <button onclick="rejectStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">✕ Reject</button>
       </td>
     </tr>`;
-  }).join('');
+  }).join(''));
 }
 
 function renderApprovedStudents(list) {
-  const tb = document.getElementById('approved-student-table');
-  if(!tb) return;
   const approved = list.filter(s => s.status === 'active');
   setText('approved-count', classStudents.filter(s => s.status === 'active').length);
-  if (!approved.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No approved students yet</td></tr>'; return; }
-  tb.innerHTML = approved.map(s => {
+  if (!approved.length) { 
+      setHTML('approved-student-table', '<tr><td colspan="6" class="empty">No approved students yet</td></tr>'); 
+      return; 
+  }
+  setHTML('approved-student-table', approved.map(s => {
     const { portraitHtml, faceHtml } = _makeImgCells(s);
     const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
     return `<tr>
@@ -798,7 +808,7 @@ function renderApprovedStudents(list) {
         <button onclick="removeStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">🗑️ Remove</button>
       </td>
     </tr>`;
-  }).join('');
+  }).join(''));
 }
 
 // Keep renderStudents as a wrapper for backward compatibility
@@ -819,15 +829,24 @@ function openEdit(id){
   const regInp = document.getElementById('edit-regnum');
   if(regInp) regInp.value=id;
   setText('edit-regnum-display', id);
-  document.getElementById('edit-name').value=s.name||'';
-  document.getElementById('edit-email').value=s.email||'';
-  document.getElementById('edit-year').value=s.year||'1st Year';
+  const nameEl = document.getElementById('edit-name');
+  const emailEl = document.getElementById('edit-email');
+  const yearEl = document.getElementById('edit-year');
+  const sectionEl = document.getElementById('edit-section');
+  const passEl = document.getElementById('edit-pass');
+  if(nameEl) nameEl.value=s.name||'';
+  if(emailEl) emailEl.value=s.email||'';
+  if(yearEl) yearEl.value=s.year||'1st Year';
   const sec=s.class&&s.class.includes('-')?s.class.split('-')[1]:'1';
-  document.getElementById('edit-section').value=sec;
-  document.getElementById('edit-pass').value='';
-  document.getElementById('edit-modal').classList.add('open');
+  if(sectionEl) sectionEl.value=sec;
+  if(passEl) passEl.value='';
+  const modal = document.getElementById('edit-modal');
+  if(modal) modal.classList.add('open');
 }
-function closeEdit(){document.getElementById('edit-modal').classList.remove('open');}
+function closeEdit(){
+  const modal = document.getElementById('edit-modal');
+  if(modal) modal.classList.remove('open');
+}
 async function saveEdit(){
   const id=document.getElementById('edit-regnum').value;
   const name=document.getElementById('edit-name').value.trim();
@@ -864,17 +883,23 @@ function renderMyElection(){
   const createCard=document.getElementById('create-election-card');
   const activeDiv=document.getElementById('my-election-active');
   if(!myElection){
-    createCard.style.display='block';
-    activeDiv.style.display='none';
+    if(createCard) createCard.style.display='block';
+    if(activeDiv) activeDiv.style.display='none';
     return;
   }
-  createCard.style.display='none';
-  activeDiv.style.display='block';
+  if(createCard) createCard.style.display='none';
+  if(activeDiv) activeDiv.style.display='block';
   setText('my-elec-code', myElection.electionCode||'------');
   const startBtn=document.getElementById('my-elec-start-btn');
   const stopBtn=document.getElementById('my-elec-stop-btn');
-  if(myElection.isActive){startBtn.style.display='none';stopBtn.style.display='inline-block';}
-  else{startBtn.style.display='inline-block';stopBtn.style.display='none';}
+  if(myElection.isActive){
+    if(startBtn) startBtn.style.display='none';
+    if(stopBtn) stopBtn.style.display='inline-block';
+  }
+  else{
+    if(startBtn) startBtn.style.display='inline-block';
+    if(stopBtn) stopBtn.style.display='none';
+  }
   // Info
   const status=myElection.isActive?'🟢 Running':myElection.isCompleted?'✅ Completed':'⏳ Pending';
   setHTML('my-elec-info', `
@@ -1161,10 +1186,11 @@ function startBranchCountdown(endTime){
 }
 
 function renderBranchStudents(list){
-  const tb=document.getElementById('branch-student-table');
-  if(!tb) return;
-  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
+  if(!list.length){
+    setHTML('branch-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+    return;
+  }
+  setHTML('branch-student-table', list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td>
     <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
     <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
@@ -1173,7 +1199,7 @@ function renderBranchStudents(list){
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 async function toggleVoteThenRefresh(regNum,val,page){
@@ -1202,10 +1228,11 @@ async function toggleVoteThenRefresh(regNum,val,page){
 }
 
 function renderMyElecStudents(list){
-  const tb=document.getElementById('my-elec-student-table');
-  if(!tb)return;
-  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
+  if(!list.length){
+    setHTML('my-elec-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+    return;
+  }
+  setHTML('my-elec-student-table', list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td>
     <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
     <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
@@ -1214,7 +1241,7 @@ function renderMyElecStudents(list){
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 async function grantAllMyElec(){
@@ -1291,10 +1318,11 @@ function startCollegeCountdown(endTime){
 }
 
 function renderCollegeStudents(list){
-  const tb=document.getElementById('college-student-table');
-  if(!tb) return;
-  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
-  tb.innerHTML=list.map(s=>`<tr>
+  if(!list.length){
+    setHTML('college-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+    return;
+  }
+  setHTML('college-student-table', list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td>
     <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
     <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
@@ -1303,7 +1331,7 @@ function renderCollegeStudents(list){
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
         `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
-  </tr>`).join('');
+  </tr>`).join(''));
 }
 
 async function grantAllCollege(){

@@ -455,6 +455,16 @@
     const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
     let devSession = null;
 
+    // Safe DOM Utilities
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+    function setHTML(id, html) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    }
+
     // --- SESSION RECOVERY ---
     (async function() {
         const stored = localStorage.getItem('ovs_currentUser');
@@ -463,9 +473,11 @@
                 const user = JSON.parse(stored);
                 if (user && user.role === 'developer') {
                     devSession = user;
-                    document.getElementById('auth-screen').style.display = 'none';
-                    document.getElementById('console-screen').style.display = 'block';
-                    document.getElementById('dev-name-label').textContent = user.name || 'Developer';
+                    const authS = document.getElementById('auth-screen');
+                    const consS = document.getElementById('console-screen');
+                    if (authS) authS.style.display = 'none';
+                    if (consS) consS.style.display = 'block';
+                    setText('dev-name-label', user.name || 'Developer');
                     loadConsole();
                 }
             } catch(e) {
@@ -483,6 +495,7 @@
 
     function showToast(msg, success = true) {
       const t = document.getElementById('toast');
+      if (!t) return;
       t.textContent = (success ? '✅ ' : '❌ ') + msg;
       t.style.borderColor = success ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
       t.classList.add('show');
@@ -513,12 +526,14 @@
         }
 
         devSession = user;
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('console-screen').style.display = 'block';
-        document.getElementById('dev-name-label').textContent = user.name;
+        const authS = document.getElementById('auth-screen');
+        const consS = document.getElementById('console-screen');
+        if (authS) authS.style.display = 'none';
+        if (consS) consS.style.display = 'block';
+        setText('dev-name-label', user.name);
         loadConsole();
       } catch (e) { 
-          errEl.textContent = e.message; 
+          setText('auth-error', e.message); 
           btn.disabled = false;
           btn.innerText = 'Verify Root Access';
       }
@@ -537,27 +552,26 @@
 
     async function loadConsole() {
       const overlay = document.getElementById('db-loading');
-      const msg = document.getElementById('db-loading-msg');
       const retryBtn = document.getElementById('db-retry-btn');
-      overlay.style.display = 'flex';
-      msg.textContent = 'Connecting to database...';
-      retryBtn.style.display = 'none';
+      if(overlay) overlay.style.display = 'flex';
+      setText('db-loading-msg', 'Connecting to database...');
+      if(retryBtn) retryBtn.style.display = 'none';
       try {
         const data = await api('/dev/stats');
         const { counts, superAdmins, institutions } = data;
         
         window.saCache = superAdmins;
         window.instCache = institutions;
-        overlay.style.display = 'none';
+        if(overlay) overlay.style.display = 'none';
 
-        document.getElementById('stat-sa').textContent = counts.saCount;
-        document.getElementById('stat-inst').textContent = counts.instCount;
-        document.getElementById('stat-users').textContent = counts.studentCount;
+        setText('stat-sa', counts.saCount);
+        setText('stat-inst', counts.instCount);
+        setText('stat-users', counts.studentCount);
         
         renderSaTable(superAdmins);
       } catch (e) {
-        msg.textContent = '❌ ' + e.message;
-        retryBtn.style.display = 'block';
+        setText('db-loading-msg', '❌ ' + e.message);
+        if(retryBtn) retryBtn.style.display = 'block';
         showToast(e.message, false);
       }
     }
@@ -575,9 +589,11 @@
     }
 
     function renderSaTable(list) {
-      const tbody = document.getElementById('sa-table-body');
-      if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No Super Admins yet</td></tr>'; return; }
-      tbody.innerHTML = list.map(sa => `
+      if (!list.length) { 
+          setHTML('sa-table-body', '<tr><td colspan="6" class="empty">No Super Admins yet</td></tr>'); 
+          return; 
+      }
+      setHTML('sa-table-body', list.map(sa => `
     <tr>
       <td><strong>${sa.regNum}</strong></td>
       <td>${sa.name}</td>
@@ -588,7 +604,7 @@
         <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}')">Edit</button>
         <button class="btn-sm btn-danger" onclick="deleteSuperAdmin('${sa.regNum}')">Remove</button>
       </td>
-    </tr>`).join('');
+    </tr>`).join(''));
     }
 
     async function createSuperAdmin() {
@@ -631,14 +647,26 @@
     function editSA(id) {
       const sa = window.saCache.find(u => u.regNum === id);
       if(!sa) return showToast('User data not found in cache.', false);
-      document.getElementById('edit-sa-id').value = sa.regNum;
-      document.getElementById('edit-sa-id-display').textContent = sa.regNum;
-      document.getElementById('edit-sa-name').value = sa.name || '';
-      document.getElementById('edit-sa-email').value = sa.email || '';
-      document.getElementById('edit-sa-institution').value = sa.institution || '';
-      document.getElementById('edit-sa-pass').value = '';
-      document.getElementById('edit-sa-modal').classList.add('open');
-      document.getElementById('edit-sa-name').focus();
+      
+      const idEl = document.getElementById('edit-sa-id');
+      if(idEl) idEl.value = sa.regNum;
+      setText('edit-sa-id-display', sa.regNum);
+      
+      const nameEl = document.getElementById('edit-sa-name');
+      const emailEl = document.getElementById('edit-sa-email');
+      const instEl = document.getElementById('edit-sa-institution');
+      const passEl = document.getElementById('edit-sa-pass');
+      
+      if(nameEl) nameEl.value = sa.name || '';
+      if(emailEl) emailEl.value = sa.email || '';
+      if(instEl) instEl.value = sa.institution || '';
+      if(passEl) passEl.value = '';
+      
+      const modal = document.getElementById('edit-sa-modal');
+      if(modal) {
+          modal.classList.add('open');
+          if(nameEl) nameEl.focus();
+      }
     }
 
     function closeEditModal() {
