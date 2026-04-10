@@ -310,7 +310,17 @@
             window.location.href = 'login.html';
         }
 
-        document.getElementById('voter-name').innerText = currentUser.name;
+        // Safe DOM Utilities
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
+        setText('voter-name', currentUser.name);
 
         let currentElectionCode = null;
         let currentElectionData = null;
@@ -340,18 +350,22 @@
                 const user = freshUser || currentUser;
 
                 if (user.isBanned === 1 || user.isBanned === true) {
-                    statusHeader.innerText = "Voting Rights Suspended 🚫";
-                    statusHeader.style.color = "var(--danger)";
-                    statusDesc.innerHTML = `<strong style="color:var(--danger);">Your account has been restricted.</strong>`;
-                    votingSection.classList.add('hidden');
+                    setText('election-status-header', "Voting Rights Suspended 🚫");
+                    const header = document.getElementById('election-status-header');
+                    if(header) header.style.color = "var(--danger)";
+                    setHTML('election-status-desc', `<strong style="color:var(--danger);">Your account has been restricted.</strong>`);
+                    const vs = document.getElementById('voting-section');
+                    if(vs) vs.classList.add('hidden');
                     return;
                 }
 
                 if (user.status === 'pending') {
-                    statusHeader.innerHTML = `⏳ Registration Pending Approval`;
-                    statusHeader.style.color = "#f59e0b";
-                    statusDesc.innerHTML = `Your registration requires manual review by your college Admin.`;
-                    votingSection.classList.add('hidden');
+                    setHTML('election-status-header', `⏳ Registration Pending Approval`);
+                    const header = document.getElementById('election-status-header');
+                    if(header) header.style.color = "#f59e0b";
+                    setHTML('election-status-desc', `Your registration requires manual review by your college Admin.`);
+                    const vs = document.getElementById('voting-section');
+                    if(vs) vs.classList.add('hidden');
                     return;
                 }
 
@@ -360,7 +374,7 @@
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('election-status-header').innerText = "Connection Error";
+                setText('election-status-header', "Connection Error");
             }
         }
 
@@ -369,9 +383,9 @@
         let currentElectionObj = null;
 
         async function loadLobby() {
-            document.getElementById('lobby-section').style.display = 'block';
-            const lobbyGrid = document.getElementById('elections-lobby-grid');
-            lobbyGrid.innerHTML = '<p class="text-center text-muted" style="padding:2rem;">🔍 Scanning for active elections...</p>';
+            const ls = document.getElementById('lobby-section');
+            if(ls) ls.style.display = 'block';
+            setHTML('elections-lobby-grid', '<p class="text-center text-muted" style="padding:2rem;">🔍 Scanning for active elections...</p>');
 
             try {
                 // Use scoped my-elections endpoint — respects branch/class/year access
@@ -379,12 +393,12 @@
                 lobbyElections = elections || [];
 
                 if (lobbyElections.length === 0) {
-                    lobbyGrid.innerHTML = `
+                    setHTML('elections-lobby-grid', `
                         <div class="glass-panel" style="padding:3rem; text-align:center; grid-column:1/-1;">
                             <div style="font-size:3rem; margin-bottom:1rem;">🗳️</div>
                             <h3 style="color:var(--text-muted);">No Elections Available</h3>
                             <p class="text-muted" style="margin-top:0.5rem;">There are no active elections for your profile right now.</p>
-                        </div>`;
+                        </div>`);
                     return;
                 }
 
@@ -422,10 +436,10 @@
                             ${btnHtml}
                         </div>`;
                 }).join('');
-
+                setHTML('elections-lobby-grid', html);
             } catch (err) {
                 console.error('Lobby error:', err);
-                lobbyGrid.innerHTML = '<p class="text-danger" style="padding:2rem; text-align:center;">⚠️ Failed to load elections. Please refresh.</p>';
+                setHTML('elections-lobby-grid', '<p class="text-danger" style="padding:2rem; text-align:center;">⚠️ Failed to load elections. Please refresh.</p>');
             }
         }
 
@@ -433,37 +447,45 @@
             // Store the actual election code for verification
             currentElectionCode = electionCode;
             currentElectionObj  = lobbyElections.find(e => e.id === id) || null;
-            document.getElementById('unlock-election-name').innerText = name;
-            document.getElementById('election-access-code').value = '';
-            document.getElementById('code-error').classList.add('hidden');
-            document.getElementById('election-code-modal').classList.add('visible');
+            setText('unlock-election-name', name);
+            const input = document.getElementById('election-access-code');
+            if(input) input.value = '';
+            const err = document.getElementById('code-error');
+            if(err) err.classList.add('hidden');
+            const modal = document.getElementById('election-code-modal');
+            if(modal) modal.classList.add('visible');
         }
 
         document.getElementById('unlock-election-btn').onclick = function() {
-            const inputCode = document.getElementById('election-access-code').value.trim().toUpperCase();
-            if (!inputCode) {
-                document.getElementById('code-error').innerText = 'Please enter the election code.';
-                document.getElementById('code-error').classList.remove('hidden');
+            const inputVal = document.getElementById('election-access-code').value.trim().toUpperCase();
+            if (!inputVal) {
+                setText('code-error', 'Please enter the election code.');
+                const err = document.getElementById('code-error');
+                if(err) err.classList.remove('hidden');
                 return;
             }
 
             // Direct comparison: the voter must enter the exact election code
-            if (inputCode === String(currentElectionCode).trim().toUpperCase()) {
+            if (inputVal === String(currentElectionCode).trim().toUpperCase()) {
                 enterBallot(currentElectionObj || { electionCode: currentElectionCode });
             } else {
-                document.getElementById('code-error').innerText = '❌ Incorrect code. Please try again.';
-                document.getElementById('code-error').classList.remove('hidden');
+                setText('code-error', '❌ Incorrect code. Please try again.');
+                const err = document.getElementById('code-error');
+                if(err) err.classList.remove('hidden');
             }
         };
 
         async function enterBallot(election) {
             currentElectionData = election;
             document.getElementById('election-code-modal').classList.remove('visible');
-            document.getElementById('lobby-section').style.display = 'none';
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('voting-section').classList.remove('hidden');
+            const ls = document.getElementById('lobby-section');
+            if(ls) ls.style.display = 'none';
+            const lo = document.getElementById('loading-overlay');
+            if(lo) lo.classList.remove('hidden');
+            const vs = document.getElementById('voting-section');
+            if(vs) vs.classList.remove('hidden');
             await loadCandidates(election);
-            document.getElementById('loading-overlay').classList.add('hidden');
+            if(lo) lo.classList.add('hidden');
         }
 
         async function loadCandidates(elecObj) {
@@ -532,7 +554,7 @@
                     candidatesGrid.appendChild(section);
                 });
                 updateCartUI();
-            } catch(e){ }
+            } catch(e){ console.error(e); }
         }
 
         function queueVote(id, name, cat) {
@@ -575,6 +597,7 @@
 
         async function loadQuestions(id) {
             const list = document.getElementById(`qa-list-${id}`);
+            if(!list) return;
             const qs = await StorageManager.getQuestions(id);
             list.innerHTML = qs.length === 0 ? '<p class="text-muted">No entries yet.</p>' : qs.map(q => `<div class="q-box"><strong>${q.voterName}:</strong> ${q.question}</div>`).join('');
         }
@@ -590,17 +613,19 @@
         }
 
         function showManifesto(cand) {
-            document.getElementById('modal-portrait').innerHTML = `<img src="${cand.portrait || 'https://via.placeholder.com/150'}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid var(--gold-primary);">`;
-            document.getElementById('modal-cand-name').innerText = cand.name;
-            document.getElementById('modal-cand-details').innerText = `${cand.branch} | ${cand.regNum}`;
-            document.getElementById('modal-manifesto').innerText = cand.manifesto || "No manifesto provided.";
-            document.getElementById('candidate-modal').classList.add('visible');
+            setHTML('modal-portrait', `<img src="${cand.portrait || 'https://via.placeholder.com/150'}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid var(--gold-primary);">`);
+            setText('modal-cand-name', cand.name);
+            setText('modal-cand-details', `${cand.branch} | ${cand.regNum}`);
+            setText('modal-manifesto', cand.manifesto || "No manifesto provided.");
+            const modal = document.getElementById('candidate-modal');
+            if(modal) modal.classList.add('visible');
         }
 
         function startVoteFlow() {
-            document.getElementById('confirm-candidate-name').innerHTML = Object.entries(ballotCart).map(([k,v]) => `<strong>${k}:</strong> ${v.name}`).join('<br>');
+            setHTML('confirm-candidate-name', Object.entries(ballotCart).map(([k,v]) => `<strong>${k}:</strong> ${v.name}`).join('<br>'));
             showStep(1);
-            document.getElementById('confirm-modal').classList.add('visible');
+            const modal = document.getElementById('confirm-modal');
+            if(modal) modal.classList.add('visible');
         }
 
         let currentStep = 1;
@@ -612,12 +637,16 @@
             document.querySelectorAll('.step-section').forEach(el => el.classList.add('hidden'));
             const nextBtn = document.getElementById('modal-next-btn');
             if (s === 1) {
-                document.getElementById('step-password').classList.remove('hidden');
-                nextBtn.innerText = "Next ➔";
+                const sp = document.getElementById('step-password');
+                if(sp) sp.classList.remove('hidden');
+                if(nextBtn) nextBtn.innerText = "Next ➔";
             } else {
-                document.getElementById('step-webcam').classList.remove('hidden');
-                nextBtn.innerText = "Cast Vote 🗳️";
-                nextBtn.disabled = true;
+                const sw = document.getElementById('step-webcam');
+                if(sw) sw.classList.remove('hidden');
+                if(nextBtn) {
+                  nextBtn.innerText = "Cast Vote 🗳️";
+                  nextBtn.disabled = true;
+                }
             }
         }
 
@@ -641,11 +670,15 @@
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             voteWebcamPhoto = canvas.toDataURL('image/jpeg');
-            document.getElementById('vote-preview').src = voteWebcamPhoto;
-            document.getElementById('vote-preview').classList.remove('hidden');
-            video.classList.add('hidden');
-            document.getElementById('capture-vote-cam').classList.add('hidden');
-            document.getElementById('modal-next-btn').disabled = false;
+            const preview = document.getElementById('vote-preview');
+            if(preview) {
+              preview.src = voteWebcamPhoto;
+              preview.classList.remove('hidden');
+            }
+            if(video) video.classList.add('hidden');
+            const capBtn = document.getElementById('capture-vote-cam');
+            if(capBtn) capBtn.classList.add('hidden');
+            if(nextBtn) nextBtn.disabled = false;
         }
 
         document.getElementById('confirm-form').addEventListener('submit', async (e) => {
@@ -653,8 +686,9 @@
             if (currentStep === 1) {
                 const pwd = document.getElementById('confirm-password').value;
                 if(pwd !== currentUser.password && btoa(pwd) !== currentUser.password) {
-                    document.getElementById('modal-error').innerText = "Incorrect Password";
-                    document.getElementById('modal-error').classList.remove('hidden');
+                    setText('modal-error', "Incorrect Password");
+                    const err = document.getElementById('modal-error');
+                    if(err) err.classList.remove('hidden');
                     return;
                 }
                 showStep(2);
@@ -689,8 +723,9 @@
                     closeModal();
                     setTimeout(()=>location.reload(), 5000);
                 } catch(err){
-                    document.getElementById('modal-error').innerText = "Submission failed: " + err.message;
-                    document.getElementById('modal-error').classList.remove('hidden');
+                    setText('modal-error', "Submission failed: " + err.message);
+                    const errEl = document.getElementById('modal-error');
+                    if(errEl) errEl.classList.remove('hidden');
                 }
             }
         });

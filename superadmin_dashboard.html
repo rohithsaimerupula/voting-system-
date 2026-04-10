@@ -628,6 +628,16 @@
 
 <script>
 const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+
+// Safe DOM Utilities
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
 let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
 if (!saSession || saSession.role !== 'superadmin') {
     window.location.href = 'login.html?admin=true';
@@ -660,12 +670,12 @@ function toggleScheduleMode(isEditing) {
         scheduler.style.display = 'flex';
         countdown.style.display = 'none';
         cancelBtn.style.display = 'block';
-        startBtn.textContent = '💾 Update Schedule';
-        title.textContent = '⚙️ Modify Election Schedule';
+        setText('v-start-btn', '💾 Update Schedule');
+        setText('schedule-card-title', '⚙️ Modify Election Schedule');
     } else {
         scheduler.style.display = 'none';
         countdown.style.display = 'block';
-        title.textContent = '⏳ Election Live Countdown';
+        setText('schedule-card-title', '⏳ Election Live Countdown');
     }
 }
 
@@ -680,12 +690,12 @@ function toggleRegScheduleMode(isEditing) {
         scheduler.style.display = 'flex';
         countdown.style.display = 'none';
         cancelBtn.style.display = 'block';
-        startBtn.textContent = '💾 Update Schedule';
-        title.textContent = '⚙️ Modify Reg Schedule';
+        setText('r-start-btn', '💾 Update Schedule');
+        setText('r-schedule-card-title', '⚙️ Modify Reg Schedule');
     } else {
         scheduler.style.display = 'none';
         countdown.style.display = 'block';
-        title.textContent = '⏳ Registration Live Countdown';
+        setText('r-schedule-card-title', '⏳ Registration Live Countdown');
     }
 }
 
@@ -699,10 +709,10 @@ function startCountdown(endTimeStr) {
         
         if (distance < 0) {
             clearInterval(countdownInterval);
-            document.getElementById('cd-days').textContent = '00';
-            document.getElementById('cd-hours').textContent = '00';
-            document.getElementById('cd-mins').textContent = '00';
-            document.getElementById('cd-secs').textContent = '00';
+            setText('cd-days', '00');
+            setText('cd-hours', '00');
+            setText('cd-mins', '00');
+            setText('cd-secs', '00');
             
             // Auto-update backend to mark election as completed
             apiFetch(`/config/election_${saSession.institution}`, {
@@ -720,10 +730,10 @@ function startCountdown(endTimeStr) {
         const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((distance % (1000 * 60)) / 1000);
         
-        document.getElementById('cd-days').textContent = String(d).padStart(2, '0');
-        document.getElementById('cd-hours').textContent = String(h).padStart(2, '0');
-        document.getElementById('cd-mins').textContent = String(m).padStart(2, '0');
-        document.getElementById('cd-secs').textContent = String(s).padStart(2, '0');
+        setText('cd-days', String(d).padStart(2, '0'));
+        setText('cd-hours', String(h).padStart(2, '0'));
+        setText('cd-mins', String(m).padStart(2, '0'));
+        setText('cd-secs', String(s).padStart(2, '0'));
     }
     
     update();
@@ -759,10 +769,10 @@ function startRegCountdown(endTimeStr) {
         const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((distance % (1000 * 60)) / 1000);
         
-        document.getElementById('r-cd-days').textContent = String(d).padStart(2, '0');
-        document.getElementById('r-cd-hours').textContent = String(h).padStart(2, '0');
-        document.getElementById('r-cd-mins').textContent = String(m).padStart(2, '0');
-        document.getElementById('r-cd-secs').textContent = String(s).padStart(2, '0');
+        setText('r-cd-days', String(d).padStart(2, '0'));
+        setText('r-cd-hours', String(h).padStart(2, '0'));
+        setText('r-cd-mins', String(m).padStart(2, '0'));
+        setText('r-cd-secs', String(s).padStart(2, '0'));
     }
     
     update();
@@ -771,10 +781,12 @@ function startRegCountdown(endTimeStr) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (saSession && saSession.role === 'superadmin') {
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('main-layout').style.display = 'flex';
-    document.getElementById('sa-inst-label').textContent = saSession.institution || 'Super Admin';
-    document.getElementById('inst-name-sub').textContent = saSession.institution || '';
+    const overlay = document.getElementById('auth-overlay');
+    const layout = document.getElementById('main-layout');
+    if(overlay) overlay.style.display = 'none';
+    if(layout) layout.style.display = 'flex';
+    setText('sa-inst-label', saSession.institution || 'Super Admin');
+    setText('inst-name-sub', saSession.institution || '');
     loadAll();
   }
 });
@@ -802,24 +814,24 @@ let _sv_u = null;
 
 function toast(msg, ok=true) {
   const t = document.getElementById('toast');
+  if(!t)return;
   t.textContent = (ok?'✅ ':'❌ ') + msg;
   t.style.borderColor = ok ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
 }
 
 async function saStep1() {
-  const err = document.getElementById('auth-err');
   const btn = document.getElementById('auth-btn-step1');
-  err.textContent = '';
+  setText('auth-err', '');
 
   // Validate ID
   const id = document.getElementById('auth-id').value.trim().toUpperCase();
   const pass = document.getElementById('auth-pass').value;
-  if (id.length !== 9) { err.style.color='var(--red)'; err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
-  if (pass.length !== 10) { err.style.color='var(--red)'; err.textContent = 'Password must be exactly 10 characters.'; return; }
-  if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 3 letters.'; return; }
-  if (!/[0-9]/.test(pass)) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 1 number.'; return; }
-  if (!/[^a-zA-Z0-9]/.test(pass)) { err.style.color='var(--red)'; err.textContent = 'Password must contain at least 1 special character.'; return; }
+  if (id.length !== 9) { setText('auth-err', 'Super Admin ID must be exactly 9 characters.'); return; }
+  if (pass.length !== 10) { setText('auth-err', 'Password must be exactly 10 characters.'); return; }
+  if ((pass.match(/[a-zA-Z]/g)||[]).length < 3) { setText('auth-err', 'Password must contain at least 3 letters.'); return; }
+  if (!/[0-9]/.test(pass)) { setText('auth-err', 'Password must contain at least 1 number.'); return; }
+  if (!/[^a-zA-Z0-9]/.test(pass)) { setText('auth-err', 'Password must contain at least 1 special character.'); return; }
 
   btn.textContent = 'Verifying...';
   btn.disabled = true;
@@ -847,40 +859,38 @@ async function saStep1() {
       btn.style.display = 'none';
       document.getElementById('otp-section').style.display = 'block';
       document.getElementById('auth-otp').focus();
-      err.style.color = 'var(--green)';
-      err.textContent = `✅ OTP sent to your email! Enter it below.`;
+      setText('auth-err', `✅ OTP sent to your email! Enter it below.`);
     } catch(emailErr) {
       btn.textContent = '📧 Send OTP & Continue';
       btn.disabled = false;
-      err.style.color = 'var(--red)';
-      err.textContent = 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error');
+      setText('auth-err', 'Failed to send OTP: ' + (emailErr.text || emailErr.message || 'Email error'));
     }
   } catch(e) {
     btn.textContent = '📧 Send OTP & Continue';
     btn.disabled = false;
-    err.style.color = 'var(--red)';
-    err.textContent = e.message;
+    setText('auth-err', e.message);
   }
 }
 
 async function saStep2() {
-  const err = document.getElementById('auth-err');
   const btn = document.getElementById('auth-btn-step2');
-  err.textContent = '';
+  setText('auth-err', '');
 
   const enteredOtp = document.getElementById('auth-otp').value.trim();
-  if (!enteredOtp || enteredOtp.length !== 6) { err.style.color='var(--red)'; err.textContent = 'Enter the 6-digit OTP from your email.'; return; }
-  if (enteredOtp !== _sv_o) { err.style.color='var(--red)'; err.textContent = '❌ Invalid OTP. Please try again.'; return; }
+  if (!enteredOtp || enteredOtp.length !== 6) { setText('auth-err', 'Enter the 6-digit OTP from your email.'); return; }
+  if (enteredOtp !== _sv_o) { setText('auth-err', '❌ Invalid OTP. Please try again.'); return; }
 
   btn.textContent = 'Logging in...';
   btn.disabled = true;
   const user = _sv_u;
   saSession = user;
   localStorage.setItem('ovs_currentUser', JSON.stringify(user));
-  document.getElementById('auth-overlay').style.display = 'none';
-  document.getElementById('main-layout').style.display = 'flex';
-  document.getElementById('sa-inst-label').textContent = user.institution || 'Super Admin';
-  document.getElementById('inst-name-sub').textContent = user.institution || '';
+  const overlay = document.getElementById('auth-overlay');
+  const layout = document.getElementById('main-layout');
+  if(overlay) overlay.style.display = 'none';
+  if(layout) layout.style.display = 'flex';
+  setText('sa-inst-label', user.institution || 'Super Admin');
+  setText('inst-name-sub', user.institution || '');
   loadAll();
 }
 
@@ -902,7 +912,7 @@ function openSAForgotModal() {
   document.getElementById('sa-forgot-id').value = '';
   document.getElementById('sa-forgot-otp').value = '';
   document.getElementById('sa-forgot-newpass').value = '';
-  document.getElementById('sa-forgot-err').textContent = '';
+  setText('sa-forgot-err', '');
   document.getElementById('sa-forgot-id').focus();
 }
 
@@ -912,10 +922,9 @@ function closeSAForgotModal() {
 
 async function saForgotSendOtp() {
   const btn = document.getElementById('sa-forgot-btn1');
-  const err = document.getElementById('sa-forgot-err');
   const id = document.getElementById('sa-forgot-id').value.trim();
-  err.textContent = '';
-  if (id.length !== 9) { err.textContent = 'Super Admin ID must be exactly 9 characters.'; return; }
+  setText('sa-forgot-err', '');
+  if (id.length !== 9) { setText('sa-forgot-err', 'Super Admin ID must be exactly 9 characters.'); return; }
 
   btn.textContent = 'Looking up account...';
   btn.disabled = true;
@@ -933,14 +942,12 @@ async function saForgotSendOtp() {
     await StorageManager.sendEmailOtp(user.email, user.name || 'Super Admin', otp, 'Master Password Recovery');
     
     const masked = user.email.replace(/^(.{2})(.*)(@.*)$/, '$1***$3');
-    document.getElementById('sa-forgot-hint').textContent = '— sent to ' + masked;
+    setText('sa-forgot-hint', '— sent to ' + masked);
     document.getElementById('sa-forgot-step1').style.display = 'none';
     document.getElementById('sa-forgot-step2').style.display = 'block';
-    err.style.color = '#22c55e';
-    err.textContent = '✅ OTP sent! Check your email inbox.';
+    setText('sa-forgot-err', '✅ OTP sent! Check your email inbox.');
   } catch(e) {
-    err.style.color = '#ef4444';
-    err.textContent = e.message || 'Failed to send OTP';
+    setText('sa-forgot-err', e.message || 'Failed to send OTP');
     btn.textContent = '📧 Send Recovery OTP';
     btn.disabled = false;
   }
@@ -948,20 +955,18 @@ async function saForgotSendOtp() {
 
 async function saForgotReset() {
   const btn = document.getElementById('sa-forgot-btn2');
-  const err = document.getElementById('sa-forgot-err');
   const otp = document.getElementById('sa-forgot-otp').value.trim();
   const newPass = document.getElementById('sa-forgot-newpass').value;
-  err.style.color = '#ef4444';
-  err.textContent = '';
+  setText('sa-forgot-err', '');
   
-  if (otp.length !== 6) { err.textContent = 'Enter the 6-digit code from your email.'; return; }
-  if (otp !== _saForgotOtp) { err.textContent = '❌ Invalid OTP. Please try again.'; return; }
+  if (otp.length !== 6) { setText('sa-forgot-err', 'Enter the 6-digit code from your email.'); return; }
+  if (otp !== _saForgotOtp) { setText('sa-forgot-err', '❌ Invalid OTP. Please try again.'); return; }
   
   // Validate new password
-  if (newPass.length !== 10) { err.textContent = 'Password must be exactly 10 characters.'; return; }
-  if ((newPass.match(/[a-zA-Z]/g)||[]).length < 3) { err.textContent = 'Password needs at least 3 letters.'; return; }
-  if (!/[0-9]/.test(newPass)) { err.textContent = 'Password needs at least 1 number.'; return; }
-  if (!/[^a-zA-Z0-9]/.test(newPass)) { err.textContent = 'Password needs at least 1 special character.'; return; }
+  if (newPass.length !== 10) { setText('sa-forgot-err', 'Password must be exactly 10 characters.'); return; }
+  if ((newPass.match(/[a-zA-Z]/g)||[]).length < 3) { setText('sa-forgot-err', 'Password needs at least 3 letters.'); return; }
+  if (!/[0-9]/.test(newPass)) { setText('sa-forgot-err', 'Password needs at least 1 number.'); return; }
+  if (!/[^a-zA-Z0-9]/.test(newPass)) { setText('sa-forgot-err', 'Password needs at least 1 special character.'); return; }
   
   btn.textContent = 'Resetting...';
   btn.disabled = true;
@@ -970,8 +975,7 @@ async function saForgotReset() {
       method: 'PATCH',
       body: JSON.stringify({ password: btoa(newPass) })
     });
-    err.style.color = '#22c55e';
-    err.textContent = '✅ Password reset successfully! You can now log in.';
+    setText('sa-forgot-err', '✅ Password reset successfully! You can now log in.');
     _saForgotOtp = null;
     setTimeout(closeSAForgotModal, 2500);
   } catch(e) {
@@ -1017,17 +1021,17 @@ async function loadAll() {
     const votedCount = students.filter(u=>u.hasVoted==1).length;
     const canVoteCount = students.filter(u=>u.canVote==1).length;
 
-    document.getElementById('s-students').textContent = students.length;
-    document.getElementById('s-admins').textContent = admins.length;
-    document.getElementById('s-subadmins').textContent = subadmins.length;
-    document.getElementById('s-voted').textContent = votedCount;
-    document.getElementById('s-canvote').textContent = canVoteCount;
+    setText('s-students', students.length);
+    setText('s-admins', admins.length);
+    setText('s-subadmins', subadmins.length);
+    setText('s-voted', votedCount);
+    setText('s-canvote', canVoteCount);
 
     // Update Summary Bar
-    document.getElementById('sum-total').textContent = students.length;
-    document.getElementById('sum-can').textContent = canVoteCount;
-    document.getElementById('sum-voted').textContent = votedCount;
-    document.getElementById('sum-not').textContent = students.length - canVoteCount;
+    setText('sum-total', students.length);
+    setText('sum-can', canVoteCount);
+    setText('sum-voted', votedCount);
+    setText('sum-not', students.length - canVoteCount);
 
     loadInstitutionCode();
 
@@ -1061,7 +1065,10 @@ async function loadInstitutionCode() {
     }
   } catch(e) {
     if (e.message !== "Not found") toast("Error loading code: " + e.message, false);
-    else document.getElementById('inst-access-code').placeholder = 'NOT SET';
+    else {
+      const el = document.getElementById('inst-access-code');
+      if(el) el.placeholder = 'NOT SET';
+    }
   }
 }
 
@@ -1103,6 +1110,7 @@ function renderAdminTable(admins) {
 
 function renderSubAdminTable(sas) {
   const tb = document.getElementById('subadmin-table');
+  if (!tb) return;
   if (!sas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">No sub-admins yet</td></tr>'; return; }
   tb.innerHTML = sas.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
@@ -1117,6 +1125,7 @@ function renderSubAdminTable(sas) {
 
 function renderStudents(list) {
   const tb = document.getElementById('student-table');
+  if (!tb) return;
   if (!list.length) { tb.innerHTML = '<tr><td colspan="11" class="empty">No students found</td></tr>'; return; }
   tb.innerHTML = list.map((s, index) => `<tr>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">Total: ${list.length} / #${index+1}</span></td>
@@ -1141,10 +1150,12 @@ window.superAction = function(sel, regNum) {
   if (action === 'edit') {
       const s = allStudents.find(x => x.regNum === regNum);
       if(!s) return;
-      document.getElementById('edit-modal-title').textContent = '✏️ Edit Student/Candidate';
-      document.getElementById('edit-role').value = s.role;
-      document.getElementById('edit-regnum').value = s.regNum;
-      document.getElementById('edit-regnum-display').textContent = s.regNum;
+      setText('edit-modal-title', '✏️ Edit Student/Candidate');
+      const roleEl = document.getElementById('edit-role');
+      if(roleEl) roleEl.value = s.role;
+      const regEl = document.getElementById('edit-regnum');
+      if(regEl) regEl.value = s.regNum;
+      setText('edit-regnum-display', s.regNum);
       document.getElementById('edit-name').value = s.name;
       document.getElementById('edit-email').value = s.email || '';
       document.getElementById('edit-branch').value = s.branch || 'CSE';
@@ -1205,8 +1216,12 @@ async function createAdmin() {
   try {
     await apiFetch('/users/add', { method:'POST', body:JSON.stringify({ regNum:id, password:btoa(pass), role:'admin', name, email, branch, institution:saSession.institution, status:'active' }) });
     toast(`Admin ${id} created for branch ${branch}`);
-    ['a-id','a-name','a-email','a-pass'].forEach(i=>document.getElementById(i).value='');
-    document.getElementById('a-branch').value = '';
+    ['a-id','a-name','a-email','a-pass'].forEach(i=>{
+      const el = document.getElementById(i);
+      if(el) el.value = '';
+    });
+    const brEl = document.getElementById('a-branch');
+    if(brEl) brEl.value = '';
     loadAll();
   } catch(e) { toast(e.message, false); }
 }
@@ -1214,10 +1229,12 @@ async function createAdmin() {
 function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
 function editAdmin(id, name, email, branch) {
-  document.getElementById('edit-modal-title').textContent = '✏️ Edit Branch Admin';
-  document.getElementById('edit-role').value = 'admin';
-  document.getElementById('edit-regnum').value = id;
-  document.getElementById('edit-regnum-display').textContent = id;
+  setText('edit-modal-title', '✏️ Edit Branch Admin');
+  const roleEl = document.getElementById('edit-role');
+  if(roleEl) roleEl.value = 'admin';
+  const regEl = document.getElementById('edit-regnum');
+  if(regEl) regEl.value = id;
+  setText('edit-regnum-display', id);
   document.getElementById('edit-name').value = name;
   document.getElementById('edit-email').value = email || '';
   document.getElementById('edit-branch').value = branch || 'CSE';
@@ -1228,10 +1245,12 @@ function editAdmin(id, name, email, branch) {
 }
 
 function editSubAdmin(id, name, email, branch, cls, year) {
-  document.getElementById('edit-modal-title').textContent = '✏️ Edit Sub-Admin';
-  document.getElementById('edit-role').value = 'subadmin';
-  document.getElementById('edit-regnum').value = id;
-  document.getElementById('edit-regnum-display').textContent = id;
+  setText('edit-modal-title', '✏️ Edit Sub-Admin');
+  const roleEl = document.getElementById('edit-role');
+  if(roleEl) roleEl.value = 'subadmin';
+  const regEl = document.getElementById('edit-regnum');
+  if(regEl) regEl.value = id;
+  setText('edit-regnum-display', id);
   document.getElementById('edit-name').value = name;
   document.getElementById('edit-email').value = email || '';
   document.getElementById('edit-branch').value = branch || 'CSE';
@@ -1557,7 +1576,7 @@ async function loadVoting() {
     currentRegistrationConfig = registration;
 
     const inst = saSession.institution;
-    document.getElementById('voting-inst-sub').textContent = `Election management — ${inst}`;
+    setText('voting-inst-sub', `Election management — ${inst}`);
 
     // ── Banner & Countdown Logic (Election) ────────────────
     const banner = document.getElementById('election-banner');
@@ -1580,7 +1599,7 @@ async function loadVoting() {
       // Auto-switch to countdown mode if active
       toggleScheduleMode(false);
       if (election.endTime) startCountdown(election.endTime);
-      if (election.electionName) title.textContent = '⏳ ' + election.electionName;
+      if (election.electionName) setText('schedule-card-title', '⏳ ' + election.electionName);
 
       // Pre-fill times
       if (election.startTime) document.getElementById('v-start').value = election.startTime.slice(0,16);
@@ -1619,7 +1638,7 @@ async function loadVoting() {
     if (registration && registration.isActive) {
       toggleRegScheduleMode(false);
       if (registration.endTime) startRegCountdown(registration.endTime);
-      rTitle.textContent = '⏳ Registration Live';
+      setText('r-schedule-card-title', '⏳ Registration Live');
       
       // Pre-fill times
       if (registration.startTime) document.getElementById('r-start').value = registration.startTime.slice(0,16);
@@ -1627,14 +1646,14 @@ async function loadVoting() {
     } else if (registration && registration.isCompleted) {
       rSchInner.style.display = 'flex';
       rCountContainer.style.display = 'none';
-      rTitle.textContent = '🔴 Registration Ended';
-      rStartBtn.textContent = '▶ Restart Registration';
+      setText('r-schedule-card-title', '🔴 Registration Ended');
+      setText('r-start-btn', '▶ Restart Registration');
       if (regCountdownInterval) clearInterval(regCountdownInterval);
     } else {
       rSchInner.style.display = 'flex';
       rCountContainer.style.display = 'none';
-      rTitle.textContent = '📝 Registration Schedule';
-      rStartBtn.textContent = '▶ Start Registration';
+      setText('r-schedule-card-title', '📝 Registration Schedule');
+      setText('r-start-btn', '▶ Start Registration');
       if (regCountdownInterval) clearInterval(regCountdownInterval);
     }
 
@@ -1708,9 +1727,9 @@ async function loadVoting() {
              }
         });
 
-        nameEl.innerHTML = winHtml || "NO WINNERS DECLARED";
-        statsEl.innerHTML = `Final Results for <strong>${election.electionName || 'Election'}</strong>`;
-        badgeEl.textContent = '🏆';
+        setHTML('winner-name', winHtml || "NO WINNERS DECLARED");
+        setHTML('winner-stats', `Final Results for <strong>${election.electionName || 'Election'}</strong>`);
+        setText('winner-badge', '🏆');
         
     } else {
         winnerBanner.style.display = 'none';
@@ -1723,7 +1742,9 @@ async function loadVoting() {
     const ctx = document.getElementById('results-chart').getContext('2d');
 
     if (candidates.length === 0) {
-      ctx.canvas.parentElement.innerHTML = '<p style="text-align:center;color:var(--muted);padding:2rem;">No candidates registered yet.</p>';
+      if(ctx && ctx.canvas && ctx.canvas.parentElement) {
+        ctx.canvas.parentElement.innerHTML = '<p style="text-align:center;color:var(--muted);padding:2rem;">No candidates registered yet.</p>';
+      }
     } else {
       chartInstance = new Chart(ctx, {
         type: 'bar',

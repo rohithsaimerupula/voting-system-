@@ -499,13 +499,23 @@ let regChartInstance = null;
 let voteChartInstance = null;
 let partChartInstance = null;
 
+// Safe DOM Utilities to prevent "Cannot set properties of null"
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (session && session.role === 'subadmin') {
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`${session.year||''} ${session.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${session.year||''} ${session.class} — ${session.branch} — ${session.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${session.year||''} ${session.class}`;
+    setText('class-label', `${session.year||''} ${session.class||'-'}`);
+    setText('class-sub', `Managing ${session.year||''} ${session.class} — ${session.branch} — ${session.institution}`);
+    setText('class-students-sub', `Students in ${session.year||''} ${session.class}`);
     loadAll();
   } else {
     window.location.href='login.html?admin=true';
@@ -517,15 +527,15 @@ async function apiFetch(path,opts={}){
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
   return r.json();
 }
-function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+function toast(msg,ok=true){const t=document.getElementById('toast');if(!t)return;t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
 async function saLogin(){
   const id=document.getElementById('auth-id').value.trim();
   const pass=document.getElementById('auth-pass').value;
   const err=document.getElementById('auth-err');
   const btn=document.querySelector('#auth-overlay button');
-  err.textContent='';
-  if(!id||!pass){err.textContent='Please enter both ID and Password.';return;}
+  setText('auth-err','');
+  if(!id||!pass){setText('auth-err','Please enter both ID and Password.');return;}
   btn.disabled=true;btn.innerText='Authenticating...';
   try{
     const user=await StorageManager.login(id,pass);
@@ -534,11 +544,11 @@ async function saLogin(){
     session=user;
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-    document.getElementById('class-label').textContent=`${user.year||''} ${user.class||'-'}`;
-    document.getElementById('class-sub').textContent=`Managing ${user.year||''} ${user.class} — ${user.branch} — ${user.institution}`;
-    document.getElementById('class-students-sub').textContent=`Students in ${user.year||''} ${user.class}`;
+    setText('class-label', `${user.year||''} ${user.class||'-'}`);
+    setText('class-sub', `Managing ${user.year||''} ${user.class} — ${user.branch} — ${user.institution}`);
+    setText('class-students-sub', `Students in ${user.year||''} ${user.class}`);
     loadAll();
-  }catch(e){err.textContent=e.message;btn.disabled=false;btn.innerText='Login';}
+  }catch(e){setText('auth-err', e.message);btn.disabled=false;btn.innerText='Login';}
 }
 function saLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
 
@@ -562,18 +572,19 @@ async function loadAll(){
     const active=students.filter(s=>s.status==='active').length;
     const allowed=students.filter(s=>s.canVote==1).length;
     const voted=students.filter(s=>s.hasVoted==1).length;
-    document.getElementById('s-students').textContent=students.length;
-    document.getElementById('s-canvote').textContent=allowed;
-    document.getElementById('s-voted').textContent=voted;
-    document.getElementById('s-not-granted').textContent=students.length-allowed;
-    document.getElementById('s-pending').textContent=students.length-active;
+    
+    setText('s-students', students.length);
+    setText('s-canvote', allowed);
+    setText('s-voted', voted);
+    setText('s-not-granted', students.length - allowed);
+    setText('s-pending', students.length - active);
 
     // Update Summary Bar
-    document.getElementById('sum-total').textContent = students.length;
-    document.getElementById('sum-can').textContent = allowed;
-    document.getElementById('sum-voted').textContent = voted;
-    document.getElementById('sum-not').textContent = students.length - allowed;
-    document.getElementById('sum-pending').textContent = students.length - active;
+    setText('sum-total', students.length);
+    setText('sum-can', allowed);
+    setText('sum-voted', voted);
+    setText('sum-not', students.length - allowed);
+    setText('sum-pending', students.length - active);
 
     renderStudents(students);
     updateCharts(students.length,active,allowed,voted);
@@ -617,8 +628,8 @@ function updateCharts(total,accepted,allowed,voted){
     options:opts
   });
   
-  document.getElementById('reg-total-pill').textContent = `Total: ${total}`;
-  document.getElementById('reg-legend').innerHTML=`
+  setText('reg-total-pill', `Total: ${total}`);
+  setHTML('reg-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">✅ Accepted:</span>
         <strong style="color:white">${accepted}</strong>
@@ -652,8 +663,8 @@ function updateCharts(total,accepted,allowed,voted){
     options:opts
   });
 
-  document.getElementById('vote-total-pill').textContent = `Accepted: ${accepted}`;
-  document.getElementById('vote-legend').innerHTML=`
+  setText('vote-total-pill', `Accepted: ${accepted}`);
+  setHTML('vote-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">🗳️ Allowed:</span>
         <strong style="color:white">${allowed}</strong>
@@ -686,8 +697,8 @@ function updateCharts(total,accepted,allowed,voted){
     options:opts
   });
 
-  document.getElementById('part-total-pill').textContent = `Allowed: ${allowed}`;
-  document.getElementById('part-legend').innerHTML=`
+  setText('part-total-pill', `Allowed: ${allowed}`);
+  setHTML('part-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">🏁 Voted:</span>
         <strong style="color:white">${voted}</strong>
@@ -748,8 +759,9 @@ function _makeImgCells(s) {
 
 function renderPendingStudents(list) {
   const tb = document.getElementById('pending-student-table');
+  if(!tb) return;
   const pending = list.filter(s => s.status !== 'active');
-  document.getElementById('pending-count').textContent = classStudents.filter(s => s.status !== 'active').length;
+  setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
   if (!pending.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'; return; }
   tb.innerHTML = pending.map(s => {
     const { portraitHtml, faceHtml } = _makeImgCells(s);
@@ -769,8 +781,9 @@ function renderPendingStudents(list) {
 
 function renderApprovedStudents(list) {
   const tb = document.getElementById('approved-student-table');
+  if(!tb) return;
   const approved = list.filter(s => s.status === 'active');
-  document.getElementById('approved-count').textContent = classStudents.filter(s => s.status === 'active').length;
+  setText('approved-count', classStudents.filter(s => s.status === 'active').length);
   if (!approved.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No approved students yet</td></tr>'; return; }
   tb.innerHTML = approved.map(s => {
     const { portraitHtml, faceHtml } = _makeImgCells(s);
@@ -803,8 +816,9 @@ function filterStudents(q){renderStudents(classStudents.filter(s=>[s.regNum,s.na
 
 function openEdit(id){
   const s=studentMap[id];if(!s)return;
-  document.getElementById('edit-regnum').value=id;
-  document.getElementById('edit-regnum-display').textContent=id;
+  const regInp = document.getElementById('edit-regnum');
+  if(regInp) regInp.value=id;
+  setText('edit-regnum-display', id);
   document.getElementById('edit-name').value=s.name||'';
   document.getElementById('edit-email').value=s.email||'';
   document.getElementById('edit-year').value=s.year||'1st Year';
@@ -856,21 +870,21 @@ function renderMyElection(){
   }
   createCard.style.display='none';
   activeDiv.style.display='block';
-  document.getElementById('my-elec-code').textContent=myElection.electionCode||'------';
+  setText('my-elec-code', myElection.electionCode||'------');
   const startBtn=document.getElementById('my-elec-start-btn');
   const stopBtn=document.getElementById('my-elec-stop-btn');
   if(myElection.isActive){startBtn.style.display='none';stopBtn.style.display='inline-block';}
   else{startBtn.style.display='inline-block';stopBtn.style.display='none';}
   // Info
   const status=myElection.isActive?'🟢 Running':myElection.isCompleted?'✅ Completed':'⏳ Pending';
-  document.getElementById('my-elec-info').innerHTML=`
+  setHTML('my-elec-info', `
     <div><strong>Name:</strong> ${myElection.name}</div>
     <div><strong>Status:</strong> ${status}</div>
     <div><strong>Scope:</strong> ${session.class} (${session.year})</div>
     <div><strong>Start:</strong> ${myElection.startTime?new Date(myElection.startTime).toLocaleString():'Not set'}</div>
     <div><strong>End:</strong> ${myElection.endTime?new Date(myElection.endTime).toLocaleString():'Not set'}</div>
     <div><strong>Registration:</strong> ${myElection.registrationOpen?'🟢 Open':'🔴 Closed'}</div>
-  `;
+  `);
   
   const cdCard = document.getElementById('class-countdown-card');
   if(cdCard) {
@@ -895,11 +909,11 @@ function startClassCountdown(endTime){
   function tick(){
     const diff = new Date(endTime) - new Date();
     if(!disp)return;
-    if(diff<=0){disp.textContent='00:00:00';clearInterval(window.classCountdownInterval);return;}
+    if(diff<=0){setText('class-cd-display', '00:00:00');clearInterval(window.classCountdownInterval);return;}
     const h=Math.floor(diff/3600000).toString().padStart(2,'0');
     const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
     const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    disp.textContent=`${h}:${m}:${s}`;
+    setText('class-cd-display', `${h}:${m}:${s}`);
   }
   tick();
   window.classCountdownInterval = setInterval(tick, 1000);
@@ -914,11 +928,11 @@ async function loadMyElectionAnalytics(){
     const allowed = acceptedStudents.filter(s=>s.canVote==1).length;
     const totalEligible = acceptedStudents.length;
     
-    document.getElementById('my-v-total').textContent=totalEligible;
-    document.getElementById('my-v-allowed').textContent=allowed;
-    document.getElementById('my-v-voted').textContent=stats.voted;
+    setText('my-v-total', totalEligible);
+    setText('my-v-allowed', allowed);
+    setText('my-v-voted', stats.voted);
     const pct=allowed>0?Math.round((stats.voted/allowed)*100):0;
-    document.getElementById('my-v-pct').textContent=pct+'%';
+    setText('my-v-pct', pct+'%');
     
     // Chart
     const canvas = document.getElementById('my-vote-chart');
@@ -927,7 +941,7 @@ async function loadMyElectionAnalytics(){
       if(window.myElecChartInstance) window.myElecChartInstance.destroy();
       window.myElecChartInstance=new Chart(ctx,{type:'pie',data:{labels:['Voted','Not Yet'],datasets:[{data:[stats.voted,Math.max(0,allowed-stats.voted)],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.08)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
     }
-    document.getElementById('my-vote-legend').innerHTML=`<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0,allowed-stats.voted)}</span>`;
+    setHTML('my-vote-legend', `<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0,allowed-stats.voted)}</span>`);
     
     // Fetch and Render Results
     const res = await StorageManager.fetchElectionResults(myElection.id);
@@ -935,9 +949,9 @@ async function loadMyElectionAnalytics(){
     const resultsCard = document.getElementById('my-elec-results-card');
     
     if (res.success && res.results.length > 0) {
-        resultsCard.style.display = 'block';
+        if(resultsCard) resultsCard.style.display = 'block';
         const totalVotes = res.results.reduce((sum, r) => sum + r.votes, 0);
-        resultsList.innerHTML = res.results.map((r, idx) => {
+        setHTML('my-elec-results-list', res.results.map((r, idx) => {
             const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
             const isWinner = idx === 0 && r.votes > 0;
             return `
@@ -957,9 +971,9 @@ async function loadMyElectionAnalytics(){
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join(''));
     } else {
-        resultsCard.style.display = 'none';
+        if(resultsCard) resultsCard.style.display = 'none';
     }
   }catch(e){console.error(e);}
 }
@@ -1096,7 +1110,7 @@ async function loadBranchElectionPage(){
       const scopeClasses = branchElec.scope && branchElec.scope.classes;
       const inScope = !scopeClasses || scopeClasses.includes(session.class);
 
-      infoDiv.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+      setHTML('branch-elec-info', `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
         <div><h3 style="margin:0;">🏢 ${branchElec.name}</h3>
         <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive?'<span class="pill-active">🟢 Running</span>':branchElec.isCompleted?'<span class="pill-completed">✅ Completed</span>':'<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
       </div>`;
@@ -1104,9 +1118,9 @@ async function loadBranchElectionPage(){
       if(!inScope){
         if(notInScope)notInScope.style.display='block';
         if(studentsCard)studentsCard.style.display='none';
-        document.getElementById('br-total').textContent='–';
-        document.getElementById('br-allowed').textContent='–';
-        document.getElementById('br-voted').textContent='–';
+        setText('br-total', '–');
+        setText('br-allowed', '–');
+        setText('br-voted', '–');
         return;
       }
 
@@ -1116,7 +1130,7 @@ async function loadBranchElectionPage(){
         startBranchCountdown(branchElec.endTime);
       }
     } else {
-      infoDiv.innerHTML='<p style="color:var(--muted);">No branch-level election created yet. Branch Admin has not created one.</p>';
+      setHTML('branch-elec-info', '<p style="color:var(--muted);">No branch-level election created yet. Branch Admin has not created one.</p>');
     }
 
     // Only accepted students in the vote access table
@@ -1124,9 +1138,9 @@ async function loadBranchElectionPage(){
     renderBranchStudents(acceptedStudents);
     const allowed=acceptedStudents.filter(s=>s.canVote==1).length;
     const voted=acceptedStudents.filter(s=>s.hasVoted==1).length;
-    document.getElementById('br-total').textContent=acceptedStudents.length;
-    document.getElementById('br-allowed').textContent=allowed;
-    document.getElementById('br-voted').textContent=voted;
+    setText('br-total', acceptedStudents.length);
+    setText('br-allowed', allowed);
+    setText('br-voted', voted);
   }catch(e){toast(e.message,false);}
 }
 
@@ -1136,11 +1150,11 @@ function startBranchCountdown(endTime){
   function tick(){
     const diff = new Date(endTime) - new Date();
     if(!disp)return;
-    if(diff<=0){disp.textContent='00:00:00';clearInterval(branchCountdownInterval);return;}
+    if(diff<=0){setText('branch-cd-display', '00:00:00');clearInterval(branchCountdownInterval);return;}
     const h=Math.floor(diff/3600000).toString().padStart(2,'0');
     const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
     const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    disp.textContent=`${h}:${m}:${s}`;
+    setText('branch-cd-display', `${h}:${m}:${s}`);
   }
   tick();
   branchCountdownInterval = setInterval(tick, 1000);
@@ -1148,6 +1162,7 @@ function startBranchCountdown(endTime){
 
 function renderBranchStudents(list){
   const tb=document.getElementById('branch-student-table');
+  if(!tb) return;
   if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
   tb.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td>
@@ -1227,17 +1242,17 @@ async function loadCollegeElectionPage(){
       const scopeClasses = collegeElec.scope && collegeElec.scope.classes;
       const inScope = !scopeClasses || scopeClasses.includes(session.class);
 
-      infoDiv.innerHTML=`<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+      setHTML('college-elec-info', `<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
         <div><h3 style="margin:0;">🎓 ${collegeElec.name}</h3>
         <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${collegeElec.isActive?'<span class="pill-active">🟢 Running</span>':collegeElec.isCompleted?'<span class="pill-completed">✅ Completed</span>':'<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${collegeElec.electionCode}</strong></p></div>
-      </div>`;
+      </div>`);
 
       if(!inScope){
         if(notInScope)notInScope.style.display='block';
         if(studentsCard)studentsCard.style.display='none';
-        document.getElementById('col-total').textContent='–';
-        document.getElementById('col-allowed').textContent='–';
-        document.getElementById('col-voted').textContent='–';
+        setText('col-total', '–');
+        setText('col-allowed', '–');
+        setText('col-voted', '–');
         return;
       }
 
@@ -1246,16 +1261,16 @@ async function loadCollegeElectionPage(){
         startCollegeCountdown(collegeElec.endTime);
       }
     } else {
-      infoDiv.innerHTML='<p style="color:var(--muted);">No college-level election created yet.</p>';
+      setHTML('college-elec-info', '<p style="color:var(--muted);">No college-level election created yet.</p>');
     }
 
     const acceptedStudents = classStudents.filter(s => s.status === 'active');
     renderCollegeStudents(acceptedStudents);
     const allowed=acceptedStudents.filter(s=>s.canVote==1).length;
     const voted=acceptedStudents.filter(s=>s.hasVoted==1).length;
-    document.getElementById('col-total').textContent=acceptedStudents.length;
-    document.getElementById('col-allowed').textContent=allowed;
-    document.getElementById('col-voted').textContent=voted;
+    setText('col-total', acceptedStudents.length);
+    setText('col-allowed', allowed);
+    setText('col-voted', voted);
   }catch(e){toast(e.message,false);}
 }
 
@@ -1265,11 +1280,11 @@ function startCollegeCountdown(endTime){
   function tick(){
     const diff = new Date(endTime) - new Date();
     if(!disp)return;
-    if(diff<=0){disp.textContent='00:00:00';clearInterval(collegeCountdownInterval);return;}
+    if(diff<=0){setText('college-cd-display', '00:00:00');clearInterval(collegeCountdownInterval);return;}
     const h=Math.floor(diff/3600000).toString().padStart(2,'0');
     const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
     const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    disp.textContent=`${h}:${m}:${s}`;
+    setText('college-cd-display', `${h}:${m}:${s}`);
   }
   tick();
   collegeCountdownInterval = setInterval(tick, 1000);
@@ -1277,6 +1292,7 @@ function startCollegeCountdown(endTime){
 
 function renderCollegeStudents(list){
   const tb=document.getElementById('college-student-table');
+  if(!tb) return;
   if(!list.length){tb.innerHTML='<tr><td colspan="4" class="empty">No accepted students in class</td></tr>';return;}
   tb.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.regNum}</strong></td>

@@ -132,6 +132,16 @@
     <script>
         let sessionUser = null;
 
+        // Safe DOM Utilities
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
         let currentLoginMode = 'voter';
 
         function switchLoginMode(mode) {
@@ -142,15 +152,15 @@
             const passInput = document.getElementById('login-pass');
 
             if (mode === 'voter') {
-                bVoter.style.background = "rgba(6,182,212,0.1)"; bVoter.style.color = "var(--neon-cyan)"; bVoter.style.borderColor = "var(--neon-cyan)";
-                bCand.style.background = "rgba(255,255,255,0.05)"; bCand.style.color = "white"; bCand.style.borderColor = "var(--glass-border)";
-                passGroup.classList.remove('hidden');
-                passInput.required = true;
+                if(bVoter) { bVoter.style.background = "rgba(6,182,212,0.1)"; bVoter.style.color = "var(--neon-cyan)"; bVoter.style.borderColor = "var(--neon-cyan)"; }
+                if(bCand) { bCand.style.background = "rgba(255,255,255,0.05)"; bCand.style.color = "white"; bCand.style.borderColor = "var(--glass-border)"; }
+                if(passGroup) passGroup.classList.remove('hidden');
+                if(passInput) passInput.required = true;
             } else {
-                bCand.style.background = "rgba(6,182,212,0.1)"; bCand.style.color = "var(--neon-cyan)"; bCand.style.borderColor = "var(--neon-cyan)";
-                bVoter.style.background = "rgba(255,255,255,0.05)"; bVoter.style.color = "white"; bVoter.style.borderColor = "var(--glass-border)";
-                passGroup.classList.add('hidden');
-                passInput.required = false;
+                if(bCand) { bCand.style.background = "rgba(6,182,212,0.1)"; bCand.style.color = "var(--neon-cyan)"; bCand.style.borderColor = "var(--neon-cyan)"; }
+                if(bVoter) { bVoter.style.background = "rgba(255,255,255,0.05)"; bVoter.style.color = "white"; bVoter.style.borderColor = "var(--glass-border)"; }
+                if(passGroup) passGroup.classList.add('hidden');
+                if(passInput) passInput.required = false;
             }
         }
 
@@ -162,9 +172,11 @@
             const btn = document.getElementById('login-btn');
             const err = document.getElementById('login-error');
 
-            btn.disabled = true;
-            btn.innerText = "Verifying...";
-            err.classList.add('hidden');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerText = "Verifying...";
+            }
+            if(err) err.classList.add('hidden');
 
             try {
                 let user;
@@ -196,37 +208,51 @@
                 sessionUser = user;
                 showUpdateForm();
             } catch (e) {
-                err.innerText = e.message;
-                err.classList.remove('hidden');
+                setText('login-error', e.message);
+                if(err) err.classList.remove('hidden');
             } finally {
-                btn.disabled = false;
-                btn.innerText = 'Enter Portal';
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = 'Enter Portal';
+                }
             }
         };
 
         function showUpdateForm() {
             document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('update-section').classList.remove('hidden');
+            const updateSec = document.getElementById('update-section');
+            if(updateSec) updateSec.classList.remove('hidden');
 
             // Populate
-            document.getElementById('name').value = sessionUser.name || '';
-            document.getElementById('year').value = sessionUser.year || '1st';
-            document.getElementById('branch').value = sessionUser.branch || 'CSE';
-            document.getElementById('section').value = sessionUser.section || '';
-            document.getElementById('email').value = sessionUser.email || '';
+            const nameEl = document.getElementById('name');
+            if(nameEl) nameEl.value = sessionUser.name || '';
+            const yearEl = document.getElementById('year');
+            if(yearEl) yearEl.value = sessionUser.year || '1st';
+            const brEl = document.getElementById('branch');
+            if(brEl) brEl.value = sessionUser.branch || 'CSE';
+            const secEl = document.getElementById('section');
+            if(secEl) secEl.value = sessionUser.section || '';
+            const emailEl = document.getElementById('email');
+            if(emailEl) emailEl.value = sessionUser.email || '';
 
             if (sessionUser && sessionUser.role === 'contestant') {
-                document.getElementById('candidate-fields').classList.remove('hidden');
-                document.getElementById('symbol').value = sessionUser.symbol || '';
-                document.getElementById('manifesto').value = sessionUser.manifesto || '';
-                document.getElementById('password-group').classList.add('hidden');
+                const candF = document.getElementById('candidate-fields');
+                if(candF) candF.classList.remove('hidden');
+                const symEl = document.getElementById('symbol');
+                if(symEl) symEl.value = sessionUser.symbol || '';
+                const manEl = document.getElementById('manifesto');
+                if(manEl) manEl.value = sessionUser.manifesto || '';
+                const passG = document.getElementById('password-group');
+                if(passG) passG.classList.add('hidden');
             } else {
-                document.getElementById('candidate-fields').classList.add('hidden');
+                const candF = document.getElementById('candidate-fields');
+                if(candF) candF.classList.add('hidden');
                 const pGroup = document.getElementById('password-group');
-                pGroup.classList.remove('hidden');
-                document.getElementById('password-label').innerText = "New Password";
-                document.getElementById('new-password').placeholder = "Enter new password";
-                document.getElementById('password-hint').innerText = "6-10 chars · 3+ letters · 1+ special char · 1+ number. Leave blank to keep current.";
+                if(pGroup) pGroup.classList.remove('hidden');
+                setText('password-label', "New Password");
+                const newPass = document.getElementById('new-password');
+                if(newPass) newPass.placeholder = "Enter new password";
+                setText('password-hint', "6-10 chars · 3+ letters · 1+ special char · 1+ number. Leave blank to keep current.");
             }
         }
 
@@ -255,8 +281,10 @@
             e.preventDefault();
             const btn = document.getElementById('save-btn');
             
-            btn.disabled = true;
-            btn.innerText = "Sending OTP...";
+            if(btn) {
+                btn.disabled = true;
+                btn.innerText = "Sending OTP...";
+            }
 
             pendingUpdates = {
                 name: document.getElementById('name').value,
@@ -290,13 +318,16 @@
                 portalGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 await StorageManager.sendEmailOtp(sessionUser.email, sessionUser.name, portalGeneratedOtp, "Profile Update");
                 
-                document.getElementById('otp-hint').innerText = `Enter the code sent to ${sessionUser.email}`;
-                document.getElementById('otp-verify-section').classList.remove('hidden');
-                btn.innerText = "OTP Sent ✓";
+                setText('otp-hint', `Enter the code sent to ${sessionUser.email}`);
+                const osp = document.getElementById('otp-verify-section');
+                if(osp) osp.classList.remove('hidden');
+                if(btn) btn.innerText = "OTP Sent ✓";
             } catch (err) {
                 alert("Error sending OTP: " + err.message);
-                btn.disabled = false;
-                btn.innerText = "Update Details";
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "Update Details";
+                }
             }
         };
 
@@ -307,14 +338,16 @@
             const msg = document.getElementById('status-msg');
 
             if (input !== portalGeneratedOtp) {
-                err.innerText = "Invalid OTP code";
-                err.classList.remove('hidden');
+                setText('otp-error', "Invalid OTP code");
+                if(err) err.classList.remove('hidden');
                 return;
             }
 
-            err.classList.add('hidden');
-            btn.disabled = true;
-            btn.innerText = "Saving Changes...";
+            if(err) err.classList.add('hidden');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerText = "Saving Changes...";
+            }
 
             try {
                 // Pass institution so PATCH is scoped correctly to this tenant
@@ -323,18 +356,24 @@
                     institution: sessionUser.institution || localStorage.getItem('ovs_inst_name') || 'Unknown'
                 };
                 await StorageManager.updateUserDetails(sessionUser.regNum, updatesWithInst);
-                msg.innerText = "Profile updated successfully! ✅";
-                msg.style.background = "rgba(16, 185, 129, 0.2)";
-                msg.style.color = "#10b981";
-                msg.classList.remove('hidden');
+                setText('status-msg', "Profile updated successfully! ✅");
+                if(msg) {
+                    msg.style.background = "rgba(16, 185, 129, 0.2)";
+                    msg.style.color = "#10b981";
+                    msg.classList.remove('hidden');
+                }
                 setTimeout(() => window.location.reload(), 2000);
             } catch (err) {
-                msg.innerText = "Update Failed: " + err.message;
-                msg.style.background = "rgba(239, 68, 68, 0.2)";
-                msg.style.color = "#ef4444";
-                msg.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "Confirm Changes";
+                setText('status-msg', "Update Failed: " + err.message);
+                if(msg) {
+                    msg.style.background = "rgba(239, 68, 68, 0.2)";
+                    msg.style.color = "#ef4444";
+                    msg.classList.remove('hidden');
+                }
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "Confirm Changes";
+                }
             }
         }
     </script>

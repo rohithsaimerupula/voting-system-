@@ -335,6 +335,16 @@
     <script>
         console.log("[OVS] Login System Initializing...");
 
+        // Safe DOM Utilities
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
         const form = document.getElementById('login-form');
         const loginTitle = document.getElementById('login-title');
         const regInput = document.getElementById('regNum');
@@ -355,16 +365,20 @@
             if (!isStaffMode) {
                 if (fpContainer) fpContainer.style.display = 'block';
                 // Pure Voter Mode: show Manage Profile, Register, and Back button
-                navRight.innerHTML = `
-                    <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
-                    <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
-                    <button onclick="window.location.href='register.html'">New? Register</button>
-                `;
-                tabsContainer.style.display = 'none';
-                loginTitle.innerText = 'Voter Login';
-                regLabel.innerText = 'Registration Number';
-                regInput.placeholder = 'Enter Reg Number';
-                passInput.placeholder = 'Enter Password (6-10 chars)';
+                const nr = document.getElementById('nav-right');
+                if(nr) {
+                    nr.innerHTML = `
+                        <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
+                        <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
+                        <button onclick="window.location.href='register.html'">New? Register</button>
+                    `;
+                }
+                const tc = document.getElementById('login-tabs');
+                if(tc) tc.style.display = 'none';
+                setText('login-title', 'Voter Login');
+                setText('reg-label', 'Registration Number');
+                if(regInput) regInput.placeholder = 'Enter Reg Number';
+                if(passInput) passInput.placeholder = 'Enter Password (6-10 chars)';
                 // NO logo click trick in voter mode
 
                 // --- INSTITUTION GATEWAY CHECK ---
@@ -373,7 +387,7 @@
                     alert('Access Denied. Please enter your College Access Code first.');
                     window.location.href = 'index.html';
                 } else {
-                    document.getElementById('inst-display').innerText = "⛩️ " + userInst;
+                    setText('inst-display', "⛩️ " + userInst);
                     checkElectionCountdown(); // Load countdown if active
                 }
             } else {
@@ -384,20 +398,28 @@
                     fpContainer.style.marginBottom = '1rem';
                 }
                 // Staff Mode: Admin + Sub-Admin tabs + 5-click OVS logo for Super Admin
-                navRight.innerHTML = `<a href="index.html" class="btn-outline">🏠 Home</a>`;
-                tabsContainer.style.display = 'flex';
-                tabsContainer.innerHTML = `
-                    <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Branch Admin</button>
-                    <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Class Admin</button>
-                `;
+                const nr = document.getElementById('nav-right');
+                if(nr) nr.innerHTML = `<a href="index.html" class="btn-outline">🏠 Home</a>`;
+                const tc = document.getElementById('login-tabs');
+                if(tc) {
+                    tc.style.display = 'flex';
+                    tc.innerHTML = `
+                        <button id="tab-admin" class="tab-btn active" style="flex:1; padding:0.8rem; background:linear-gradient(135deg,var(--warning),var(--danger)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">🧑‍💼 Branch Admin</button>
+                        <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Class Admin</button>
+                    `;
+                }
 
-                document.getElementById('tab-admin').addEventListener('click', () => {
+                const tabA = document.getElementById('tab-admin');
+                const tabS = document.getElementById('tab-subadmin');
+                if(tabA) tabA.addEventListener('click', () => {
                     isVoter = false; isSubAdmin = false;
-                    document.getElementById('tab-admin').style.background = 'linear-gradient(135deg,var(--warning),var(--danger))';
-                    document.getElementById('tab-admin').style.border = 'none';
-                    document.getElementById('tab-subadmin').style.background = 'rgba(255,255,255,0.05)';
-                    document.getElementById('tab-subadmin').style.border = '1px solid var(--glass-border)';
-                    loginTitle.innerText = 'Branch Admin Login';
+                    tabA.style.background = 'linear-gradient(135deg,var(--warning),var(--danger))';
+                    tabA.style.border = 'none';
+                    if(tabS) {
+                        tabS.style.background = 'rgba(255,255,255,0.05)';
+                        tabS.style.border = '1px solid var(--glass-border)';
+                    }
+                    setText('login-title', 'Branch Admin Login');
                     regLabel.innerText = 'Admin ID (7 chars · A-Z & 0-9)';
                     regInput.placeholder = 'e.g. ADMCSE01';
                     regInput.maxLength = 7;
