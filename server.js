@@ -20,20 +20,29 @@ const turso = createClient({
 //  MAILER (Nodemailer Transporter)
 // ─────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'localhost',
-    port: process.env.SMTP_PORT || 587,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587/STARTTLS
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
 });
-// Verify transporter connection on start (silent)
-if (process.env.SMTP_USER) {
+
+// Verify transporter connection on start
+if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username') {
     transporter.verify((error) => {
-        if (error) console.warn("[SMTP] Connection failure:", error.message);
-        else console.log("[SMTP] Connection established successfully.");
+        if (error) {
+            console.error("\x1b[31m%s\x1b[0m", `[SMTP] Configuration Error: ${error.message}`);
+            if (error.message.includes('Invalid login') || error.responseCode === 535) {
+                console.warn("\x1b[33m%s\x1b[0m", "[SMTP] Hint: Ensure you are using a Gmail 'App Password', not your main account password.");
+            }
+        } else {
+            console.log("\x1b[32m%s\x1b[0m", "[SMTP] Connection established! Ready to send OTPs via Gmail.");
+        }
     });
+} else {
+    console.log("\x1b[33m%s\x1b[0m", "[SMTP] Running in Developer Mode (Console-only OTPs).");
 }
 
 // ─────────────────────────────────────────
