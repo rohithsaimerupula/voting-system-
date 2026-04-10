@@ -365,14 +365,12 @@
             if (!isStaffMode) {
                 if (fpContainer) fpContainer.style.display = 'block';
                 // Pure Voter Mode: show Manage Profile, Register, and Back button
-                const nr = document.getElementById('nav-right');
-                if(nr) {
-                    setHTML('nav-right', `
-                        <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
-                        <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
-                        <button onclick="window.location.href='register.html'">New? Register</button>
-                    `);
-                }
+                setHTML('nav-right', `
+                    <button onclick="window.location.href='index.html'" class="btn-outline">← Back</button>
+                    <button onclick="window.location.href='profile_portal.html'" class="btn-outline">Manage Profile</button>
+                    <button onclick="window.location.href='register.html'" class="submit-btn" style="width:auto; padding:0.5rem 1.2rem; margin:0;">New? Register</button>
+                `);
+
                 const tc = document.getElementById('login-tabs');
                 if(tc) tc.style.display = 'none';
                 setText('login-title', 'Voter Login');
@@ -407,7 +405,6 @@
                         <button id="tab-subadmin" class="tab-btn" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:8px; color:white; cursor:pointer;">👥 Class Admin</button>
                     `);
                 }
- Riverside:
                 const tabA = document.getElementById('tab-admin');
                 const tabS = document.getElementById('tab-subadmin');
                 if(tabA) tabA.addEventListener('click', () => {
@@ -1098,33 +1095,7 @@
             });
         }
 
-        // Initial UI setup based on isVoter (if buildUI is not called elsewhere)
-        // This block is added to ensure the back button visibility is handled on load
-        // and to provide a basic implementation if buildUI is not present.
-        if (typeof buildUI === 'function') {
-            buildUI(); // Call buildUI if it exists to set initial state
-        } else {
-            // Manual initial setup if buildUI is not a function
-            if (isVoter) {
-                document.getElementById('login-title').innerText = "Voter Login";
-                document.getElementById('reg-label').innerText = "Registration Number";
-                document.getElementById('password-label').innerText = "10-Digit Password";
-                const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'inline-block';
-                document.getElementById('register-link').classList.add('hidden'); // Hide register for voters
-                if (backButton) backButton.classList.remove('hidden'); // Show back button for voters
-                document.getElementById('regNum').placeholder = "Enter Registration Number";
-                document.getElementById('password').placeholder = "Enter Password";
-            } else {
-                document.getElementById('login-title').innerText = "Staff Login";
-                document.getElementById('reg-label').innerText = "Admin/Sub-Admin ID";
-                document.getElementById('password-label').innerText = "Password";
-                const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'none';
-                document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
-                if (backButton) backButton.classList.add('hidden'); // Hide back button for staff
-                document.getElementById('regNum').placeholder = "Enter ID";
-                document.getElementById('password').placeholder = "Enter Password";
-            }
-        }
+
         document.getElementById('regNum').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
