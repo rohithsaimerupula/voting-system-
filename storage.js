@@ -400,7 +400,7 @@ const StorageManager = {
              console.error("[EmailSystem] Backend Error:", error);
              // Bubble up original error message for better diagnostics
              if (error.message && error.message.includes("Failed to send email")) {
-                 throw new Error(`SMTP_FAIL: ${error.message}`);
+                 throw new Error(`EMAIL_FAIL: ${error.message}`);
              }
              throw error;
          }

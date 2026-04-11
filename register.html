@@ -848,7 +848,7 @@
                 document.getElementById('otp-group').classList.remove('hidden');
                 
                 // For Developer Testing on Vercel without SMTP configured:
-                const devOtpWarning = `⚠️ Email failed. <br><strong style="color:var(--gold); font-size:1.1rem;">BACKEND RECOVERY OTP: ${generatedOtp}</strong> (Auto-filled for you!) <br><small style="display:block; margin-top:0.5rem; opacity:0.8;">Admin: This code is also visible in your 🛡️ System Health dashboard.</small>`;
+                const devOtpWarning = `⚠️ Email failed. <br><strong style="color:var(--gold); font-size:1.1rem;">DEV BYPASS OTP: ${generatedOtp}</strong> (Auto-filled for you!)`;
                 showError(devOtpWarning);
                 console.warn('[OVS OTP] FALLBACK: Generated OTP for manual entry:', generatedOtp);
                 

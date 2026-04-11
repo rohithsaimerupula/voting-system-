@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
 const { createClient } = require('@libsql/client');
@@ -17,26 +16,7 @@ const turso = createClient({
     authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
 });
 
-const transporter = nodemailer.createTransport({
-    pool: true, // Maintain persistent connections
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-    maxConnections: 5,
-    maxMessages: 100,
-    connectionTimeout: 20000, // 20s timeout
-});
-
-if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username') {
-    transporter.verify((error) => {
-        if (error) console.error("[SMTP] Configuration Error:", error.message);
-        else console.log("[SMTP] Connection established!");
-    });
-}
+const db = turso;
 
 // Basic Middleware for Request Scoping
 function authGuard(req, res, next) {
@@ -207,89 +187,44 @@ app.post('/api/deviceFingerprints', async (req, res) => {
 
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
-        const { email, name, otp, context, institution } = req.body;
+        const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
 
-        // --- ALWAYS LOG OTP FOR ADMIN RECOVERY (FALLBACK) ---
-        // This ensures the Super Admin can see the OTP if the email fails
-        try {
-            await db.execute({
-                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
-                args: ["OTP_GENERATED", `OTP for ${email} (${name || 'User'})`, `OTP: ${otp} | Context: ${context || 'Security'}`, new Date().toISOString(), institution || "Global"]
-            });
-        } catch (e) { console.warn("Failed to log OTP for recovery:", e.message); }
-
         // --- DEVELOPER MODE BYPASS ---
-        if (!process.env.BREVO_API_KEY && (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username')) {
+        if (!process.env.BREVO_API_KEY) {
             console.log(`[DEV_OTP] ${email}: ${otp}`);
-            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console and Admin Health Dashboard." });
+            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console (SMTP Disabled)." });
         }
 
-        // --- DRIVER 1: BREVO API (Preferred) ---
-        if (process.env.BREVO_API_KEY) {
-            try {
-                const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-                    method: 'POST',
-                    headers: {
-                        'api-key': process.env.BREVO_API_KEY,
-                        'Content-Type': 'application/json',
-                        'accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        sender: { name: "Vanguard Security", email: process.env.SMTP_FROM || process.env.SMTP_USER || "security@ovs-vanguard.com" },
-                        to: [{ email, name }],
-                        subject: `${context || 'Verification Code'} — OVS`,
-                        htmlContent: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
-                    })
-                });
-                
-                if (brevoRes.ok) return res.json({ success: true });
-                const brevoErr = await brevoRes.json();
-                console.warn("[BREVO] API Error:", brevoErr);
-                // Fallback to SMTP if Brevo fails but SMTP is available
-            } catch (err) {
-                console.warn("[BREVO] Connection failed, attempting SMTP fallback...");
-            }
-        }
-
-        // --- DRIVER 2: NODEMAILER SMTP (Backup/Traditional) ---
-        if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username') {
-            const mailOptions = {
-                from: `"Vanguard Security" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-                to: email,
+        // --- BREVO API DELIVERY ---
+        const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'api-key': process.env.BREVO_API_KEY,
+                'Content-Type': 'application/json',
+                'accept': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { name: "Vanguard Security", email: process.env.SMTP_FROM || "security@ovs-vanguard.com" },
+                to: [{ email, name }],
                 subject: `${context || 'Verification Code'} — OVS`,
-                html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
-            };
-
-            let lastError = null;
-            for (let attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    await transporter.sendMail(mailOptions);
-                    return res.json({ success: true });
-                } catch (err) {
-                    lastError = err;
-                    console.warn(`[SMTP] Attempt ${attempt} failed: ${err.message}`);
-                    if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
-                }
-            }
-
-            // Final failure: Log to DB for Super Admin visibility
-            await db.execute({
-                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
-                args: ["SMTP_FAILURE", `Failed to delivery OTP to ${email}`, lastError.message, new Date().toISOString(), institution || "Global"]
-            });
-            return res.status(500).json({ error: `SMTP_FAIL: ${lastError.message}` });
-        }
-
-        res.status(500).json({ error: "No primary or secondary email drivers configured. Please check server environment variables." });
+                htmlContent: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
+            })
+        });
+        
+        if (brevoRes.ok) return res.json({ success: true });
+        
+        const brevoErr = await brevoRes.json();
+        console.error("[BREVO_FAIL]", brevoErr);
+        res.status(500).json({ error: `Brevo API Error: ${brevoErr.message || 'Check API Key'}` });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/system-health', authGuard, async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        const alerts = await db.execute({ sql: "SELECT * FROM system_alerts WHERE institution = ? OR institution = 'Global' ORDER BY timestamp DESC LIMIT 20", args: [inst] });
-        res.json({ alerts: alerts.rows, smtpStatus: !!process.env.SMTP_USER });
+        const alerts = await db.execute({ sql: "SELECT * FROM system_alerts WHERE (institution = ? OR institution = 'Global') AND type != 'OTP_GENERATED' ORDER BY timestamp DESC LIMIT 20", args: [inst] });
+        res.json({ alerts: alerts.rows, smtpStatus: !!process.env.BREVO_API_KEY });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
