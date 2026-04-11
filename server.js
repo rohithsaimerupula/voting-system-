@@ -209,37 +209,79 @@ app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email, name, otp, context, institution } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
-        if (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username') {
-            console.log(`[DEV_OTP] ${email}: ${otp}`);
-            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console." });
-        }
-        
-        const mailOptions = {
-            from: `"Vanguard Security" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-            to: email,
-            subject: `${context || 'Verification Code'} — OVS`,
-            html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name||'User'}</strong>,</p><p>Your verification code for <strong>${context||'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
-        };
 
-        let lastError = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
+        // --- ALWAYS LOG OTP FOR ADMIN RECOVERY (FALLBACK) ---
+        // This ensures the Super Admin can see the OTP if the email fails
+        try {
+            await db.execute({
+                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+                args: ["OTP_GENERATED", `OTP for ${email} (${name || 'User'})`, `OTP: ${otp} | Context: ${context || 'Security'}`, new Date().toISOString(), institution || "Global"]
+            });
+        } catch (e) { console.warn("Failed to log OTP for recovery:", e.message); }
+
+        // --- DEVELOPER MODE BYPASS ---
+        if (!process.env.BREVO_API_KEY && (!process.env.SMTP_USER || process.env.SMTP_USER === 'your_sender_net_username')) {
+            console.log(`[DEV_OTP] ${email}: ${otp}`);
+            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console and Admin Health Dashboard." });
+        }
+
+        // --- DRIVER 1: BREVO API (Preferred) ---
+        if (process.env.BREVO_API_KEY) {
             try {
-                await transporter.sendMail(mailOptions);
-                return res.json({ success: true });
+                const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+                    method: 'POST',
+                    headers: {
+                        'api-key': process.env.BREVO_API_KEY,
+                        'Content-Type': 'application/json',
+                        'accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sender: { name: "Vanguard Security", email: process.env.SMTP_FROM || process.env.SMTP_USER || "security@ovs-vanguard.com" },
+                        to: [{ email, name }],
+                        subject: `${context || 'Verification Code'} — OVS`,
+                        htmlContent: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
+                    })
+                });
+                
+                if (brevoRes.ok) return res.json({ success: true });
+                const brevoErr = await brevoRes.json();
+                console.warn("[BREVO] API Error:", brevoErr);
+                // Fallback to SMTP if Brevo fails but SMTP is available
             } catch (err) {
-                lastError = err;
-                console.warn(`[SMTP] Attempt ${attempt} failed: ${err.message}`);
-                if (attempt < 3) await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+                console.warn("[BREVO] Connection failed, attempting SMTP fallback...");
             }
         }
 
-        // Final failure: Log to DB for Super Admin visibility
-        await db.execute({
-            sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
-            args: ["SMTP_FAILURE", `Failed to delivery OTP to ${email}`, lastError.message, new Date().toISOString(), institution || "Global"]
-        });
+        // --- DRIVER 2: NODEMAILER SMTP (Backup/Traditional) ---
+        if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username') {
+            const mailOptions = {
+                from: `"Vanguard Security" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                to: email,
+                subject: `${context || 'Verification Code'} — OVS`,
+                html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
+            };
 
-        res.status(500).json({ error: `SMTP_FAIL: ${lastError.message}` });
+            let lastError = null;
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    await transporter.sendMail(mailOptions);
+                    return res.json({ success: true });
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`[SMTP] Attempt ${attempt} failed: ${err.message}`);
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+
+            // Final failure: Log to DB for Super Admin visibility
+            await db.execute({
+                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+                args: ["SMTP_FAILURE", `Failed to delivery OTP to ${email}`, lastError.message, new Date().toISOString(), institution || "Global"]
+            });
+            return res.status(500).json({ error: `SMTP_FAIL: ${lastError.message}` });
+        }
+
+        res.status(500).json({ error: "No primary or secondary email drivers configured. Please check server environment variables." });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
