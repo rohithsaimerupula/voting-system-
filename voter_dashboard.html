@@ -341,10 +341,8 @@
                     document.querySelector('nav').style.marginTop = "2rem";
                 }
 
-                const freshUser = await fetch(`/api/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
-                    .then(r => r.ok ? r.json() : currentUser)
+                const user = await fetchApi(`/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
                     .catch(() => currentUser);
-                const user = freshUser || currentUser;
 
                 if (user.isBanned === 1 || user.isBanned === true) {
                     setText('election-status-header', "Voting Rights Suspended 🚫");
@@ -385,7 +383,7 @@
             setHTML('elections-lobby-grid', '<p class="text-center text-muted" style="padding:2rem;">🔍 Scanning for active elections...</p>');
 
             try {
-                const elections = await apiFetch(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
+                const elections = await fetchApi(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
                 lobbyElections = elections || [];
 
                 if (lobbyElections.length === 0) {
@@ -489,9 +487,8 @@
                 
                 definedCategories = [];
                 try {
-                    const res = await fetch('/api/config/categories_' + encodeURIComponent(currentUser.institution));
-                    if(res.ok) {
-                        const data = await res.json();
+                    const data = await fetchApi('/api/config/categories_' + encodeURIComponent(currentUser.institution));
+                    if(data) {
                         definedCategories = data.value?.categories || data.categories || [];
                     }
                 } catch(e){}

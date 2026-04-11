@@ -386,10 +386,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 });
 
-async function apiFetch(path,opts={}){
-  const r=await fetch(API+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
-  return r.json();
+async function apiFetch(path, opts = {}) {
+    // Standardize to use the new fetchApi which includes security headers
+    return await fetchApi(path, opts);
 }
 function toast(m,ok=true){
     const t=document.getElementById('toast');

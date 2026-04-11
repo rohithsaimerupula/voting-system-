@@ -512,13 +512,10 @@
             btn.disabled = true;
 
             try {
-                const res  = await fetch(API + '/institutions/verify', {
+                const data = await fetchApi('/institutions/verify', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Verification failed');
 
                 // Persistence: Unlock the gateway for this device
                 localStorage.setItem('ovs_gate_unlocked', 'true');

@@ -729,22 +729,16 @@
                 // since their regNum is unique and they may belong to any institution
                 if (recoveryTargetRole === 'superadmin') {
                     try {
-                        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001/api' : '/api';
-                        const res = await fetch(`${API_BASE}/users/${finalId}`);
-                        if (res.ok) {
-                            const userData = await res.json();
-                            if (userData && userData.role === 'superadmin' && userData.institution) {
-                                inst = userData.institution;
-                            } else {
-                                throw new Error("No Super Admin account found with that ID.");
-                            }
+                        const userData = await fetchApi(`/users/${finalId}`);
+                        if (userData && userData.role === 'superadmin' && userData.institution) {
+                            inst = userData.institution;
                         } else {
-                            throw new Error("Super Admin ID not found.");
+                            throw new Error("No Super Admin account found with that ID.");
                         }
                     } catch(e) {
-                        alert("Error: " + e.message);
-                        setText('rec-btn-1', "Send Code");
+                        alert("Error: " + (e.message || "Super Admin ID not found."));
                         btn.disabled = false;
+                        btn.innerText = "Send Code";
                         return;
                     }
                 }

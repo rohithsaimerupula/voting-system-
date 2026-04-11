@@ -187,10 +187,7 @@
                     // Candidate: Auth with regNum only — look up by ID and institution, no password needed
                     const inst = localStorage.getItem('ovs_inst_name') || '';
                     try {
-                        const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001/api' : '/api';
-                        const res = await fetch(`${API}/users/${id}?institution=${encodeURIComponent(inst)}`);
-                        if (!res.ok) throw new Error('Candidate ID not found.');
-                        const data = await res.json();
+                        const data = await fetchApi(`/users/${id}?institution=${encodeURIComponent(inst)}`);
                         if (data.role !== 'contestant') throw new Error('This ID is not a candidate account.');
                         if (data.status === 'pending') throw new Error('Account pending approval. Please wait for admin activation.');
                         if (data.isBanned === 1 || data.isBanned === true) throw new Error('This account has been banned.');

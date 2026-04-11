@@ -529,12 +529,11 @@
 
         async function loadCategories(inst) {
             try {
-                const API_URL = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-                const res = await fetch(`${API_URL}/config/categories_${encodeURIComponent(inst)}`);
+                const res = await fetchApi(`/config/categories_${encodeURIComponent(inst)}`);
                 const sel = document.getElementById('category');
                 const contestantOpt = document.querySelector('#role option[value="contestant"]');
-                if (res.ok) {
-                    const data = await res.json();
+                if (res) {
+                    const data = res;
                     if (data && data.categories && data.categories.length > 0) {
                         const cats = data.categories.map(c => `<option value="${c}">${c}</option>`).join('');
                         setHTML('category', cats);
@@ -574,19 +573,24 @@
 
         async function checkRegistrationStatus(inst) {
             try {
-                const API_URL = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
-                const res = await fetch(`${API_URL}/config/registration_${encodeURIComponent(inst)}`);
-                if (res.ok) {
-                    const config = await res.json();
+                let config;
+                try {
+                    config = await fetchApi(`/config/registration_${encodeURIComponent(inst)}`);
+                } catch (e) {
+                    if (e.message !== "Not found") throw e;
+                    config = null; 
+                }
+
+                if (config) {
                     const now = new Date().getTime();
                     
-                    if (config && config.isActive === false && config.isCompleted === true) {
+                    if (config.isActive === false && config.isCompleted === true) {
                         return lockRegistrationGate("Registrations are officially closed by your institution.");
-                    } else if (config && config.isActive === false && config.isCompleted === false) {
+                    } else if (config.isActive === false && config.isCompleted === false) {
                         return lockRegistrationGate("Registrations have not been started yet. Please wait for an admin to open the portal.");
                     }
                     
-                    if (config && config.isActive) {
+                    if (config.isActive) {
                         if (config.startTime && now < new Date(config.startTime).getTime()) {
                             return lockRegistrationGate(`Registrations will automatically open on <br><strong style="color:var(--gold)">${new Date(config.startTime).toLocaleString()}</strong>`);
                         }
@@ -595,8 +599,7 @@
                         }
                     }
                 } else {
-                    // Config not found or some other error = timer hasn't been set up yet. Close by default.
-                    return lockRegistrationGate("Registrations have not been started yet. Please wait for the Super Admin to configure the registration schedule.");
+                    console.log("[OVS] No registration config found for this institution. Defaulting to open access.");
                 }
             } catch(e) {
                 console.error("Lockout check failed", e);

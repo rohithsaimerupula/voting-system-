@@ -4,10 +4,15 @@ const API_BASE = (location.hostname === 'localhost' || location.hostname === '12
 // Shared utilities
 async function fetchApi(path, options = {}, retries = 2) {
     try {
+        const currentUser = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+        const inst = localStorage.getItem('ovs_inst_name') || (currentUser ? currentUser.institution : '');
+        
         const res = await fetch(`${API_BASE}${path}`, {
             ...options,
             headers: {
                 'Content-Type': 'application/json',
+                'X-OVS-Reg-Num': currentUser ? currentUser.regNum : 'guest',
+                'X-OVS-Institution': encodeURIComponent(inst || 'Unknown'),
                 ...(options.headers || {})
             }
         });
@@ -407,6 +412,7 @@ const StorageManager = {
             const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
             return await fetchApi(`/config/election_${inst}`);
         } catch (e) {
+            // If completely missing, we assume not started
             return { isActive: false, isCompleted: false, startTime: null, endTime: null };
         }
     },
@@ -415,7 +421,8 @@ const StorageManager = {
             const inst = localStorage.getItem('ovs_inst_name') || 'Unknown';
             return await fetchApi(`/config/registration_${inst}`);
         } catch (e) {
-            return { isActive: false, isCompleted: false, startTime: null, endTime: null };
+            // For a new institution, if no config exists, we default to OPEN to allow the first users/admins to register.
+            return { isActive: true, isCompleted: false, startTime: null, endTime: null };
         }
     },
     async getInstitutionConfig(key) {

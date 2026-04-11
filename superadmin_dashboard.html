@@ -6,6 +6,7 @@
   <title>Super Admin — OVS</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="storage.js"></script>
   <script>
       (function() {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -835,9 +836,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function apiFetch(path, opts = {}) {
-  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) } });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || r.statusText); }
-  return r.json();
+    // Standardize to use the new fetchApi which includes security headers
+    return await fetchApi(path, opts);
 }
 
 // Security: SHA-256 Hashing for Super Admin

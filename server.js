@@ -38,6 +38,21 @@ if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_sender_net_username
     });
 }
 
+// Basic Middleware for Request Scoping
+function authGuard(req, res, next) {
+    const regNum = req.headers['x-ovs-reg-num'];
+    const institution = decodeURIComponent(req.headers['x-ovs-institution'] || '');
+    
+    // For now, we just ensure these exist for sensitive operations
+    // In a full production app, this would verify a JWT token
+    if (!regNum || !institution) {
+        // Allow GET config without auth (except sensitive ones)
+        if (req.method === 'GET' && req.path.startsWith('/api/config')) return next();
+        return res.status(401).json({ error: "Unauthorized: Registration Number and Institution required in headers." });
+    }
+    next();
+}
+
 async function retryWithBackoff(fn, retries = 6, delayMs = 3000) {
     let lastError = null;
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -81,9 +96,42 @@ function boolInt(val) { return val ? 1 : 0; }
 
 app.get('/api/users', async (req, res) => {
     try {
-        const inst = req.query.institution;
-        const result = await db.execute({ sql: "SELECT * FROM users WHERE institution = ?", args: [decodeURIComponent(inst)] });
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({ sql: "SELECT * FROM users WHERE institution = ?", args: [inst] });
         res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/auditLogs', async (req, res) => {
+    try {
+        const { action, user, details, timestamp, institution } = req.body;
+        await db.execute({
+            sql: "INSERT INTO auditLogs (action, user, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+            args: [action, user, details, timestamp, institution]
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/auditLogs', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({ sql: "SELECT * FROM auditLogs WHERE institution = ? ORDER BY timestamp DESC LIMIT 100", args: [inst] });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/institutions/verify', async (req, res) => {
+    try {
+        const { code } = req.body;
+        const codeMap = { 
+            "VIEW2026": "Vignan's Institute of Engineering for Women", 
+            "VIIT2026": "Vignan's Institute of Information Technology", 
+            "TEST2026": "Test University" 
+        };
+        const institution = codeMap[code];
+        if (institution) res.json({ success: true, institution });
+        else res.status(401).json({ error: "Invalid access code." });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -101,21 +149,58 @@ app.post('/api/users/add', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
     try {
-        const inst = req.query.institution;
+        const inst = decodeURIComponent(req.query.institution || '');
         const result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         res.json(result.rows[0]);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/users/role/:role', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        await db.execute({ sql: "DELETE FROM users WHERE role = ? AND institution = ?", args: [req.params.role, inst] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.patch('/api/users/:id', async (req, res) => {
     try {
         const updates = req.body;
+        const inst = decodeURIComponent(req.query.institution || '');
         const keys = Object.keys(updates);
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
-        values.push(req.params.id, req.query.institution);
+        values.push(req.params.id, inst);
         await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND institution = ?`, args: values });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/deviceFingerprints/:fp', async (req, res) => {
+    try {
+        const result = await db.execute({ sql: "SELECT * FROM deviceFingerprints WHERE fingerprint = ?", args: [req.params.fp] });
+        if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+        const row = result.rows[0];
+        res.json({ ...row, counts: JSON.parse(row.counts || '{}') });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/deviceFingerprints', async (req, res) => {
+    try {
+        const { fingerprint, firstSeen, lastActive, counts } = req.body;
+        await db.execute({
+            sql: "INSERT INTO deviceFingerprints (fingerprint, firstSeen, lastActive, counts) VALUES (?, ?, ?, ?) ON CONFLICT(fingerprint) DO UPDATE SET lastActive = excluded.lastActive, counts = excluded.counts",
+            args: [fingerprint, firstSeen, lastActive, JSON.stringify(counts)]
+        });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -158,17 +243,27 @@ app.post('/api/auth/send-otp', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/admin/system-health', async (req, res) => {
+app.get('/api/admin/system-health', authGuard, async (req, res) => {
     try {
-        const inst = req.query.institution;
+        const inst = decodeURIComponent(req.query.institution || '');
         const alerts = await db.execute({ sql: "SELECT * FROM system_alerts WHERE institution = ? OR institution = 'Global' ORDER BY timestamp DESC LIMIT 20", args: [inst] });
         res.json({ alerts: alerts.rows, smtpStatus: !!process.env.SMTP_USER });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/vote', async (req, res) => {
+app.post('/api/vote', authGuard, async (req, res) => {
     try {
         const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp, institution, electionCode } = req.body;
+        
+        // Server-side validation: Check if user already voted or is banned
+        const userCheck = await db.execute({ sql: "SELECT hasVoted, isBanned, canVote FROM users WHERE regNum = ? AND institution = ?", args: [voterRegNum, institution] });
+        if (userCheck.rows.length === 0) return res.status(404).json({ error: "Voter not found" });
+        const user = userCheck.rows[0];
+        
+        if (user.isBanned) return res.status(403).json({ error: "You are banned from voting." });
+        if (user.hasVoted) return res.status(400).json({ error: "You have already cast your vote." });
+        if (!user.canVote) return res.status(403).json({ error: "You are not authorized to vote yet. Please wait for admin approval." });
+
         await db.execute({
             sql: "INSERT INTO publicLedger (receiptHash, voterRegNum, electionCode, candidateStr, institution, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
             args: [secureHash, voterRegNum, electionCode || 'global', typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum, institution, timestamp, 'pending']
@@ -178,6 +273,85 @@ app.post('/api/vote', async (req, res) => {
             args: [typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum, votePhoto, secureHash, voterRegNum, institution]
         });
         res.json({ success: true, receipt: secureHash });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/questions', async (req, res) => {
+    try {
+        const { candidateId, voterName, question, timestamp, institution } = req.body;
+        await db.execute({
+            sql: "INSERT INTO questions (candidateId, voterName, question, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+            args: [candidateId, voterName, question, timestamp, institution]
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/questions/:candidateId', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({ sql: "SELECT * FROM questions WHERE candidateId = ? AND institution = ?", args: [req.params.candidateId, inst] });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/questions/:id', async (req, res) => {
+    try {
+        const { answer } = req.body;
+        const inst = decodeURIComponent(req.query.institution || '');
+        await db.execute({ sql: "UPDATE questions SET answer = ? WHERE id = ? AND institution = ?", args: [answer, req.params.id, inst] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/globalChat', async (req, res) => {
+    try {
+        const { voterName, text, timestamp, institution } = req.body;
+        await db.execute({
+            sql: "INSERT INTO globalChat (voterName, text, timestamp, institution) VALUES (?, ?, ?, ?)",
+            args: [voterName, text, timestamp, institution]
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/globalChat', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({ sql: "SELECT * FROM globalChat WHERE institution = ? ORDER BY id DESC LIMIT 50", args: [inst] });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/election/reset', async (req, res) => {
+    try {
+        const { institution } = req.body;
+        await db.batch([
+            { sql: "DELETE FROM publicLedger WHERE institution = ?", args: [institution] },
+            { sql: "UPDATE users SET hasVoted = 0, votedFor = NULL, votePhoto = NULL, voteStatus = NULL, voteReceiptHash = NULL WHERE institution = ?", args: [institution] }
+        ], "write");
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/voters/my-elections', authGuard, async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const regNum = req.query.regNum;
+        
+        // Find elections for this institution
+        const elections = await db.execute({ sql: "SELECT * FROM elections WHERE institution = ? AND isActive = 1", args: [inst] });
+        
+        // Find if user has already voted in these elections
+        const votes = await db.execute({ sql: "SELECT electionCode FROM publicLedger WHERE voterRegNum = ? AND institution = ?", args: [regNum, inst] });
+        const votedCodes = new Set(votes.rows.map(v => v.electionCode));
+
+        const result = elections.rows.map(e => ({
+            ...e,
+            hasVoted: votedCodes.has(e.id) || votedCodes.has(e.electionCode) || votedCodes.has('global')
+        }));
+
+        res.json(result);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -196,7 +370,7 @@ app.get('/api/config/:key', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/config/:key', async (req, res) => {
+app.post('/api/config/:key', authGuard, async (req, res) => {
     try {
         const { data } = req.body;
         await db.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(data)] });
