@@ -671,7 +671,24 @@
       
       const pwdErr = validatePassword(pass, 10, 10);
       if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
+      
       try {
+        // --- DUPLICATION CHECKS ---
+        // 1. Check if the gateway code is already in use
+        const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
+        const existingCodes = codesRes.ok ? (await codesRes.json()) : {};
+        
+        if (existingCodes[code]) {
+            return showToast(`Error: The code "${code}" is already active for "${existingCodes[code]}".`, false);
+        }
+
+        // 2. Check if the institution name is already in use
+        const inUse = Object.values(existingCodes).some(v => v.toLowerCase() === institution.toLowerCase());
+        if (inUse) {
+            return showToast(`Error: The institution "${institution}" already has a gateway code.`, false);
+        }
+
+        // --- CREATION ---
         // Create the super admin user
         const addRes = await fetch(API + '/users/add', { 
             method: 'POST', 
@@ -681,8 +698,6 @@
         if (!addRes.ok) { const e = await addRes.json().catch(()=>({error:'Failed'})); throw new Error(e.error); }
         
         // Save the institution gateway code to the database
-        const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
-        const existingCodes = codesRes.ok ? (await codesRes.json()) : {};
         existingCodes[code] = institution;
         await fetch(API + '/config/institution_codes', { 
             method: 'POST', 
