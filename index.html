@@ -479,15 +479,23 @@
         const instName = localStorage.getItem('ovs_inst_name');
         const lastCode = localStorage.getItem('_ovs_last_gate_code');
 
-        if (gateUnlocked === 'true' && instName) {
-            // Already unlocked on this device: Skip Gateway
-            const overlay = document.getElementById('gateway-overlay');
-            overlay.style.display = 'none';
-            unlockGateway(instName);
-        } else if (lastCode) {
-            // Fresh visit: Show Gateway but pre-fill code
-            document.getElementById('inst-code').value = lastCode;
+        async function checkGatePersistence() {
+            if (gateUnlocked === 'true' && instName) {
+                // Verify with server that this institution still exists
+                const isValid = await StorageManager.validateInstitution();
+                if (isValid) {
+                    const overlay = document.getElementById('gateway-overlay');
+                    overlay.style.display = 'none';
+                    unlockGateway(instName);
+                } else {
+                    // Institution deleted: Reset gateway
+                    resetGateway();
+                }
+            } else if (lastCode) {
+                document.getElementById('inst-code').value = lastCode;
+            }
         }
+        checkGatePersistence();
 
         const codeMap = { "VIEW2026": "Vignan's Institute of Engineering for Women", "VIIT2026": "Vignan's Institute of Information Technology", "TEST2026": "Test University" };
 

@@ -364,6 +364,13 @@
                 return;
             }
             
+            const isValid = await StorageManager.validateInstitution();
+            if (!isValid) {
+                alert('This institution is no longer active. Redirecting to gateway...');
+                window.location.href = 'index.html';
+                return;
+            }
+
             setText('inst-badge', `⛩️ ${inst}`);
             loadCategories(inst);
             initRegistrationTimer();

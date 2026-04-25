@@ -58,6 +58,26 @@ const StorageManager = {
         } catch(e) { console.error("Audit Log Failure: ", e); }
     },
 
+    async validateInstitution() {
+        const inst = localStorage.getItem('ovs_inst_name');
+        if (!inst) return false;
+        try {
+            const res = await fetch(`${API_BASE}/institutions/validate?name=${encodeURIComponent(inst)}`);
+            if (!res.ok) {
+                // Institution was likely deleted
+                localStorage.removeItem('ovs_inst_name');
+                localStorage.removeItem('ovs_inst_code');
+                localStorage.removeItem('ovs_inst_logo');
+                localStorage.removeItem('ovs_gate_unlocked');
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.warn("Institution validation failed: ", e);
+            return true; // Assume valid if network fails
+        }
+    },
+
     async getAuditLogs() {
         try {
             const currentUser = this.getCurrentUser();

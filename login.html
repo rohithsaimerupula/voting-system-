@@ -385,8 +385,15 @@
                     alert('Access Denied. Please enter your College Access Code first.');
                     window.location.href = 'index.html';
                 } else {
-                    setText('inst-display', "⛩️ " + userInst);
-                    checkElectionCountdown(); // Load countdown if active
+                    StorageManager.validateInstitution().then(isValid => {
+                        if (!isValid) {
+                            alert('This institution is no longer active. Redirecting to gateway...');
+                            window.location.href = 'index.html';
+                        } else {
+                            setText('inst-display', "⛩️ " + userInst);
+                            checkElectionCountdown(); // Load countdown if active
+                        }
+                    });
                 }
             } else {
                 if (fpContainer) {

@@ -147,6 +147,23 @@ app.post('/api/institutions/verify', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/institutions/validate', async (req, res) => {
+    try {
+        const name = req.query.name;
+        if (!name) return res.status(400).json({ error: "Name required" });
+        
+        const result = await db.execute({ 
+            sql: "SELECT regNum FROM users WHERE role = 'superadmin' AND institution = ? LIMIT 1", 
+            args: [name] 
+        });
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: "Institution invalid" });
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 
 // Dedicated institution codes endpoint (no authGuard - used by Developer Portal)
 app.get('/api/config/institution_codes', async (req, res) => {
