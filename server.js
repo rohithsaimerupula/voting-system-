@@ -204,6 +204,8 @@ app.delete('/api/users/role/:role', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.patch('/api/users/:id', async (req, res) => {
+    try {
         const updates = req.body || {};
         const inst = decodeURIComponent(req.query.institution || '');
         const keys = Object.keys(updates);
