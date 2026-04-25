@@ -106,31 +106,47 @@ app.post('/api/institutions/verify', async (req, res) => {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: "Code required" });
 
-        // First check the dynamic config table (managed by Developer Portal)
+        let institution = null;
+
+        // Step 1: Check the dynamic config table (managed by Developer Portal)
         try {
             const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
             if (configResult.rows.length > 0) {
                 const codeMap = JSON.parse(configResult.rows[0].value);
                 if (codeMap && codeMap[code]) {
-                    return res.json({ success: true, institution: codeMap[code] });
+                    institution = codeMap[code];
                 }
             }
         } catch(dbErr) {
-            console.warn('[OVS] DB code lookup failed, using fallback:', dbErr.message);
+            console.warn('[OVS] DB code lookup failed:', dbErr.message);
         }
 
-        // Fallback to hardcoded codes (for legacy support)
-        const fallbackMap = { 
-            "VIEW2026": "Vignan's Institute of Engineering for Women", 
-            "VIIT2026": "Vignan's Institute of Information Technology", 
-            "TEST2026": "Test University" 
-        };
-        const institution = fallbackMap[code];
-        if (institution) return res.json({ success: true, institution });
+        // Step 2: Fallback to hardcoded codes if not found in DB
+        if (!institution) {
+            const fallbackMap = { 
+                "VIEW2026": "Vignan's Institute of Engineering for Women", 
+                "VIIT2026": "Vignan's Institute of Information Technology", 
+                "TEST2026": "Test University" 
+            };
+            institution = fallbackMap[code] || null;
+        }
+
+        if (!institution) return res.status(401).json({ error: "Invalid access code." });
+
+        // Step 3: Verify the institution still has an active Super Admin in the database
+        const saCheck = await db.execute({ 
+            sql: "SELECT regNum FROM users WHERE role = 'superadmin' AND institution = ? LIMIT 1", 
+            args: [institution] 
+        });
         
-        res.status(401).json({ error: "Invalid access code." });
+        if (saCheck.rows.length === 0) {
+            return res.status(401).json({ error: "This institution no longer exists or has been deactivated." });
+        }
+
+        res.json({ success: true, institution });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 
 // Dedicated institution codes endpoint (no authGuard - used by Developer Portal)
 app.get('/api/config/institution_codes', async (req, res) => {
