@@ -454,6 +454,13 @@
   <script>
     const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
     let devSession = null;
+    
+    // Force clear any stale sessions on each load
+    localStorage.removeItem('ovs_currentUser');
+    localStorage.removeItem('ovs_inst_name');
+    localStorage.removeItem('ovs_inst_code');
+
+    console.log('[OVS Dev Portal] v2.1 loaded at', new Date().toISOString());
 
     // Safe DOM Utilities
     function setText(id, val) {
