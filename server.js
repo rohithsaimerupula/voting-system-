@@ -16,7 +16,7 @@ const turso = createClient({
     authToken: process.env.TURSO_AUTH_TOKEN || "dummy",
 });
 
-const db = turso;
+
 
 // Basic Middleware for Request Scoping
 function authGuard(req, res, next) {
@@ -197,6 +197,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
         }
 
         // --- BREVO API DELIVERY ---
+        console.log(`[OVS BACKEND] Sending OTP to ${email}: ${otp}`);
         const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
@@ -233,13 +234,15 @@ app.post('/api/vote', authGuard, async (req, res) => {
         const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp, institution, electionCode } = req.body;
         
         // Server-side validation: Check if user already voted or is banned
-        const userCheck = await db.execute({ sql: "SELECT hasVoted, isBanned, canVote FROM users WHERE regNum = ? AND institution = ?", args: [voterRegNum, institution] });
+        const userCheck = await db.execute({ sql: "SELECT isBanned, status FROM users WHERE regNum = ? AND institution = ?", args: [voterRegNum, institution] });
         if (userCheck.rows.length === 0) return res.status(404).json({ error: "Voter not found" });
         const user = userCheck.rows[0];
         
         if (user.isBanned) return res.status(403).json({ error: "You are banned from voting." });
-        if (user.hasVoted) return res.status(400).json({ error: "You have already cast your vote." });
-        if (!user.canVote) return res.status(403).json({ error: "You are not authorized to vote yet. Please wait for admin approval." });
+        if (user.status !== 'active') return res.status(403).json({ error: "You are not authorized to vote yet. Please wait for admin approval." });
+
+        const ledgerCheck = await db.execute({ sql: "SELECT 1 FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND (electionCode = ? OR electionCode = 'global')", args: [voterRegNum, institution, electionCode || 'global'] });
+        if (ledgerCheck.rows.length > 0) return res.status(400).json({ error: "You have already cast your vote in this election." });
 
         await db.execute({
             sql: "INSERT INTO publicLedger (receiptHash, voterRegNum, electionCode, candidateStr, institution, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
