@@ -847,20 +847,7 @@
                 btn.innerText = "Retry";
                 document.getElementById('otp-group').classList.remove('hidden');
                 
-                // For Developer Testing on Vercel without SMTP configured:
-                const devOtpWarning = `⚠️ Email failed. <br><strong style="color:var(--gold); font-size:1.1rem;">DEV BYPASS OTP: ${generatedOtp}</strong> (Auto-filled for you!)`;
-                showError(devOtpWarning);
-                console.warn('[OVS OTP] FALLBACK: Generated OTP for manual entry:', generatedOtp);
-                
-                // Magic Dev auto-fill
-                const otpInput = document.getElementById('otp-input');
-                if (otpInput) {
-                    otpInput.value = generatedOtp;
-                    otpInput.style.border = '2px solid var(--gold)';
-                    // Keep error visible longer
-                    const errCont = document.getElementById('error-container');
-                    if(errCont) setTimeout(() => { errCont.classList.remove('hidden'); }, 6100); 
-                }
+                showError(`⚠️ Email delivery failed. Please check your email address and try again. Error: ${err.message}`);
             }
         }
 

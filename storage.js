@@ -275,8 +275,6 @@ const StorageManager = {
 
             if (!skip2FA && userData.role === 'superadmin') {
                 const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                // CRITICAL: Always log OTP to console first in case Email service fails
-                console.warn(`[OVS SECURITY] 2FA IDENTIFIER FOR ${regNum}: ${otp}`);
                 
                 try {
                     await this.sendEmailOtp(userData.email, userData.name, otp, "Super Admin 2FA Login");
@@ -353,7 +351,6 @@ const StorageManager = {
             }
 
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            console.log(`[StorageManager] OTP for ${regNum} is ${otp}`); 
             const maskedEmail = userData.email.replace(/^(.{2})(.*)(@.*)$/, "$1***$3");
             
             try {
@@ -376,9 +373,6 @@ const StorageManager = {
 
     async sendEmailOtp(email, name, otp, context) {
          console.log(`[EmailSystem] Sending ${context} OTP Request to Backend: ${email}`);
-         
-         // CRITICAL: Always log OTP to console in case Email service silently fails
-         console.warn(`[OVS OTP BYPASS] ${context} OTP for ${email}: ${otp}`);
          
          try {
              const response = await fetchApi('/auth/send-otp', {

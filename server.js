@@ -190,14 +190,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
 
-        // --- DEVELOPER MODE BYPASS ---
-        if (!process.env.BREVO_API_KEY) {
-            console.log(`[DEV_OTP] ${email}: ${otp}`);
-            return res.json({ success: true, warning: "System in Developer Mode: OTP logged to server console (SMTP Disabled)." });
-        }
-
         // --- BREVO API DELIVERY ---
-        console.log(`[OVS BACKEND] Sending OTP to ${email}: ${otp}`);
         const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
