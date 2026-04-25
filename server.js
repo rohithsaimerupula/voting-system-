@@ -130,9 +130,49 @@ app.post('/api/users/add', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        const result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+        let result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+        
+        // Developer global fallback check
+        if (result.rows.length === 0 && !inst && req.params.id === 'OVS-CORE-ROOT') {
+            result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND role = 'developer'", args: [req.params.id] });
+        }
+        
         if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         res.json(result.rows[0]);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/dev/stats', async (req, res) => {
+    try {
+        const allUsers = await db.execute({ sql: "SELECT * FROM users" });
+        const superAdmins = allUsers.rows.filter(u => u.role === 'superadmin');
+        const insts = new Set(allUsers.rows.filter(u => u.institution && u.institution !== 'Unknown' && u.institution !== 'Global').map(u => u.institution));
+        const instCount = insts.size;
+        
+        res.json({
+            counts: { saCount: superAdmins.length, instCount, studentCount: allUsers.rows.length },
+            superAdmins,
+            institutions: Array.from(insts)
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/users/orphans', async (req, res) => {
+    try {
+        const validInstsResult = await db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin'" });
+        const validInsts = validInstsResult.rows.map(r => r.institution);
+        
+        if (validInsts.length === 0) {
+            return res.json({ rowsAffected: 0, message: "No valid institutions found to anchor data." });
+        }
+        
+        const placeholders = validInsts.map(() => '?').join(',');
+        const result = await db.execute({ 
+            sql: `DELETE FROM users WHERE institution NOT IN (${placeholders}) AND role != 'developer'`, 
+            args: validInsts 
+        });
+        
+        res.json({ success: true, rowsAffected: result.rowsAffected });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
