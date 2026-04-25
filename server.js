@@ -142,17 +142,31 @@ app.get('/api/users/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-        const allUsers = (await db.execute({ sql: "SELECT * FROM users" })).rows || [];
-        const superAdmins = allUsers.filter(u => u && u.role === 'superadmin');
-        const insts = new Set(allUsers.filter(u => u && u.institution && u.institution !== 'Unknown' && u.institution !== 'Global').map(u => u.institution));
-        const instCount = insts.size;
+app.get('/api/dev/stats', async (req, res) => {
+    try {
+        const [saRes, instRes, userCountRes] = await Promise.all([
+            db.execute({ sql: "SELECT regNum, name, institution, email, status FROM users WHERE role = 'superadmin'" }),
+            db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE institution IS NOT NULL AND institution NOT IN ('Unknown', 'Global', '')" }),
+            db.execute({ sql: "SELECT COUNT(*) as count FROM users" })
+        ]);
+
+        const superAdmins = saRes.rows || [];
+        const institutions = (instRes.rows || []).map(r => r.institution);
+        const totalUsers = userCountRes.rows[0]?.count || 0;
         
         res.json({
-            counts: { saCount: superAdmins.length, instCount, studentCount: allUsers.length },
+            counts: { 
+                saCount: superAdmins.length, 
+                instCount: institutions.length, 
+                studentCount: totalUsers 
+            },
             superAdmins,
-            institutions: Array.from(insts)
+            institutions
         });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[DEV_STATS_ERR]", e);
+        res.status(500).json({ error: e.message || "Internal Database Error" }); 
+    }
 });
 
 app.delete('/api/users/orphans', async (req, res) => {
