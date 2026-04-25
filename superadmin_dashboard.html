@@ -1729,6 +1729,12 @@
         if (!newCode) return toast("Code cannot be empty", false);
         try {
           const res = await apiFetch('/config/institution_codes').catch(() => ({}));
+          
+          // Check if code is already in use by someone else
+          if (res[newCode] && res[newCode] !== saSession.institution) {
+              return toast(`Error: The code "${newCode}" is already in use by another institution.`, false);
+          }
+
           const oldCode = Object.keys(res).find(k => res[k] === saSession.institution);
 
           if (oldCode) delete res[oldCode]; // Remove old code mapped to this institution
