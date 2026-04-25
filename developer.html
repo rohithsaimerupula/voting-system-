@@ -488,9 +488,19 @@
     })();
 
     async function api(path, opts = {}) {
-      const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
-      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText); }
-      return r.json();
+      const res = await fetch(API + path, { 
+        ...(opts || {}), 
+        headers: { 
+          'Content-Type': 'application/json', 
+          ...((opts && opts.headers) || {}) 
+        } 
+      });
+      if (!res.ok) { 
+        const e = await res.json().catch(() => ({})); 
+        throw new Error((e && e.error) || res.statusText); 
+      }
+      const data = await res.json();
+      return data || {};
     }
 
     function showToast(msg, success = true) {
@@ -558,17 +568,19 @@
       if(retryBtn) retryBtn.style.display = 'none';
       try {
         const data = await api('/dev/stats');
+        if (!data || !data.counts) throw new Error("Invalid response from stats engine.");
+        
         const { counts, superAdmins, institutions } = data;
         
-        window.saCache = superAdmins;
-        window.instCache = institutions;
+        window.saCache = superAdmins || [];
+        window.instCache = institutions || [];
         if(overlay) overlay.style.display = 'none';
 
-        setText('stat-sa', counts.saCount);
-        setText('stat-inst', counts.instCount);
-        setText('stat-users', counts.studentCount);
+        setText('stat-sa', (counts && counts.saCount) || 0);
+        setText('stat-inst', (counts && counts.instCount) || 0);
+        setText('stat-users', (counts && counts.studentCount) || 0);
         
-        renderSaTable(superAdmins);
+        renderSaTable(window.saCache);
       } catch (e) {
         setText('db-loading-msg', '❌ ' + e.message);
         if(retryBtn) retryBtn.style.display = 'block';

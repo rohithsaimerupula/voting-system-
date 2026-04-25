@@ -8,18 +8,19 @@ async function fetchApi(path, options = {}, retries = 2) {
         const inst = localStorage.getItem('ovs_inst_name') || (currentUser ? currentUser.institution : '');
         
         const res = await fetch(`${API_BASE}${path}`, {
-            ...options,
+            ...(options || {}),
             headers: {
                 'Content-Type': 'application/json',
-                'X-OVS-Reg-Num': currentUser ? currentUser.regNum : 'guest',
+                'X-OVS-Reg-Num': currentUser ? (currentUser.regNum || 'guest') : 'guest',
                 'X-OVS-Institution': encodeURIComponent(inst || 'Unknown'),
-                ...(options.headers || {})
+                ...((options && options.headers) || {})
             }
         });
         if (!res.ok) {
             let err;
             try { err = await res.json(); } catch(e) { err = { error: res.statusText }; }
-            throw new Error(err.error || "API Request Failed");
+            const msg = (err && typeof err === 'object') ? (err.error || "API Request Failed") : "API Request Failed";
+            throw new Error(msg);
         }
         return await res.json();
     } catch (e) {

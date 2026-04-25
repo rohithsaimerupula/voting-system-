@@ -142,15 +142,13 @@ app.get('/api/users/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/dev/stats', async (req, res) => {
-    try {
-        const allUsers = await db.execute({ sql: "SELECT * FROM users" });
-        const superAdmins = allUsers.rows.filter(u => u.role === 'superadmin');
-        const insts = new Set(allUsers.rows.filter(u => u.institution && u.institution !== 'Unknown' && u.institution !== 'Global').map(u => u.institution));
+        const allUsers = (await db.execute({ sql: "SELECT * FROM users" })).rows || [];
+        const superAdmins = allUsers.filter(u => u && u.role === 'superadmin');
+        const insts = new Set(allUsers.filter(u => u && u.institution && u.institution !== 'Unknown' && u.institution !== 'Global').map(u => u.institution));
         const instCount = insts.size;
         
         res.json({
-            counts: { saCount: superAdmins.length, instCount, studentCount: allUsers.rows.length },
+            counts: { saCount: superAdmins.length, instCount, studentCount: allUsers.length },
             superAdmins,
             institutions: Array.from(insts)
         });
@@ -192,11 +190,11 @@ app.delete('/api/users/role/:role', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.patch('/api/users/:id', async (req, res) => {
-    try {
-        const updates = req.body;
+        const updates = req.body || {};
         const inst = decodeURIComponent(req.query.institution || '');
         const keys = Object.keys(updates);
+        if (keys.length === 0) return res.json({ success: true, message: "No updates provided." });
+        
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
         values.push(req.params.id, inst);
