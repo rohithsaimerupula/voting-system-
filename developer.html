@@ -672,18 +672,30 @@
       const pwdErr = validatePassword(pass, 10, 10);
       if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
       try {
-        await api('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) });
+        // Create the super admin user
+        const addRes = await fetch(API + '/users/add', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) 
+        });
+        if (!addRes.ok) { const e = await addRes.json().catch(()=>({error:'Failed'})); throw new Error(e.error); }
         
-        // Map the institution code
-        const resCodes = await api('/config/institution_codes').catch(()=>({}));
-        resCodes[code] = institution; // Link code to institution
-        await api('/config/institution_codes', { method: 'POST', body: JSON.stringify({ merge: false, data: resCodes }) });
+        // Save the institution gateway code to the database
+        const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
+        const existingCodes = codesRes.ok ? (await codesRes.json()) : {};
+        existingCodes[code] = institution;
+        await fetch(API + '/config/institution_codes', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: existingCodes })
+        });
 
         showToast(`Super Admin ${id} created with Code: ${code}!`);
         ['sa-id', 'sa-name', 'sa-email', 'sa-institution', 'sa-code', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
         loadConsole();
       } catch (e) { showToast(e.message, false); }
     }
+
 
     function editSA(id) {
       const sa = window.saCache.find(u => u.regNum === id);
@@ -787,22 +799,39 @@
     }
 
     async function deleteSuperAdmin(id) {
-      // Find SA's institution name for the warning
-      const saRow = document.querySelector(`#sa-table-body tr td strong`);
       const instCell = [...document.querySelectorAll('#sa-table-body tr')].find(r => r.querySelector('strong')?.textContent === id)?.querySelectorAll('td')[2]?.textContent || 'their institution';
       
       const confirmed = confirm(`⚠️ PERMANENT DELETE — CANNOT BE UNDONE\n\nRemoving Super Admin: ${id}\nInstitution: ${instCell}\n\nThis will AUTOMATICALLY delete:\n• All Admins of this institution\n• All Sub-Admins of this institution\n• All Students/Voters of this institution\n• All Candidates of this institution\n• The institution's election history & config\n• The institution's Gateway Access Code\n\nAre you absolutely sure?`);
       if (!confirmed) return;
       try {
-        const result = await api(`/users/${id}?institution=${encodeURIComponent(instCell)}`, { method: 'DELETE' });
-        if (result.cascadeDeleted) {
-          showToast(`✅ Institution "${result.institution}" fully wiped — Super Admin & all data removed.`);
-        } else {
-          showToast(`${id} removed.`);
-        }
+        // Delete the super admin and all associated users
+        await fetch(API + `/users/${encodeURIComponent(id)}?institution=${encodeURIComponent(instCell)}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
+        
+        // Also remove this institution's gateway code from config
+        try {
+            const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
+            if (codesRes.ok) {
+                const codes = await codesRes.json();
+                // Remove any code that maps to this institution
+                let changed = false;
+                for (const key in codes) {
+                    if (codes[key] === instCell) { delete codes[key]; changed = true; }
+                }
+                if (changed) {
+                    await fetch(API + '/config/institution_codes', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: codes })
+                    });
+                }
+            }
+        } catch(codeErr) { console.warn('Could not clean up gateway code:', codeErr.message); }
+
+        showToast(`✅ Super Admin ${id} and institution "${instCell}" fully removed.`);
         loadConsole();
       } catch (e) { showToast(e.message, false); }
     }
+
 
     // Enter key navigation on Auth Screen
     document.getElementById('dev-id').addEventListener('keydown', e => {

@@ -104,16 +104,55 @@ app.get('/api/auditLogs', async (req, res) => {
 app.post('/api/institutions/verify', async (req, res) => {
     try {
         const { code } = req.body;
-        const codeMap = { 
+        if (!code) return res.status(400).json({ error: "Code required" });
+
+        // First check the dynamic config table (managed by Developer Portal)
+        try {
+            const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+            if (configResult.rows.length > 0) {
+                const codeMap = JSON.parse(configResult.rows[0].value);
+                if (codeMap && codeMap[code]) {
+                    return res.json({ success: true, institution: codeMap[code] });
+                }
+            }
+        } catch(dbErr) {
+            console.warn('[OVS] DB code lookup failed, using fallback:', dbErr.message);
+        }
+
+        // Fallback to hardcoded codes (for legacy support)
+        const fallbackMap = { 
             "VIEW2026": "Vignan's Institute of Engineering for Women", 
             "VIIT2026": "Vignan's Institute of Information Technology", 
             "TEST2026": "Test University" 
         };
-        const institution = codeMap[code];
-        if (institution) res.json({ success: true, institution });
-        else res.status(401).json({ error: "Invalid access code." });
+        const institution = fallbackMap[code];
+        if (institution) return res.json({ success: true, institution });
+        
+        res.status(401).json({ error: "Invalid access code." });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// Dedicated institution codes endpoint (no authGuard - used by Developer Portal)
+app.get('/api/config/institution_codes', async (req, res) => {
+    try {
+        const result = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+        if (result.rows.length === 0) return res.json({});
+        res.json(JSON.parse(result.rows[0].value));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/config/institution_codes', async (req, res) => {
+    try {
+        const { data } = req.body;
+        if (!data || typeof data !== 'object') return res.status(400).json({ error: 'Invalid data' });
+        await db.execute({ 
+            sql: "INSERT INTO config (key, value) VALUES ('institution_codes', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", 
+            args: [JSON.stringify(data)] 
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 
 app.post('/api/users/add', async (req, res) => {
     try {
