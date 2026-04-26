@@ -239,7 +239,13 @@ app.post('/api/users/add', async (req, res) => {
 
         await db.execute({
             sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, managedBy, canVote, category, packId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait, u.webcamReg, u.deviceFingerprint, u.branch, u.class, u.managedBy, boolInt(u.canVote), u.category, u.packId || null]
+            args: [
+                u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', 
+                boolInt(u.hasVoted), boolInt(u.isBanned), 
+                u.portrait || null, u.webcamReg || null, u.deviceFingerprint || null, 
+                u.branch || null, u.class || null, u.managedBy || null, 
+                boolInt(u.canVote), u.category || null, u.packId || null
+            ]
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
