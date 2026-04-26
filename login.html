@@ -178,31 +178,12 @@
             </div>
           </div>
           <button id="sa-modal-btn" onclick="saModalLogin()" style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-            Send OTP & Continue <span>→</span>
+            Secure Login <span>→</span>
           </button>
           <div style="margin-top:1.5rem; text-align:center;">
               <button type="button" onclick="closeSAModal(); showRecoveryModal('superadmin')"
                   style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot Master Password?</button>
           </div>
-        </div>
-        
-        <!-- Step 2: OTP -->
-        <div id="sa-step-2" style="display:none; animation:popIn 0.4s ease;">
-          <div style="text-align:left;margin-bottom:1.5rem;">
-            <label style="display:flex;justify-content:space-between;color:#f59e0b;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">
-              <span>Verification Code</span>
-              <small style="color:#94a3b8;font-weight:400;text-transform:none;">Sent to inbox</small>
-            </label>
-            <div style="position:relative;">
-              <span style="position:absolute;left:1.2rem;top:50%;transform:translateY(-50%);opacity:0.8;font-size:1.2rem;">🛡️</span>
-              <input type="text" id="sa-modal-otp" placeholder="000 000" maxlength="6" class="sa-modal-input"
-                style="width:100%;height:54px;padding-left:3.2rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);color:#f59e0b;font-size:1.4rem;letter-spacing:4px;font-weight:800;text-align:center;font-family:'Outfit',sans-serif;outline:none;">
-            </div>
-          </div>
-          <button onclick="saModalVerifyOtp()" 
-            style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;">
-            Verify OTP & Login
-          </button>
         </div>
         
         <div id="sa-modal-err" style="color:#ef4444;margin-top:1.2rem;font-size:0.9rem;min-height:1.2rem;font-weight:600;"></div>
@@ -1019,27 +1000,19 @@
                 if (!user) throw new Error('Invalid credentials.');
                 if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
 
-                // Bypass OTP: Log in directly
+                // Redirect directly to Super Admin dashboard
                 localStorage.setItem('ovs_currentUser', JSON.stringify(user));
                 window.location.href = 'superadmin_dashboard.html';
             } catch(e) {
-                btn.textContent = 'Verify & Access';
+                btn.textContent = 'Secure Login';
                 btn.disabled = false;
                 err.style.color = '#ef4444';
-                err.textContent = e.message || 'Access Denied';
+                err.textContent = e.message || 'Error during login';
             }
         }
 
         async function saModalVerifyOtp() {
-            const entered = document.getElementById('sa-modal-otp').value.trim();
-            const err = document.getElementById('sa-modal-err');
-            if (entered !== window._saModalOtp) {
-                err.style.color = '#ef4444';
-                err.textContent = 'Invalid OTP. Try again.';
-                return;
-            }
-            localStorage.setItem('ovs_currentUser', JSON.stringify(window._saModalUser));
-            window.location.href = 'superadmin_dashboard.html';
+            // Deprecated - OTP removed
         }
 
         // Real-time restrictions on SA modal inputs
