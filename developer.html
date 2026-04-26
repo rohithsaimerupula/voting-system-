@@ -334,6 +334,19 @@
     .modal-field input:disabled { opacity:0.5; cursor:not-allowed; }
     .modal-save { width:100%; padding:0.85rem; border-radius:10px; border:none; background:linear-gradient(135deg,#ff2a4d,#cc223e); color:white; font-weight:700; font-size:1rem; cursor:pointer; margin-top:0.5rem; font-family:'Outfit',sans-serif; transition:all 0.3s; }
     .modal-save:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(245,158,11,0.4); }
+    .alert-card {
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      border-left: 4px solid var(--red);
+      background: rgba(255, 255, 255, 0.03);
+      text-align: left;
+    }
+    .alert-OTP_GENERATED { border-color: #22c55e; background: rgba(34, 197, 94, 0.05); }
+    .alert-SMTP_FAILURE { border-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+    .alert-timestamp { color: var(--muted); font-size: 0.7rem; display: block; margin-top: 0.25rem; }
+    .alert-code { font-family: monospace; font-weight: bold; color: #22c55e; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; }
   </style>
 </head>
 
@@ -446,37 +459,11 @@
         <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
       </div>
 
-      <!-- Recent OTPs (Recovery Console) -->
-      <div class="section" style="border-color: #f59e0b;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-            <h2 style="color:#f59e0b;">📧 Recent Verification Codes (OTPs)</h2>
-            <button class="btn-sm btn-green" onclick="generateManualOTP()">➕ Generate Manual Code</button>
-        </div>
-        <p class="text-muted" style="margin-bottom:1rem;">If the email service is down or credits are exhausted, you can find the login codes for Super Admins here.</p>
-        <div style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
-            <table style="margin:0;">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Recipient</th>
-                  <th>OTP Code</th>
-                  <th>Context</th>
-                </tr>
-              </thead>
-              <tbody id="otp-table-body">
-                <tr><td colspan="4" class="empty">Loading recent codes...</td></tr>
-              </tbody>
-            </table>
-        </div>
-      </div>
-
       <!-- Super Admins Table -->
       <div class="section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h2 style="margin-bottom: 0;">📋 All Super Admins</h2>
-            <div style="display:flex; gap:0.5rem;">
-                <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
-            </div>
+            <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
         </div>
         <table>
           <thead>
@@ -496,6 +483,20 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <!-- SYSTEM HEALTH & OTP LOGS -->
+      <div class="section">
+        <h2>🛡️ System Health & OTP Logs</h2>
+        <div id="health-stats" style="margin-bottom:1rem; font-size:0.9rem; display:flex; gap:1.5rem;">
+            <span id="health-smtp">Email Service: <strong style="color:var(--muted)">Checking...</strong></span>
+            <span id="health-db">Database: <strong style="color:var(--green)">Connected</strong></span>
+        </div>
+        <div id="alerts-list" style="max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.2); padding:1rem; border-radius:12px;">
+            <p class="text-muted" style="text-align:center; padding:1rem;">Loading system alerts...</p>
+        </div>
+        <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+            <button class="btn btn-red-outline" style="padding:0.6rem 1.2rem; font-size:0.85rem;" onclick="loadSystemHealth()">🔄 Refresh Logs</button>
+        </div>
       </div>
     </div>
   </div>
@@ -721,53 +722,6 @@
       window.location.href = 'index.html';
     }
 
-    async function loadOTPs() {
-        try {
-            const res = await fetch(API + '/admin/system-health', { headers: { 'Content-Type': 'application/json' } });
-            if (!res.ok) return;
-            const data = await res.json();
-            const otpTable = document.getElementById('otp-table-body');
-            if(!otpTable) return;
-            const otps = (data.alerts || []).filter(a => a.type === 'OTP_GENERATED');
-            
-            if (otps.length === 0) {
-                otpTable.innerHTML = '<tr><td colspan="4" class="empty">No recent codes found.</td></tr>';
-                return;
-            }
-            
-            otpTable.innerHTML = otps.map(a => {
-                const time = new Date(a.timestamp).toLocaleTimeString();
-                const recipient = a.message.replace('OTP for ', '');
-                const code = a.details.split('Code: ')[1]?.split(' (')[0] || 'Unknown';
-                const context = a.details.split('Context: ')[1]?.split(')')[0] || 'N/A';
-                return `<tr>
-                    <td>${time}</td>
-                    <td>${recipient}</td>
-                    <td><strong style="color:#f59e0b; font-size:1.1rem; letter-spacing:1px;">${code}</strong></td>
-                    <td>${context}</td>
-                </tr>`;
-            }).join('');
-        } catch(e) { console.error("OTP load failed:", e); }
-    }
-
-    async function generateManualOTP() {
-        const email = prompt("Enter User Email to generate manual OTP:");
-        if (!email) return;
-        const name = prompt("Enter User Name (optional):") || "User";
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        try {
-            const res = await fetch(API + '/auth/generate-otp-only', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, name, otp, context: "Manual Admin Recovery" })
-            });
-            if (!res.ok) throw new Error("Failed to generate code.");
-            showToast(`Manual OTP [${otp}] generated for ${email}!`);
-            loadOTPs();
-        } catch(e) { showToast(e.message, false); }
-    }
-
     async function loadConsole() {
       const overlay = document.getElementById('db-loading');
       const retryBtn = document.getElementById('db-retry-btn');
@@ -777,8 +731,7 @@
       try {
         const [statsRes, packsRes] = await Promise.all([
             fetch(API + '/dev/stats', { headers: { 'Content-Type': 'application/json' } }),
-            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } }),
-            loadOTPs()
+            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } })
         ]);
 
         if (!statsRes.ok) {
@@ -809,6 +762,7 @@
         renderSaTable(window.saCache);
         renderPacksTable(window.packsCache);
         populatePackDropdown(window.packsCache);
+        loadSystemHealth();
       } catch (e) {
         const msg = e.message || 'Unknown error';
         setText('db-loading-msg', '❌ ' + msg);
@@ -856,6 +810,45 @@
       </td>
     </tr>`;
       }).join(''));
+    }
+
+    async function loadSystemHealth() {
+        const list = document.getElementById('alerts-list');
+        try {
+            const res = await fetch(API + '/admin/system-health?institution=Global', {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!res.ok) throw new Error('Health API Failed');
+            const data = await res.json();
+            
+            const smtpEl = document.getElementById('health-smtp');
+            if (smtpEl) smtpEl.innerHTML = `Email Service: <strong style="color:${data.smtpStatus ? '#22c55e' : '#ef4444'}">${data.smtpStatus ? 'Active (Brevo)' : 'Not Configured'}</strong>`;
+            
+            if (!data.alerts || data.alerts.length === 0) {
+                list.innerHTML = '<p class="text-muted" style="text-align:center; padding:1rem;">No recent alerts or OTP logs found.</p>';
+                return;
+            }
+            
+            list.innerHTML = data.alerts.map(a => {
+                let details = a.details || '';
+                // Highlight OTP codes for easy reading
+                if (a.type === 'OTP_GENERATED' && details.includes('Code:')) {
+                    details = details.replace(/Code: (\d+)/, 'Code: <span class="alert-code">$1</span>');
+                }
+                return `
+                    <div class="alert-card alert-${a.type}">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
+                            <strong>${a.type}</strong>
+                            <span class="alert-timestamp">${new Date(a.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div style="color:var(--text)">${a.message}</div>
+                        <div style="color:var(--muted); margin-top:0.25rem; font-size:0.8rem;">${details}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch(e) {
+            list.innerHTML = `<p style="color:var(--red); text-align:center; padding:1rem;">Failed to load health data: ${e.message}</p>`;
+        }
     }
 
     async function createSuperAdmin() {
