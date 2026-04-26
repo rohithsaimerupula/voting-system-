@@ -73,6 +73,26 @@ async function initDb() {
 }
 initDb();
 
+// Migration: safely add new columns to existing tables
+async function runMigrations() {
+    const migrations = [
+        { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" }
+    ];
+    for (const m of migrations) {
+        try {
+            await db.execute({ sql: m.sql, args: [] });
+            console.log(`[Migration] Added column: ${m.label}`);
+        } catch (e) {
+            // "duplicate column name" means it already exists — safe to ignore
+            if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) {
+                console.warn(`[Migration] Skipped ${m.label}:`, e.message);
+            }
+        }
+    }
+}
+runMigrations();
+
+
 function boolInt(val) { return val ? 1 : 0; }
 
 app.get('/api/users', async (req, res) => {
