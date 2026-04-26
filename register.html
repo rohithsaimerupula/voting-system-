@@ -807,9 +807,6 @@
 
             generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
             const name = document.getElementById('name').value || "New User";
-            
-            // For testing: bypass email delivery delay
-            console.log("🔑 [OVS Debug] Your OTP code is:", generatedOtp);
 
             const btn = document.getElementById('send-otp-btn');
             btn.disabled = true;

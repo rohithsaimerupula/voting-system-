@@ -481,6 +481,18 @@ app.post('/api/auth/send-otp', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Create OTP without sending email (Developer Recovery)
+app.post('/api/auth/generate-otp-only', async (req, res) => {
+    try {
+        const { email, name, otp, context } = req.body;
+        await db.execute({
+            sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+            args: ['OTP_GENERATED', `OTP for ${email} (SILENT)`, `Code: ${otp} (Context: ${context || 'Manual'})`, new Date().toISOString(), 'Global']
+        });
+        res.json({ success: true, otp });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/admin/system-health', authGuard, async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
