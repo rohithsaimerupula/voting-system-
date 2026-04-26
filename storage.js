@@ -294,23 +294,6 @@ const StorageManager = {
 
             if (!isMatch) throw new Error("Invalid credentials.");
 
-            if (!skip2FA && userData.role === 'superadmin') {
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                
-                try {
-                    await this.sendEmailOtp(userData.email, userData.name, otp, "Super Admin 2FA Login");
-                    return { requires2FA: true, otpRequired: otp, userObj: userData };
-                } catch (emailErr) {
-                    console.error("[OVS SECURITY] Email service failed:", emailErr);
-                    return { 
-                        requires2FA: true, 
-                        otpRequired: otp, 
-                        userObj: userData,
-                        warning: "Email Delivery Failed. Check Browser Console for Login Code (F12)."
-                    };
-                }
-            }
-
             if (userData.hasVoted === 1) userData.hasVoted = true;
             if (userData.hasVoted === 0) userData.hasVoted = false;
             if (userData.canVote === 1) userData.canVote = true;

@@ -448,14 +448,6 @@ app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
-        
-        // Log OTP to system_alerts for recovery if email fails
-        try {
-            await db.execute({
-                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
-                args: ['OTP_GENERATED', `OTP for ${email}`, `Code: ${otp} (Context: ${context || 'N/A'})`, new Date().toISOString(), 'Global']
-            });
-        } catch (logErr) { console.warn("Failed to log OTP alert:", logErr.message); }
 
         // --- BREVO API DELIVERY ---
         const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -478,18 +470,6 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const brevoErr = await brevoRes.json();
         console.error("[BREVO_FAIL]", brevoErr);
         res.status(500).json({ error: `Brevo API Error: ${brevoErr.message || 'Check API Key'}` });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Create OTP without sending email (Developer Recovery)
-app.post('/api/auth/generate-otp-only', async (req, res) => {
-    try {
-        const { email, name, otp, context } = req.body;
-        await db.execute({
-            sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
-            args: ['OTP_GENERATED', `OTP for ${email} (SILENT)`, `Code: ${otp} (Context: ${context || 'Manual'})`, new Date().toISOString(), 'Global']
-        });
-        res.json({ success: true, otp });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

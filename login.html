@@ -846,10 +846,7 @@
 
             if (!current2faState) return;
 
-            // Master Bypass for Developer Emergency
-            const isMasterBypass = (otpIn === '777777');
-
-            if (otpIn === current2faState.otpRequired || isMasterBypass) {
+            if (otpIn === current2faState.otpRequired) {
                 err.classList.add('hidden');
                 setText('twofa-btn', "Logging in...");
                 btn.disabled = true;
@@ -1022,31 +1019,21 @@
                 if (!user) throw new Error('Invalid credentials.');
                 if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
 
-                // Generate OTP and send via Backend
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                window._saModalOtp = otp;
-                window._saModalUser = user;
-                btn.textContent = 'Sending OTP...';
-                await StorageManager.sendEmailOtp(user.email, user.name || 'Super Admin', otp, 'Super Admin Login');
-                document.getElementById('sa-step-1').style.display = 'none';
-                document.getElementById('sa-step-2').style.display = 'block';
-                err.style.color = '#22c55e';
-                err.textContent = `OTP sent successfully!`;
+                // Bypass OTP: Log in directly
+                localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+                window.location.href = 'superadmin_dashboard.html';
             } catch(e) {
-                btn.textContent = 'Send OTP & Continue';
+                btn.textContent = 'Verify & Access';
                 btn.disabled = false;
                 err.style.color = '#ef4444';
-                err.textContent = e.message || 'Error sending OTP';
+                err.textContent = e.message || 'Access Denied';
             }
         }
 
         async function saModalVerifyOtp() {
             const entered = document.getElementById('sa-modal-otp').value.trim();
             const err = document.getElementById('sa-modal-err');
-            
-            const isMasterBypass = (entered === '777777');
-            
-            if (entered !== window._saModalOtp && !isMasterBypass) {
+            if (entered !== window._saModalOtp) {
                 err.style.color = '#ef4444';
                 err.textContent = 'Invalid OTP. Try again.';
                 return;
