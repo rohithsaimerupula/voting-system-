@@ -177,18 +177,8 @@
                 style="width:100%;height:48px;padding-left:2.8rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.3);color:white;font-family:'Outfit',sans-serif;font-size:1rem;outline:none;">
             </div>
           </div>
-          <button id="sa-modal-btn" onclick="saModalLogin()" style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-            Send OTP & Continue <span>→</span>
-          </button>
-          <div style="margin-top:1.5rem; text-align:center;">
-              <button type="button" onclick="closeSAModal(); showRecoveryModal('superadmin')"
-                  style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot Master Password?</button>
-          </div>
-        </div>
-        
-        <!-- Step 2: OTP -->
-        <div id="sa-step-2" style="display:none; animation:popIn 0.4s ease;">
-          <div style="text-align:left;margin-bottom:1.5rem;">
+          <!-- OTP Input (Hidden initially) -->
+          <div id="sa-otp-box" style="display:none; animation:popIn 0.4s ease; margin-bottom:1.5rem; text-align:left;">
             <label style="display:flex;justify-content:space-between;color:#f59e0b;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">
               <span>Verification Code</span>
               <small style="color:#94a3b8;font-weight:400;text-transform:none;">Sent to inbox</small>
@@ -199,10 +189,14 @@
                 style="width:100%;height:54px;padding-left:3.2rem;padding-right:1rem;border-radius:12px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);color:#f59e0b;font-size:1.4rem;letter-spacing:4px;font-weight:800;text-align:center;font-family:'Outfit',sans-serif;outline:none;">
             </div>
           </div>
-          <button onclick="saModalVerifyOtp()" 
-            style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;">
-            Verify OTP & Login
+
+          <button id="sa-modal-btn" onclick="saModalLogin()" style="width:100%;height:50px;border-radius:12px;border:1px solid rgba(245,158,11,0.5);background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 10px 20px -10px rgba(245,158,11,0.5);font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+            Send OTP & Continue <span>→</span>
           </button>
+          <div id="sa-modal-forgot" style="margin-top:1.5rem; text-align:center;">
+              <button type="button" onclick="closeSAModal(); showRecoveryModal('superadmin')"
+                  style="background:none; border:none; color:rgba(245,158,11,0.8); font-size:0.85rem; cursor:pointer; font-weight:600; text-decoration:underline;">Forgot Master Password?</button>
+          </div>
         </div>
         
         <div id="sa-modal-err" style="color:#ef4444;margin-top:1.2rem;font-size:0.9rem;min-height:1.2rem;font-weight:600;"></div>
@@ -1019,11 +1013,26 @@
                 if (!user) throw new Error('Invalid credentials.');
                 if (!user || user.role !== 'superadmin') throw new Error('Not a Super Admin account.');
 
-                // Bypass OTP: Log in directly
-                localStorage.setItem('ovs_currentUser', JSON.stringify(user));
-                window.location.href = 'superadmin_dashboard.html';
+                // Generate OTP and send via Backend
+                const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                window._saModalOtp = otp;
+                window._saModalUser = user;
+                btn.textContent = 'Sending OTP...';
+                await StorageManager.sendEmailOtp(user.email, user.name || 'Super Admin', otp, 'Super Admin Login');
+                
+                // Show OTP inline instead of switching views
+                document.getElementById('sa-otp-box').style.display = 'block';
+                document.getElementById('sa-modal-otp').focus();
+                
+                // Switch button mode
+                btn.textContent = 'Verify OTP & Login';
+                btn.onclick = saModalVerifyOtp;
+                btn.disabled = false;
+                
+                err.style.color = '#22c55e';
+                err.textContent = `OTP sent successfully!`;
             } catch(e) {
-                btn.textContent = 'Verify & Access';
+                btn.textContent = 'Send OTP & Continue';
                 btn.disabled = false;
                 err.style.color = '#ef4444';
                 err.textContent = e.message || 'Access Denied';
