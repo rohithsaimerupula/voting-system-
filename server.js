@@ -57,7 +57,7 @@ const db = {
 async function initDb() {
     try {
         await db.batch([
-            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, PRIMARY KEY (regNum, institution))`,
+            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, PRIMARY KEY (regNum, institution))`,
             `CREATE TABLE IF NOT EXISTS auditLogs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, user TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS deviceFingerprints (fingerprint TEXT PRIMARY KEY, firstSeen TEXT, lastActive TEXT, counts JSON)`,
             `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSON)`,
@@ -65,7 +65,8 @@ async function initDb() {
             `CREATE TABLE IF NOT EXISTS questions (id INTEGER PRIMARY KEY AUTOINCREMENT, candidateId TEXT, voterName TEXT, question TEXT, answer TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS globalChat (id INTEGER PRIMARY KEY AUTOINCREMENT, voterName TEXT, text TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS system_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
-            `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`
+            `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`,
+            `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`
         ], "write");
         console.log("Database initialized.");
     } catch (err) { console.error("Error initializing DB:", err); }
@@ -191,11 +192,103 @@ app.post('/api/users/add', async (req, res) => {
     try {
         const u = req.body;
         const inst = u.institution || 'Unknown';
+
+        // --- PACK LIMIT ENFORCEMENT ---
+        const rolesToCheck = ['admin', 'subadmin', 'voter', 'contestant'];
+        if (rolesToCheck.includes(u.role)) {
+            // Find the super admin of this institution to get their packId
+            const saRes = await db.execute({ sql: "SELECT packId FROM users WHERE institution = ? AND role = 'superadmin' LIMIT 1", args: [inst] });
+            const packId = saRes.rows.length > 0 ? saRes.rows[0].packId : null;
+            if (packId) {
+                const packRes = await db.execute({ sql: "SELECT * FROM packs WHERE id = ?", args: [packId] });
+                if (packRes.rows.length > 0) {
+                    const pack = packRes.rows[0];
+                    if (u.role === 'admin') {
+                        const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'admin'", args: [inst] });
+                        if (cnt.rows[0].c >= pack.maxAdmins) return res.status(403).json({ error: `Admin limit reached for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxAdmins}). Upgrade your pack to add more admins.` });
+                    } else if (u.role === 'subadmin') {
+                        const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'subadmin'", args: [inst] });
+                        if (cnt.rows[0].c >= pack.maxSubAdmins) return res.status(403).json({ error: `Sub-Admin limit reached for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxSubAdmins}). Upgrade your pack to add more sub-admins.` });
+                    } else if (u.role === 'voter' || u.role === 'contestant') {
+                        const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role IN ('voter','contestant')", args: [inst] });
+                        if (cnt.rows[0].c >= pack.maxStudents) return res.status(403).json({ error: `Student capacity full for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxStudents}). Registration is closed until capacity is upgraded.` });
+                    }
+                }
+            }
+        }
+
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, managedBy, canVote, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait, u.webcamReg, u.deviceFingerprint, u.branch, u.class, u.managedBy, boolInt(u.canVote), u.category]
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, managedBy, canVote, category, packId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', boolInt(u.hasVoted), boolInt(u.isBanned), u.portrait, u.webcamReg, u.deviceFingerprint, u.branch, u.class, u.managedBy, boolInt(u.canVote), u.category, u.packId || null]
         });
         res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- PACKS CRUD ---
+app.get('/api/packs', async (req, res) => {
+    try {
+        const result = await db.execute({ sql: "SELECT * FROM packs ORDER BY createdAt DESC", args: [] });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/packs', async (req, res) => {
+    try {
+        const { name, maxAdmins, maxSubAdmins, maxStudents } = req.body;
+        if (!name) return res.status(400).json({ error: "Pack name is required" });
+        const id = `PACK-${Date.now()}`;
+        await db.execute({
+            sql: "INSERT INTO packs (id, name, maxAdmins, maxSubAdmins, maxStudents, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+            args: [id, name, maxAdmins || 20, maxSubAdmins || 4, maxStudents || 1000, new Date().toISOString()]
+        });
+        res.json({ success: true, id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/packs/:id', async (req, res) => {
+    try {
+        const { name, maxAdmins, maxSubAdmins, maxStudents } = req.body;
+        await db.execute({
+            sql: "UPDATE packs SET name = ?, maxAdmins = ?, maxSubAdmins = ?, maxStudents = ? WHERE id = ?",
+            args: [name, maxAdmins, maxSubAdmins, maxStudents, req.params.id]
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/packs/:id', async (req, res) => {
+    try {
+        const inUse = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE packId = ? AND role = 'superadmin'", args: [req.params.id] });
+        if (inUse.rows[0].c > 0) return res.status(400).json({ error: "This pack is assigned to an active institution. Reassign it before deleting." });
+        await db.execute({ sql: "DELETE FROM packs WHERE id = ?", args: [req.params.id] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Pack usage for an institution
+app.get('/api/institutions/pack-usage', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        if (!inst) return res.status(400).json({ error: 'institution required' });
+        const saRes = await db.execute({ sql: "SELECT packId FROM users WHERE institution = ? AND role = 'superadmin' LIMIT 1", args: [inst] });
+        if (!saRes.rows.length || !saRes.rows[0].packId) return res.json({ pack: null, usage: null });
+        const packId = saRes.rows[0].packId;
+        const [packRes, adminCnt, subCnt, stuCnt] = await Promise.all([
+            db.execute({ sql: "SELECT * FROM packs WHERE id = ?", args: [packId] }),
+            db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'admin'", args: [inst] }),
+            db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'subadmin'", args: [inst] }),
+            db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role IN ('voter','contestant')", args: [inst] })
+        ]);
+        const pack = packRes.rows[0];
+        res.json({
+            pack,
+            usage: {
+                admins: { current: adminCnt.rows[0].c, max: pack.maxAdmins },
+                subAdmins: { current: subCnt.rows[0].c, max: pack.maxSubAdmins },
+                students: { current: stuCnt.rows[0].c, max: pack.maxStudents }
+            }
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

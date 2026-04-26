@@ -690,6 +690,12 @@
         </div>
       </div>
 
+        <div class="card" id="pack-usage-card" style="display:none; background:rgba(168,85,247,0.04); border:1px solid rgba(168,85,247,0.2);">
+          <h3 style="color:#a855f7;">📦 Plan Usage</h3>
+          <div id="pack-usage-inner" style="display:flex; flex-direction:column; gap:1rem;"></div>
+        </div>
+      </div>
+
       <!-- ADMINS -->
       <div class="page" id="page-admins">
         <div class="page-title">🧑‍💼 Manage Admins</div>
@@ -1702,7 +1708,43 @@
 
           // Build scope UI for Advanced Election
           buildSaScopeHierarchy();
+
+          // Load pack usage widget
+          loadPackUsage();
         } catch (e) { toast(e.message, false); }
+      }
+
+      async function loadPackUsage() {
+        try {
+          const data = await apiFetch(`/institutions/pack-usage?institution=${encodeURIComponent(saSession.institution)}`);
+          const card = document.getElementById('pack-usage-card');
+          const inner = document.getElementById('pack-usage-inner');
+          if (!card || !inner) return;
+          if (!data.pack || !data.usage) { card.style.display = 'none'; return; }
+          card.style.display = 'block';
+          const p = data.pack;
+          const u = data.usage;
+          function bar(label, current, max, color) {
+            const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
+            const isNear = pct >= 80;
+            const barColor = isNear ? 'var(--red)' : color;
+            return `<div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">${label}</span>
+                <span style="font-size:0.85rem; font-weight:700; color:${isNear ? 'var(--red)' : 'white'};">${current} / ${max} <span style="color:var(--muted); font-weight:400;">(${pct}%)</span></span>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:3px; transition:width 0.6s ease;"></div>
+              </div>
+            </div>`;
+          }
+          inner.innerHTML = `
+            <div style="font-size:0.78rem; color:#a855f7; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:-0.3rem;">Active Plan: ${p.name}</div>
+            ${bar('Admins', u.admins.current, u.admins.max, 'var(--gold)')}
+            ${bar('Sub-Admins', u.subAdmins.current, u.subAdmins.max, '#a855f7')}
+            ${bar('Students', u.students.current, u.students.max, 'var(--cyan)')}
+          `;
+        } catch(e) { /* silently fail */ }
       }
 
       async function loadInstitutionCode() {

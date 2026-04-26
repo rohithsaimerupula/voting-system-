@@ -370,6 +370,47 @@
         </div>
       </div>
 
+      <!-- PACKS MANAGER -->
+      <div class="section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h2 style="margin:0;">📦 Manage Packs</h2>
+          <button class="btn btn-red-outline" style="border-color:#a855f7;color:#a855f7;" onclick="togglePackForm()">➕ Create New Pack</button>
+        </div>
+
+        <!-- Create Pack Form (hidden by default) -->
+        <div id="pack-form" style="display:none; background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem;">
+          <div class="form-row">
+            <div><label>Pack Name <small style="color:var(--muted);text-transform:none">(e.g. Starter, Enterprise)</small></label><input type="text" id="pack-name" placeholder="Enterprise Pack"></div>
+            <div><label>Max Admins</label><input type="number" id="pack-maxAdmins" value="20" min="1" max="500"></div>
+          </div>
+          <div class="form-row">
+            <div><label>Max Sub-Admins</label><input type="number" id="pack-maxSubAdmins" value="4" min="1" max="100"></div>
+            <div><label>Max Students (Voters + Contestants)</label><input type="number" id="pack-maxStudents" value="1000" min="1" max="100000"></div>
+          </div>
+          <div style="display:flex;gap:1rem;margin-top:0.5rem;">
+            <button class="btn" style="flex:1;background:linear-gradient(135deg,#a855f7,#7c3aed);color:white;padding:0.8rem;" onclick="createPack()">💾 Save Pack</button>
+            <button class="btn btn-red-outline" style="width:auto;padding:0.8rem 1.5rem;" onclick="togglePackForm()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Packs Table -->
+        <table>
+          <thead>
+            <tr>
+              <th>Pack ID</th>
+              <th>Pack Name</th>
+              <th style="text-align:center">Max Admins</th>
+              <th style="text-align:center">Max Sub-Admins</th>
+              <th style="text-align:center">Max Students</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="packs-table-body">
+            <tr><td colspan="6" class="empty">No packs created yet. Create one above.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Create Super Admin -->
       <div class="section">
         <h2>🏛️ Create Super Admin</h2>
@@ -384,6 +425,13 @@
         <div class="form-row">
           <div><label>Gateway Access Code</label><input type="text" id="sa-code" placeholder="e.g. KLU2026" maxlength="10" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
           <div><label>Password <small style="color:var(--muted);text-transform:none">(Exactly 10 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sup@er10ad"></div>
+        </div>
+        <div class="form-row">
+          <div style="grid-column:1/-1;"><label>Assign Pack <small style="color:var(--muted);text-transform:none">— Select a pack to apply member limits to this institution</small></label>
+            <select id="sa-pack" style="width:100%;padding:0.9rem 1.2rem;border-radius:10px;border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.06);color:white;font-size:1rem;font-family:'Outfit',sans-serif;outline:none;">
+              <option value="">-- No Pack (Unlimited) --</option>
+            </select>
+          </div>
         </div>
         <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
       </div>
@@ -400,6 +448,7 @@
               <th>ID</th>
               <th>Name</th>
               <th>Institution</th>
+              <th>Pack</th>
               <th>Email</th>
               <th>Status</th>
               <th>Actions</th>
@@ -407,7 +456,7 @@
           </thead>
           <tbody id="sa-table-body">
             <tr>
-              <td colspan="6" class="empty">Loading...</td>
+              <td colspan="7" class="empty">Loading...</td>
             </tr>
           </tbody>
         </table>
@@ -589,12 +638,16 @@
       setText('db-loading-msg', 'Connecting to database...');
       if(retryBtn) retryBtn.style.display = 'none';
       try {
-        const res = await fetch(API + '/dev/stats', { headers: { 'Content-Type': 'application/json' } });
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({ error: res.statusText }));
-            throw new Error('Stats API: ' + (errData.error || res.statusText));
+        const [statsRes, packsRes] = await Promise.all([
+            fetch(API + '/dev/stats', { headers: { 'Content-Type': 'application/json' } }),
+            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } })
+        ]);
+
+        if (!statsRes.ok) {
+            const errData = await statsRes.json().catch(() => ({ error: statsRes.statusText }));
+            throw new Error('Stats API: ' + (errData.error || statsRes.statusText));
         }
-        const data = await res.json();
+        const data = await statsRes.json();
         if (!data || !data.counts) throw new Error('Stats returned empty. Check database.');
         
         const counts = data.counts || {};
@@ -603,6 +656,12 @@
 
         window.saCache = superAdmins;
         window.instCache = institutions;
+
+        // Load packs
+        let packs = [];
+        if (packsRes.ok) packs = await packsRes.json();
+        window.packsCache = packs;
+
         if(overlay) overlay.style.display = 'none';
 
         setText('stat-sa', counts.saCount || 0);
@@ -610,6 +669,8 @@
         setText('stat-users', counts.studentCount || 0);
         
         renderSaTable(window.saCache);
+        renderPacksTable(window.packsCache);
+        populatePackDropdown(window.packsCache);
       } catch (e) {
         const msg = e.message || 'Unknown error';
         setText('db-loading-msg', '❌ ' + msg);
@@ -632,21 +693,30 @@
 
     function renderSaTable(list) {
       if (!list.length) { 
-          setHTML('sa-table-body', '<tr><td colspan="6" class="empty">No Super Admins yet</td></tr>'); 
+          setHTML('sa-table-body', '<tr><td colspan="7" class="empty">No Super Admins yet</td></tr>'); 
           return; 
       }
-      setHTML('sa-table-body', list.map(sa => `
+      const packsMap = {};
+      (window.packsCache || []).forEach(p => { packsMap[p.id] = p; });
+      setHTML('sa-table-body', list.map(sa => {
+          const pack = sa.packId ? packsMap[sa.packId] : null;
+          const packBadge = pack 
+              ? `<span style="background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3);padding:0.2rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:600;">${pack.name}</span>`
+              : `<span style="color:var(--muted);font-size:0.78rem;">No Pack</span>`;
+          return `
     <tr>
       <td><strong>${sa.regNum}</strong></td>
       <td>${sa.name}</td>
       <td>${sa.institution || '-'}</td>
+      <td>${packBadge}</td>
       <td>${sa.email || '-'}</td>
       <td><span class="badge badge-sa">${sa.status}</span></td>
       <td style="display:flex;gap:0.4rem;">
         <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}')">Edit</button>
         <button class="btn-sm btn-danger" onclick="deleteSuperAdmin('${sa.regNum}')">Remove</button>
       </td>
-    </tr>`).join(''));
+    </tr>`;
+      }).join(''));
     }
 
     async function createSuperAdmin() {
@@ -658,6 +728,7 @@
       const institution = document.getElementById('sa-institution').value.trim();
       const code = document.getElementById('sa-code').value.trim();
       const pass = document.getElementById('sa-pass').value;
+      const packId = document.getElementById('sa-pack').value;
       
       if (!id || !name || !institution || !pass || !code) return showToast('Please fill all fields', false);
       
@@ -675,7 +746,6 @@
       
       try {
         // --- DUPLICATION CHECKS ---
-        // 1. Check if the gateway code is already in use
         const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
         const existingCodes = codesRes.ok ? (await codesRes.json()) : {};
         
@@ -683,22 +753,19 @@
             return showToast(`Error: The code "${code}" is already active for "${existingCodes[code]}".`, false);
         }
 
-        // 2. Check if the institution name is already in use
         const inUse = Object.values(existingCodes).some(v => v.toLowerCase() === institution.toLowerCase());
         if (inUse) {
             return showToast(`Error: The institution "${institution}" already has a gateway code.`, false);
         }
 
         // --- CREATION ---
-        // Create the super admin user
         const addRes = await fetch(API + '/users/add', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active' }) 
+            body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active', packId: packId || null }) 
         });
         if (!addRes.ok) { const e = await addRes.json().catch(()=>({error:'Failed'})); throw new Error(e.error); }
         
-        // Save the institution gateway code to the database
         existingCodes[code] = institution;
         await fetch(API + '/config/institution_codes', { 
             method: 'POST', 
@@ -706,10 +773,73 @@
             body: JSON.stringify({ data: existingCodes })
         });
 
-        showToast(`Super Admin ${id} created with Code: ${code}!`);
+        const packLabel = packId ? ` with Pack: ${(window.packsCache||[]).find(p=>p.id===packId)?.name || packId}` : ' (No Pack)';
+        showToast(`Super Admin ${id} created${packLabel}! Code: ${code}!`);
         ['sa-id', 'sa-name', 'sa-email', 'sa-institution', 'sa-code', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
+        document.getElementById('sa-pack').value = '';
         loadConsole();
       } catch (e) { showToast(e.message, false); }
+    }
+
+    // --- PACK FUNCTIONS ---
+    function togglePackForm() {
+        const form = document.getElementById('pack-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function createPack() {
+        const name = document.getElementById('pack-name').value.trim();
+        const maxAdmins = parseInt(document.getElementById('pack-maxAdmins').value) || 20;
+        const maxSubAdmins = parseInt(document.getElementById('pack-maxSubAdmins').value) || 4;
+        const maxStudents = parseInt(document.getElementById('pack-maxStudents').value) || 1000;
+        if (!name) return showToast('Pack name is required', false);
+        try {
+            const res = await api('/packs', { method: 'POST', body: JSON.stringify({ name, maxAdmins, maxSubAdmins, maxStudents }) });
+            showToast(`Pack "${name}" created!`);
+            document.getElementById('pack-name').value = '';
+            document.getElementById('pack-form').style.display = 'none';
+            loadConsole();
+        } catch(e) { showToast(e.message, false); }
+    }
+
+    async function deletePack(id) {
+        if (!confirm('Delete this pack? If any institution is using it, deletion will be blocked.')) return;
+        try {
+            await api('/packs/' + id, { method: 'DELETE' });
+            showToast('Pack deleted.');
+            loadConsole();
+        } catch(e) { showToast(e.message, false); }
+    }
+
+    function renderPacksTable(packs) {
+        const tbody = document.getElementById('packs-table-body');
+        if (!tbody) return;
+        if (!packs || packs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty">No packs created yet. Create one above.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = packs.map(p => `
+            <tr>
+              <td><code style="color:#a855f7;font-size:0.8rem;">${p.id}</code></td>
+              <td><strong>${p.name}</strong></td>
+              <td style="text-align:center;"><span style="background:rgba(6,182,212,0.15);color:#06b6d4;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxAdmins}</span></td>
+              <td style="text-align:center;"><span style="background:rgba(168,85,247,0.15);color:#a855f7;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxSubAdmins}</span></td>
+              <td style="text-align:center;"><span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxStudents}</span></td>
+              <td><button class="btn-sm btn-danger" onclick="deletePack('${p.id}')">Delete</button></td>
+            </tr>`).join('');
+    }
+
+    function populatePackDropdown(packs) {
+        const sel = document.getElementById('sa-pack');
+        if (!sel) return;
+        // Keep the "No Pack" default option
+        sel.innerHTML = '<option value="">-- No Pack (Unlimited) --</option>';
+        (packs || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (Admins: ${p.maxAdmins} | Sub-Admins: ${p.maxSubAdmins} | Students: ${p.maxStudents})`;
+            sel.appendChild(opt);
+        });
     }
 
 
