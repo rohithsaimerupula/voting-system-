@@ -218,8 +218,8 @@ app.get('/api/dev/stats', async (req, res) => {
     try {
         const [saRes, instRes, userCountRes] = await Promise.all([
             db.execute({ sql: "SELECT regNum, name, institution, email, status FROM users WHERE role = 'superadmin'", args: [] }),
-            db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE institution IS NOT NULL AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
-            db.execute({ sql: "SELECT COUNT(*) as count FROM users", args: [] })
+            db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
+            db.execute({ sql: "SELECT COUNT(*) as count FROM users WHERE role != 'developer' AND institution IN (SELECT DISTINCT institution FROM users WHERE role = 'superadmin')", args: [] })
         ]);
 
         const superAdmins = saRes.rows || [];
