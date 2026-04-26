@@ -394,6 +394,7 @@ const StorageManager = {
 
     async sendEmailOtp(email, name, otp, context) {
          console.log(`[EmailSystem] Sending ${context} OTP Request to Backend: ${email}`);
+         console.log(`[OVS DEBUG] OTP for ${email}: ${otp}`);
          
          try {
              const response = await fetchApi('/auth/send-otp', {
