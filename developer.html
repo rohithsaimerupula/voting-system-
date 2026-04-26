@@ -465,6 +465,30 @@
   </div>
   <div class="toast" id="toast"></div>
 
+  <!-- ASSIGN PACK MODAL -->
+  <div class="modal-overlay" id="assign-pack-modal" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-box" style="max-width:440px;">
+      <button class="modal-close" onclick="closeAssignPackModal()">✕</button>
+      <h3>📦 Assign Pack</h3>
+      <p class="sub">Super Admin: <strong id="assign-pack-sa-id-display" style="color:#a855f7;"></strong></p>
+      <input type="hidden" id="assign-pack-sa-id">
+      <input type="hidden" id="assign-pack-sa-inst">
+      <div class="modal-field">
+        <label>Select Pack</label>
+        <select id="assign-pack-select" style="width:100%;padding:0.9rem 1.2rem;border-radius:10px;border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.06);color:white;font-size:1rem;font-family:'Outfit',sans-serif;outline:none;">
+          <option value="">-- No Pack (Remove Limit) --</option>
+        </select>
+      </div>
+      <div style="margin-top:0.5rem; padding:0.75rem 1rem; background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.15); border-radius:8px; font-size:0.82rem; color:var(--muted);">
+        ℹ️ Changing a pack updates the limits immediately. Existing users are not deleted.
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+        <button class="btn" style="flex:1;background:linear-gradient(135deg,#a855f7,#7c3aed);color:white;" onclick="saveAssignPack()">💾 Save Assignment</button>
+        <button class="btn btn-red-outline" style="width:auto;padding:0.8rem 1.5rem;" onclick="closeAssignPackModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- EDIT SUPER ADMIN MODAL -->
   <div class="modal-overlay" id="edit-sa-modal">
     <div class="modal-box">
@@ -711,7 +735,8 @@
       <td>${packBadge}</td>
       <td>${sa.email || '-'}</td>
       <td><span class="badge badge-sa">${sa.status}</span></td>
-      <td style="display:flex;gap:0.4rem;">
+      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn-sm" style="background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3);" onclick="openAssignPack('${sa.regNum}','${(sa.institution||'').replace(/'/g,"\\'")}')">📦 Pack</button>
         <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="editSA('${sa.regNum}')">Edit</button>
         <button class="btn-sm btn-danger" onclick="deleteSuperAdmin('${sa.regNum}')">Remove</button>
       </td>
@@ -832,7 +857,6 @@
     function populatePackDropdown(packs) {
         const sel = document.getElementById('sa-pack');
         if (!sel) return;
-        // Keep the "No Pack" default option
         sel.innerHTML = '<option value="">-- No Pack (Unlimited) --</option>';
         (packs || []).forEach(p => {
             const opt = document.createElement('option');
@@ -841,6 +865,59 @@
             sel.appendChild(opt);
         });
     }
+
+    // --- ASSIGN PACK MODAL ---
+    function openAssignPack(saId, institution) {
+        document.getElementById('assign-pack-sa-id').value = saId;
+        document.getElementById('assign-pack-sa-inst').value = institution;
+        document.getElementById('assign-pack-sa-id-display').textContent = saId + ' — ' + institution;
+
+        // Populate the dropdown with current packs
+        const sel = document.getElementById('assign-pack-select');
+        sel.innerHTML = '<option value="">-- No Pack (Remove Limit) --</option>';
+        (window.packsCache || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (Admins: ${p.maxAdmins} | Sub-Admins: ${p.maxSubAdmins} | Students: ${p.maxStudents})`;
+            sel.appendChild(opt);
+        });
+
+        // Pre-select current pack
+        const sa = (window.saCache || []).find(s => s.regNum === saId);
+        if (sa && sa.packId) sel.value = sa.packId;
+
+        const modal = document.getElementById('assign-pack-modal');
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.background = 'rgba(5,10,20,0.85)';
+        modal.style.backdropFilter = 'blur(10px)';
+        modal.style.zIndex = '99999';
+    }
+
+    function closeAssignPackModal() {
+        document.getElementById('assign-pack-modal').style.display = 'none';
+    }
+
+    async function saveAssignPack() {
+        const saId = document.getElementById('assign-pack-sa-id').value;
+        const institution = document.getElementById('assign-pack-sa-inst').value;
+        const packId = document.getElementById('assign-pack-select').value;
+        try {
+            await api(`/superadmins/${encodeURIComponent(saId)}/assign-pack`, {
+                method: 'PATCH',
+                body: JSON.stringify({ packId: packId || null, institution })
+            });
+            const packName = packId ? (window.packsCache || []).find(p => p.id === packId)?.name || packId : 'No Pack';
+            showToast(`Pack "${packName}" assigned to ${saId}!`);
+            closeAssignPackModal();
+            loadConsole();
+        } catch(e) { showToast(e.message, false); }
+    }
+
+    document.getElementById('assign-pack-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeAssignPackModal();
+    });
 
 
     function editSA(id) {

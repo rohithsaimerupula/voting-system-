@@ -292,6 +292,20 @@ app.get('/api/institutions/pack-usage', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Assign (or remove) a pack from a Super Admin
+app.patch('/api/superadmins/:id/assign-pack', async (req, res) => {
+    try {
+        const { packId, institution } = req.body;
+        const inst = institution || '';
+        // Verify this user is a super admin of the right institution
+        const check = await db.execute({ sql: "SELECT regNum FROM users WHERE regNum = ? AND institution = ? AND role = 'superadmin'", args: [req.params.id, inst] });
+        if (!check.rows.length) return res.status(404).json({ error: 'Super Admin not found' });
+        await db.execute({ sql: "UPDATE users SET packId = ? WHERE regNum = ? AND institution = ? AND role = 'superadmin'", args: [packId || null, req.params.id, inst] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
 app.get('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
@@ -310,7 +324,7 @@ app.get('/api/users/:id', async (req, res) => {
 app.get('/api/dev/stats', async (req, res) => {
     try {
         const [saRes, instRes, userCountRes] = await Promise.all([
-            db.execute({ sql: "SELECT regNum, name, institution, email, status FROM users WHERE role = 'superadmin'", args: [] }),
+            db.execute({ sql: "SELECT regNum, name, institution, email, status, packId FROM users WHERE role = 'superadmin'", args: [] }),
             db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
             db.execute({ sql: "SELECT COUNT(*) as count FROM users WHERE role != 'developer' AND institution IN (SELECT DISTINCT institution FROM users WHERE role = 'superadmin')", args: [] })
         ]);
