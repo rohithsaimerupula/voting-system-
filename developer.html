@@ -448,7 +448,7 @@
               <th>ID</th>
               <th>Name</th>
               <th>Institution</th>
-              <th>Pack</th>
+              <th>Membership Pack</th>
               <th>Email</th>
               <th>Status</th>
               <th>Actions</th>
@@ -485,6 +485,36 @@
       <div style="display:flex;gap:1rem;margin-top:1.5rem;">
         <button class="btn" style="flex:1;background:linear-gradient(135deg,#a855f7,#7c3aed);color:white;" onclick="saveAssignPack()">💾 Save Assignment</button>
         <button class="btn btn-red-outline" style="width:auto;padding:0.8rem 1.5rem;" onclick="closeAssignPackModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT PACK MODAL -->
+  <div class="modal-overlay" id="edit-pack-modal" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-box" style="max-width:440px;">
+      <button class="modal-close" onclick="closeEditPackModal()">✕</button>
+      <h3>✏️ Edit Pack</h3>
+      <p class="sub">Pack ID: <strong id="edit-pack-id-display" style="color:#f59e0b;"></strong></p>
+      <input type="hidden" id="edit-pack-id">
+      <div class="modal-field">
+        <label>Pack Name</label>
+        <input type="text" id="edit-pack-name" placeholder="Enterprise Pack">
+      </div>
+      <div class="modal-field">
+        <label>Max Admins</label>
+        <input type="number" id="edit-pack-maxAdmins" min="1" max="500">
+      </div>
+      <div class="modal-field">
+        <label>Max Sub-Admins</label>
+        <input type="number" id="edit-pack-maxSubAdmins" min="1" max="100">
+      </div>
+      <div class="modal-field">
+        <label>Max Students</label>
+        <input type="number" id="edit-pack-maxStudents" min="1" max="100000">
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+        <button class="btn btn-gold" style="flex:1;" onclick="saveEditPack()">💾 Save Changes</button>
+        <button class="btn btn-red-outline" style="width:auto;padding:0.8rem 1.5rem;" onclick="closeEditPackModal()">Cancel</button>
       </div>
     </div>
   </div>
@@ -850,7 +880,10 @@
               <td style="text-align:center;"><span style="background:rgba(6,182,212,0.15);color:#06b6d4;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxAdmins}</span></td>
               <td style="text-align:center;"><span style="background:rgba(168,85,247,0.15);color:#a855f7;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxSubAdmins}</span></td>
               <td style="text-align:center;"><span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.78rem;font-weight:700;">${p.maxStudents}</span></td>
-              <td><button class="btn-sm btn-danger" onclick="deletePack('${p.id}')">Delete</button></td>
+              <td style="display:flex;gap:0.4rem;justify-content:center;">
+                <button class="btn-sm" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);" onclick="openEditPack('${p.id}')">Edit</button>
+                <button class="btn-sm btn-danger" onclick="deletePack('${p.id}')">Delete</button>
+              </td>
             </tr>`).join('');
     }
 
@@ -865,6 +898,52 @@
             sel.appendChild(opt);
         });
     }
+
+    // --- EDIT PACK MODAL ---
+    function openEditPack(packId) {
+        const p = (window.packsCache || []).find(x => x.id === packId);
+        if(!p) return;
+        document.getElementById('edit-pack-id').value = p.id;
+        document.getElementById('edit-pack-id-display').textContent = p.id;
+        document.getElementById('edit-pack-name').value = p.name;
+        document.getElementById('edit-pack-maxAdmins').value = p.maxAdmins;
+        document.getElementById('edit-pack-maxSubAdmins').value = p.maxSubAdmins;
+        document.getElementById('edit-pack-maxStudents').value = p.maxStudents;
+
+        const modal = document.getElementById('edit-pack-modal');
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.background = 'rgba(5,10,20,0.85)';
+        modal.style.backdropFilter = 'blur(10px)';
+        modal.style.zIndex = '99999';
+    }
+
+    function closeEditPackModal() {
+        document.getElementById('edit-pack-modal').style.display = 'none';
+    }
+
+    async function saveEditPack() {
+        const id = document.getElementById('edit-pack-id').value;
+        const name = document.getElementById('edit-pack-name').value.trim();
+        const maxAdmins = parseInt(document.getElementById('edit-pack-maxAdmins').value) || 20;
+        const maxSubAdmins = parseInt(document.getElementById('edit-pack-maxSubAdmins').value) || 4;
+        const maxStudents = parseInt(document.getElementById('edit-pack-maxStudents').value) || 1000;
+        if (!name) return showToast('Pack name is required', false);
+        try {
+            await api('/packs/' + id, { 
+                method: 'PATCH', 
+                body: JSON.stringify({ name, maxAdmins, maxSubAdmins, maxStudents }) 
+            });
+            showToast(`Pack "${name}" updated successfully!`);
+            closeEditPackModal();
+            loadConsole();
+        } catch(e) { showToast(e.message, false); }
+    }
+
+    document.getElementById('edit-pack-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditPackModal();
+    });
 
     // --- ASSIGN PACK MODAL ---
     function openAssignPack(saId, institution) {
