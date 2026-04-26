@@ -784,8 +784,6 @@
       }).join(''));
     }
 
-    }
-
     async function createSuperAdmin() {
       const nameInput = document.getElementById('sa-name').value;
       if (nameInput.startsWith(' ')) return showToast('Name cannot start with a space.', false);
