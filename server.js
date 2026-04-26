@@ -469,8 +469,20 @@ app.post('/api/auth/send-otp', async (req, res) => {
         
         const brevoErr = await brevoRes.json();
         console.error("[BREVO_FAIL]", brevoErr);
+        
+        // Log failure to system_alerts for background diagnostics
+        try {
+            await db.execute({
+                sql: "INSERT INTO system_alerts (type, message, details, timestamp, institution) VALUES (?, ?, ?, ?, ?)",
+                args: ['SMTP_FAILURE', `Failed to deliver OTP to ${email}`, JSON.stringify(brevoErr), new Date().toISOString(), 'Global']
+            });
+        } catch (logErr) { console.error("Logging failure failed:", logErr); }
+
         res.status(500).json({ error: `Brevo API Error: ${brevoErr.message || 'Check API Key'}` });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[OTP_SYSTEM_CRITICAL]", e);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 app.get('/api/admin/system-health', authGuard, async (req, res) => {
