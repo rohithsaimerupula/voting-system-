@@ -485,6 +485,12 @@
 
         buildUI();
 
+        // If redirected from Super Admin Dashboard (auth failure), open modal automatically
+        if (isStaffMode && new URLSearchParams(window.location.search).get('admin') === 'true') {
+            document.getElementById('sa-login-modal').style.display = 'flex';
+            document.getElementById('sa-modal-id').focus();
+        }
+
         // Stub legacy variables so nothing breaks below
         const tabVoter = null;
         const tabAdmin = null;
