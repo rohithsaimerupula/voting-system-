@@ -1051,7 +1051,8 @@
             const sessionUser = { ...window._saModalUser, role: 'superadmin' };
             localStorage.setItem('ovs_currentUser', JSON.stringify(sessionUser));
             document.getElementById('sa-otp-verify-btn').textContent = '✅ Verified! Redirecting...';
-            const token = btoa(unescape(encodeURIComponent(JSON.stringify(sessionUser))));
+            const rawToken = btoa(unescape(encodeURIComponent(JSON.stringify(sessionUser))));
+            const token = encodeURIComponent(rawToken);
             await new Promise(r => setTimeout(r, 200));
             window.location.href = `superadmin_dashboard.html?sa_auth=${token}`;
         }
