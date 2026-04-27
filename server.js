@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { createClient } = require('@libsql/client');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -449,28 +450,28 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
 
-        // --- BREVO API DELIVERY ---
-        const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-            method: 'POST',
-            headers: {
-                'api-key': process.env.BREVO_API_KEY,
-                'Content-Type': 'application/json',
-                'accept': 'application/json'
-            },
-            body: JSON.stringify({
-                sender: { name: "Vanguard Security", email: process.env.SMTP_FROM || "security@ovs-vanguard.com" },
-                to: [{ email, name }],
-                subject: `${context || 'Verification Code'} — OVS`,
-                htmlContent: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
-            })
+        // --- GMAIL SMTP DELIVERY ---
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.SMTP_FROM,
+                pass: process.env.GMAIL_APP_PASSWORD
+            }
         });
-        
-        if (brevoRes.ok) return res.json({ success: true });
-        
-        const brevoErr = await brevoRes.json();
-        console.error("[BREVO_FAIL]", brevoErr);
-        res.status(500).json({ error: `Brevo API Error: ${brevoErr.message || 'Check API Key'}` });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+
+        const mailOptions = {
+            from: `"Vanguard Security" <${process.env.SMTP_FROM}>`,
+            to: email,
+            subject: `${context || 'Verification Code'} — OVS`,
+            html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    } catch (e) {
+        console.error("[NODEMAILER_FAIL]", e);
+        res.status(500).json({ error: `SMTP Error: ${e.message}` });
+    }
 });
 
 app.get('/api/admin/system-health', authGuard, async (req, res) => {
