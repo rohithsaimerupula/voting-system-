@@ -1202,6 +1202,48 @@
       </div>
     </div>
 
+    <!-- SYSTEM HEALTH -->
+    <div class="page" id="page-health">
+      <div class="page-title">🛡️ System Health</div>
+      <div class="page-sub">Real-time status of SMTP, OTP delivery, and system alerts</div>
+      
+      <div class="stats-grid">
+        <div class="stat" id="stat-smtp-box" style="border-bottom: 4px solid var(--muted);">
+          <div class="num" id="stat-smtp-status">OFFLINE</div>
+          <div class="lbl">SMTP Connection</div>
+        </div>
+        <div class="stat" style="border-bottom: 4px solid var(--gold);">
+          <div class="num" id="stat-alert-count">0</div>
+          <div class="lbl">Recent Alerts</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📧 SMTP & OTP Configuration</h3>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem;">
+          Your current SMTP service is used to deliver voter OTPs and admin 2FA codes. 
+          If you see "OFFLINE", please check your Vercel Environment Variables.
+        </p>
+        <div style="display:flex; gap:1rem;">
+          <button class="btn btn-gold" onclick="testSmtpConnection()">📧 Send Test Email</button>
+          <button class="btn-sm" style="border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white;" onclick="loadSystemHealth()">🔄 Refresh Status</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🚨 Diagnostic Alerts</h3>
+        <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem;">These are the last 20 critical system events recorded by the backend.</p>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Time</th><th>Type</th><th>Message</th><th>Error Details</th></tr></thead>
+            <tbody id="health-alerts-table">
+              <tr><td colspan="4" class="empty">No alerts yet. System is healthy.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- AUDIT LOG -->
     <div class="page" id="page-audit">
       <div class="page-title">📜 Audit Log</div>
@@ -2778,16 +2820,36 @@
       window.loadSystemHealth = async function() {
         try {
           const data = await apiFetch(`/admin/system-health?institution=${encodeURIComponent(saSession.institution)}`);
-          const smtpBox = document.getElementById('stat-smtp-box');
           const smtpStatus = document.getElementById('stat-smtp-status');
-          if (data.smtpStatus) {
-            if (smtpStatus) { smtpStatus.textContent = 'ONLINE'; smtpStatus.style.color = "var(--green)"; }
+          const smtpBox = document.getElementById('stat-smtp-box');
+          
+          if (data && data.smtpStatus) {
+            if (smtpStatus) { smtpStatus.textContent = "ONLINE"; smtpStatus.style.color = "var(--green)"; }
             if (smtpBox) smtpBox.style.borderBottomColor = "var(--green)";
           } else {
-            if (smtpStatus) { smtpStatus.textContent = 'OFFLINE'; smtpStatus.style.color = "var(--red)"; }
+            if (smtpStatus) { smtpStatus.textContent = "OFFLINE"; smtpStatus.style.color = "var(--red)"; }
             if (smtpBox) smtpBox.style.borderBottomColor = "var(--red)";
           }
-        } catch (e) { toast(e.message, false); }
+          
+          const count = data.alerts ? data.alerts.length : 0;
+          setText('stat-alert-count', count);
+          
+          const table = document.getElementById('health-alerts-table');
+          if (table) {
+            if (!data.alerts || data.alerts.length === 0) {
+              table.innerHTML = '<tr><td colspan="4" class="empty">No alerts yet. System is healthy.</td></tr>';
+            } else {
+              table.innerHTML = data.alerts.map(a => `
+                <tr>
+                  <td style="white-space:nowrap;color:var(--muted);">${new Date(a.timestamp).toLocaleString()}</td>
+                  <td><span class="badge ${a.type==='SMTP_FAILURE'?'badge-banned':'badge-active'}">${a.type}</span></td>
+                  <td>${a.message}</td>
+                  <td style="color:var(--red); font-family:monospace; font-size:0.75rem;">${a.details || '-'}</td>
+                </tr>
+              `).join('');
+            }
+          }
+        } catch (e) { toast("Health fetch failed: " + e.message, false); }
       };
 
       window.testSmtpConnection = async function () {
