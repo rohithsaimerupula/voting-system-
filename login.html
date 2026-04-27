@@ -1061,12 +1061,13 @@
                 document.getElementById('sa-modal-otp').style.borderColor = 'rgba(239,68,68,0.6)';
                 return;
             }
-            // Save session and redirect
+            // Save session and redirect — pass encoded token in URL as bulletproof fallback
             const sessionUser = { ...window._saModalUser, role: 'superadmin' };
             localStorage.setItem('ovs_currentUser', JSON.stringify(sessionUser));
             document.getElementById('sa-otp-verify-btn').textContent = '✅ Verified! Redirecting...';
+            const token = btoa(unescape(encodeURIComponent(JSON.stringify(sessionUser))));
             await new Promise(r => setTimeout(r, 200));
-            window.location.href = 'superadmin_dashboard.html';
+            window.location.href = `superadmin_dashboard.html?sa_auth=${token}`;
         }
 
         function saOtpBack() {
