@@ -477,23 +477,9 @@
         // --- Device Memory: Remember unlock status for this browser ---
         const gateUnlocked = localStorage.getItem('ovs_gate_unlocked');
         const instName = localStorage.getItem('ovs_inst_name');
-        const lastCode = localStorage.getItem('_ovs_last_gate_code');
 
         async function checkGatePersistence() {
-            if (gateUnlocked === 'true' && instName) {
-                // Verify with server that this institution still exists
-                const isValid = await StorageManager.validateInstitution();
-                if (isValid) {
-                    const overlay = document.getElementById('gateway-overlay');
-                    overlay.style.display = 'none';
-                    unlockGateway(instName);
-                } else {
-                    // Institution deleted: Reset gateway
-                    resetGateway();
-                }
-            } else if (lastCode) {
-                document.getElementById('inst-code').value = lastCode;
-            }
+            // Intentionally left blank: User requested no auto-bypass and no cached code
         }
         checkGatePersistence();
 
@@ -504,7 +490,6 @@
             localStorage.removeItem('ovs_inst_code');
             localStorage.removeItem('ovs_inst_logo');
             localStorage.removeItem('ovs_gate_unlocked');
-            localStorage.removeItem('_ovs_last_gate_code');
             window.location.reload();
         }
 
@@ -528,7 +513,6 @@
                 // Persistence: Unlock the gateway for this device
                 localStorage.setItem('ovs_gate_unlocked', 'true');
                 localStorage.setItem('ovs_inst_name', data.institution);
-                localStorage.setItem('_ovs_last_gate_code', code);
                 
                 unlockGateway(data.institution);
             } catch (e) {

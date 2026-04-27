@@ -198,7 +198,7 @@
         <div style="position:relative;margin-bottom:1.8rem;">
           <input type="text" id="sa-modal-otp" placeholder="0 0 0 0 0 0" maxlength="6" autocomplete="one-time-code"
             style="width:100%;height:70px;border-radius:16px;border:2px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.04);color:#f59e0b;font-size:2rem;letter-spacing:8px;font-weight:900;text-align:center;font-family:'Outfit',sans-serif;outline:none;transition:all 0.3s;caret-color:#f59e0b;"
-            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6); if(this.value.length===6) document.getElementById('sa-otp-verify-btn').style.background='linear-gradient(135deg,#22c55e,#16a34a)'"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6); if(this.value.length===6) { document.getElementById('sa-otp-verify-btn').style.background='linear-gradient(135deg,#22c55e,#16a34a)'; } else { document.getElementById('sa-otp-verify-btn').style.background='linear-gradient(135deg,#f59e0b,#d97706)'; }"
             onkeydown="if(event.key==='Enter') saModalVerifyOtp()">
           <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:60%;height:2px;background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent);border-radius:2px;"></div>
         </div>
@@ -453,21 +453,6 @@
                     resetInputs();
                 });
 
-                // 5-click OVS logo reveals Super Admin modal (STAFF MODE ONLY)
-                let logoClicks = 0, logoTimer = null;
-                document.getElementById('ovs-logo').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    logoClicks++;
-                    clearTimeout(logoTimer);
-                    if (logoClicks >= 5) {
-                        logoClicks = 0;
-                        document.getElementById('sa-login-modal').style.display = 'flex';
-                        document.getElementById('sa-modal-id').focus();
-                    } else {
-                        logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
-                    }
-                });
-
                 setText('login-title', 'Admin Login');
                 setText('reg-label', 'Admin ID (7 chars · A-Z & 0-9)');
                 regInput.placeholder = 'e.g. ADMCSE01';
@@ -485,11 +470,7 @@
 
         buildUI();
 
-        // If redirected from Super Admin Dashboard (auth failure), open modal automatically
-        if (isStaffMode && new URLSearchParams(window.location.search).get('admin') === 'true') {
-            document.getElementById('sa-login-modal').style.display = 'flex';
-            document.getElementById('sa-modal-id').focus();
-        }
+        // Removed auto-popup of SA modal to fix bug where staff login always opened it
 
         // Stub legacy variables so nothing breaks below
         const tabVoter = null;
@@ -973,38 +954,36 @@
             voterCountdownInterval = setInterval(update, 1000);
         }
 
-        // 5-Click Logo: Super Admin Hidden Portal
-        let logoClicks = 0;
-        let logoTimer = null;
+        // 6-Click Logo: Super Admin Hidden Portal
+        let ovsLogoClicks = 0;
+        let ovsLogoTimer = null;
         document.getElementById('ovs-logo').addEventListener('click', (e) => {
             e.stopPropagation();
-            // Disable 5-click logo in voter mode, keep in staff mode
+            // Disable 6-click logo in voter mode, keep in staff mode
             if (!isStaffMode) return;
 
-            logoClicks++;
-            clearTimeout(logoTimer);
-            if (logoClicks >= 5) {
-                logoClicks = 0;
+            ovsLogoClicks++;
+            clearTimeout(ovsLogoTimer);
+            if (ovsLogoClicks >= 6) {
+                ovsLogoClicks = 0;
                 // Move SA hidden modal so it's only visible in staff mode
                 if (isStaffMode) {
                     document.getElementById('sa-login-modal').style.display = 'flex';
                     document.getElementById('sa-modal-id').focus();
                 }
             } else {
-                logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+                ovsLogoTimer = setTimeout(() => { ovsLogoClicks = 0; }, 2000);
             }
         });
 
         function closeSAModal() {
             document.getElementById('sa-login-modal').style.display = 'none';
             setText('sa-modal-err', '');
-            // Reset back to step 1
-            document.getElementById('sa-step-1').style.display = 'block';
-            document.getElementById('sa-step-2').style.display = 'none';
             document.getElementById('sa-modal-id').value = '';
             document.getElementById('sa-modal-pass').value = '';
-            document.getElementById('sa-modal-otp').value = '';
-            document.getElementById('sa-modal-btn').textContent = 'Send OTP & Continue';
+            const otpInput = document.getElementById('sa-modal-otp');
+            if (otpInput) otpInput.value = '';
+            document.getElementById('sa-modal-btn').innerHTML = '📨 Send OTP & Continue <span style="font-size:1.1rem;">→</span>';
         }
 
         async function saModalLogin() {
@@ -1065,6 +1044,7 @@
                 err.style.color = '#ef4444';
                 err.textContent = '❌ Invalid OTP. Please try again.';
                 document.getElementById('sa-modal-otp').style.borderColor = 'rgba(239,68,68,0.6)';
+                document.getElementById('sa-otp-verify-btn').style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
                 return;
             }
             // Save session and redirect — pass encoded token in URL as bulletproof fallback
