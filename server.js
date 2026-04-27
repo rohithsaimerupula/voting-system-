@@ -478,7 +478,7 @@ app.get('/api/admin/system-health', authGuard, async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
         const alerts = await db.execute({ sql: "SELECT * FROM system_alerts WHERE (institution = ? OR institution = 'Global') AND type != 'OTP_GENERATED' ORDER BY timestamp DESC LIMIT 20", args: [inst] });
-        res.json({ alerts: alerts.rows, smtpStatus: !!process.env.BREVO_API_KEY });
+        res.json({ alerts: alerts.rows, smtpStatus: !!process.env.GMAIL_APP_PASSWORD });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
