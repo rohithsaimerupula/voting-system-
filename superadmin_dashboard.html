@@ -9,6 +9,7 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap"
     rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
   <script src="storage.js"></script>
   <script>
     (function () {
@@ -2621,30 +2622,32 @@
       });
 
       // Initialize tsParticles Cyber Mesh Effect
-      tsParticles.load("tsparticles", {
-        fpsLimit: 60,
-        particles: {
-          number: { value: 30, density: { enable: true, value_area: 800 } },
-          color: { value: ["#ffffff", "#ff2a4d"] },
-          shape: { type: "circle" },
-          opacity: { value: 0.2, random: true },
-          size: { value: 2, random: true },
-          links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
-          move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
-        },
-        interactivity: {
-          detectsOn: "canvas",
-          events: {
-            onHover: { enable: true, mode: "grab" },
-            resize: true
+      if (typeof tsParticles !== 'undefined') {
+        tsParticles.load("tsparticles", {
+          fpsLimit: 60,
+          particles: {
+            number: { value: 30, density: { enable: true, value_area: 800 } },
+            color: { value: ["#ffffff", "#ff2a4d"] },
+            shape: { type: "circle" },
+            opacity: { value: 0.2, random: true },
+            size: { value: 2, random: true },
+            links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+            move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } }
           },
-          modes: {
-            grab: { distance: 150, links: { opacity: 0.3 } }
-          }
-        },
-        retina_detect: true,
-        background: { color: "transparent" }
-      });
+          interactivity: {
+            detectsOn: "canvas",
+            events: {
+              onHover: { enable: true, mode: "grab" },
+              resize: true
+            },
+            modes: {
+              grab: { distance: 150, links: { opacity: 0.3 } }
+            }
+          },
+          retina_detect: true,
+          background: { color: "transparent" }
+        });
+      }
       window.promoteSemester = async function () {
         const code = prompt('Type "PROMOTE" to advance students to next semester (Deletes 4Y Sem2)');
         if (code !== 'PROMOTE') {
