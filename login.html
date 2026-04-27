@@ -1047,7 +1047,11 @@
                 err.textContent = 'Invalid OTP. Try again.';
                 return;
             }
-            localStorage.setItem('ovs_currentUser', JSON.stringify(window._saModalUser));
+            // Explicitly set role and save session before redirect
+            const sessionUser = { ...window._saModalUser, role: 'superadmin' };
+            localStorage.setItem('ovs_currentUser', JSON.stringify(sessionUser));
+            // Small delay to ensure localStorage write completes before navigation
+            await new Promise(r => setTimeout(r, 100));
             window.location.href = 'superadmin_dashboard.html';
         }
 

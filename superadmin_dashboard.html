@@ -1297,8 +1297,16 @@
         if (el) el.innerHTML = html;
       }
       let saSession = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+      // Retry once after short delay to handle any localStorage race condition on redirect
       if (!saSession || saSession.role !== 'superadmin') {
-        window.location.href = 'login.html?admin=true';
+        setTimeout(() => {
+          const retry = JSON.parse(localStorage.getItem('ovs_currentUser') || "null");
+          if (!retry || retry.role !== 'superadmin') {
+            window.location.href = 'login.html?admin=true';
+          } else {
+            saSession = retry;
+          }
+        }, 200);
       }
       let allStudents = [];
       let chartInstance = null;
