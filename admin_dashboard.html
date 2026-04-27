@@ -39,6 +39,7 @@
     .brand{font-size:1.4rem;font-weight:900;color:var(--cyan);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
     .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;}
     .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.15rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
+    .nav-icon{display:inline-block;width:20px;text-align:center;font-size:1.1rem;}
     .nav-item:hover,.nav-item.active{background:rgba(6,182,212,0.1);color:var(--cyan);font-weight:600;}
     .nav-group-label{font-size:0.68rem;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.1em;padding:0.8rem 1rem 0.3rem;margin-top:0.5rem;}
     .nav-sub-item{padding:0.55rem 1rem 0.55rem 2rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.1rem;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);}
@@ -107,15 +108,15 @@
   <div class="sidebar">
     <div class="brand">🧑‍💼 OVS</div>
     <div class="role-tag" id="branch-label">Branch Authority</div>
-    <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)">📊 Overview</div>
-    <div class="nav-item" id="nav-students" onclick="showPage('students',this)">🎓 My Branch Students</div>
-    <div class="nav-item" id="nav-subadmins" onclick="showPage('subadmins',this)">👥 Manage Sub-Admins</div>
+    <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span class="nav-icon">📊</span> Overview</div>
+    <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My Branch Students</div>
+    <div class="nav-item" id="nav-subadmins" onclick="showPage('subadmins',this)"><span class="nav-icon">👥</span> Manage Sub-Admins</div>
     <div class="nav-group-label">🗳️ Voting</div>
-    <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)">🏢 My Election</div>
-    <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)">🎓 College Head Election</div>
+    <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏢</span> My Election</div>
+    <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span class="nav-icon">🎓</span> College Head Election</div>
     <div class="sidebar-footer">
-      <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)">🔄 Refresh Data</div>
-      <div class="nav-item" onclick="adminLogout()" style="color:var(--red)">🚪 Logout</div>
+      <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)"><span class="nav-icon">🔄</span> Refresh Data</div>
+      <div class="nav-item" onclick="adminLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
     </div>
   </div>
 
