@@ -357,6 +357,7 @@
       </div>
       <button class="btn btn-red" onclick="devLogin()">Verify Developer Access</button>
       <div id="auth-error"></div>
+      <div style="font-size:0.65rem; color:rgba(255,255,255,0.2); margin-top:1.5rem;">Infrastructure Node v2.2.4 — Updated 20:25</div>
     </div>
   </div>
 
@@ -626,7 +627,12 @@
     localStorage.removeItem('ovs_inst_name');
     localStorage.removeItem('ovs_inst_code');
 
-    console.log('[OVS Dev Portal] v2.1 loaded at', new Date().toISOString());
+    console.log('[OVS Dev Portal] v2.2.4 loaded at', new Date().toISOString());
+
+    // Force clear any stale scripts or states
+    if (!window.location.search.includes('v=')) {
+        window.history.replaceState(null, '', window.location.pathname + '?v=' + Date.now());
+    }
 
     // Safe DOM Utilities
     function setText(id, val) {
