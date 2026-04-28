@@ -97,6 +97,30 @@ runMigrations();
 
 function boolInt(val) { return val ? 1 : 0; }
 
+app.get('/api/dev/verify/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        console.log(`[AUTH_DEBUG] Direct Dev Verify: ${id}`);
+        
+        // Search globally for developer role
+        const result = await db.execute({ 
+            sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
+            args: [id] 
+        });
+        
+        if (result.rows.length === 0) {
+            console.warn(`[AUTH_DEBUG] Dev NOT FOUND: ${id}`);
+            return res.status(404).json({ error: "Developer ID not recognized by infrastructure." });
+        }
+        
+        console.log(`[AUTH_DEBUG] Dev FOUND: ${id}`);
+        res.json(result.rows[0]);
+    } catch (e) { 
+        console.error(`[AUTH_DEBUG] Dev Verify Error: ${e.message}`);
+        res.status(500).json({ error: e.message }); 
+    }
+});
+
 app.get('/api/users', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
