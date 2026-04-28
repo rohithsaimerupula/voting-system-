@@ -350,24 +350,41 @@ app.get('/api/users/:id', async (req, res) => {
 
 app.get('/api/dev/stats', async (req, res) => {
     try {
-        const [saRes, instRes, userCountRes] = await Promise.all([
+        const [saRes, instRes, allUsersRes] = await Promise.all([
             db.execute({ sql: "SELECT regNum, name, institution, email, status, packId FROM users WHERE role = 'superadmin'", args: [] }),
             db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
-            db.execute({ sql: "SELECT COUNT(*) as count FROM users WHERE role != 'developer' AND institution IN (SELECT DISTINCT institution FROM users WHERE role = 'superadmin')", args: [] })
+            db.execute({ sql: "SELECT institution, role, COUNT(*) as count FROM users WHERE role != 'developer' GROUP BY institution, role", args: [] })
         ]);
 
         const superAdmins = saRes.rows || [];
-        const institutions = (instRes.rows || []).map(r => r.institution);
-        const totalUsers = (userCountRes.rows[0] && userCountRes.rows[0].count) || 0;
+        const instNames = (instRes.rows || []).map(r => r.institution);
+        
+        // Build detailed institutions list
+        const detailedInstitutions = instNames.map(name => {
+            const admin = superAdmins.find(sa => sa.institution === name);
+            const userCounts = allUsersRes.rows.filter(r => r.institution === name);
+            const stats = {
+                admins: userCounts.find(r => r.role === 'admin')?.count || 0,
+                subadmins: userCounts.find(r => r.role === 'subadmin')?.count || 0,
+                voters: (userCounts.find(r => r.role === 'voter')?.count || 0) + (userCounts.find(r => r.role === 'contestant')?.count || 0)
+            };
+            return {
+                name,
+                superAdmin: admin ? { name: admin.name, email: admin.email, packId: admin.packId } : null,
+                stats
+            };
+        });
+
+        const totalUsers = allUsersRes.rows.reduce((sum, r) => sum + r.count, 0);
         
         res.json({
             counts: { 
                 saCount: superAdmins.length, 
-                instCount: institutions.length, 
+                instCount: detailedInstitutions.length, 
                 studentCount: totalUsers 
             },
             superAdmins,
-            institutions
+            institutions: detailedInstitutions
         });
     } catch (e) { 
         console.error("[DEV_STATS_ERR]", e);
