@@ -762,7 +762,7 @@
         
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || 'Root Identifier not found.');
+            throw new Error(errData.error || 'Developer ID not found.');
         }
         
         const userData = await res.json();
