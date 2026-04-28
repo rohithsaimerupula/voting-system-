@@ -330,14 +330,23 @@ app.patch('/api/superadmins/:id/assign-pack', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        let result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+        const id = req.params.id;
         
-        // Developer global fallback check: If no institution is provided, search globally for a developer role
+        // Try exact match with institution first
+        let result = await db.execute({ 
+            sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND institution = ?", 
+            args: [id, inst] 
+        });
+        
+        // Developer global fallback: Search globally for developer role if not found yet
         if (result.rows.length === 0 && !inst) {
-            result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND role = 'developer'", args: [req.params.id] });
+            result = await db.execute({ 
+                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
+                args: [id] 
+            });
         }
         
-        if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+        if (result.rows.length === 0) return res.status(404).json({ error: "Developer ID not found" });
         res.json(result.rows[0]);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
