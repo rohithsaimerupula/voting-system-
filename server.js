@@ -331,24 +331,36 @@ app.get('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
         const id = req.params.id;
+        console.log(`[AUTH_DEBUG] Fetching user: ${id}, Institution: ${inst}`);
         
         // Try exact match with institution first
-        let result = await db.execute({ 
-            sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND institution = ?", 
-            args: [id, inst] 
-        });
-        
-        // Developer global fallback: Search globally for developer role if not found yet
-        if (result.rows.length === 0 && !inst) {
+        let result = { rows: [] };
+        if (inst) {
             result = await db.execute({ 
-                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
-                args: [id] 
+                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND institution = ?", 
+                args: [id, inst] 
             });
         }
         
-        if (result.rows.length === 0) return res.status(404).json({ error: "Developer ID not found" });
+        // Developer global fallback: Search globally for developer role if not found yet
+        if (result.rows.length === 0) {
+            const devCheck = await db.execute({ 
+                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
+                args: [id] 
+            });
+            if (devCheck.rows.length > 0) result = devCheck;
+        }
+        
+        if (result.rows.length === 0) {
+            console.warn(`[AUTH_DEBUG] User NOT FOUND: ${id}`);
+            return res.status(404).json({ error: "Developer ID not found" });
+        }
+        console.log(`[AUTH_DEBUG] User FOUND: ${id} (${result.rows[0].role})`);
         res.json(result.rows[0]);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error(`[AUTH_DEBUG] Error: ${e.message}`);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 app.get('/api/dev/stats', async (req, res) => {
