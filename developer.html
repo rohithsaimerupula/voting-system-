@@ -769,7 +769,7 @@
         
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || 'Root Identifier not found.');
+            throw new Error(errData.error || 'Developer ID not found.');
         }
         
         const userData = await res.json();
@@ -778,9 +778,10 @@
             throw new Error('Unauthorized Access Level or Invalid Developer ID.');
         }
         
-        // Password check (supports plain, btoa, or hashed)
+        // Password check: SHA-256 (primary), btoa (legacy), plain (dev fallback)
+        const sha256pass = await StorageManager.hashPassword(pass);
         const btoapass = btoa(pass);
-        if (userData.password !== pass && userData.password !== btoapass) {
+        if (userData.password !== sha256pass && userData.password !== btoapass && userData.password !== pass) {
             throw new Error('Invalid Developer Password.');
         }
 

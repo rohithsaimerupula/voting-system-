@@ -67,8 +67,7 @@ async function initDb() {
             `CREATE TABLE IF NOT EXISTS globalChat (id INTEGER PRIMARY KEY AUTOINCREMENT, voterName TEXT, text TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS system_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`,
-            `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`,
-            `CREATE TABLE IF NOT EXISTS institutions (name TEXT PRIMARY KEY, address TEXT, code TEXT, logo TEXT, createdAt TEXT)`
+            `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`
         ], "write");
         console.log("Database initialized.");
     } catch (err) { console.error("Error initializing DB:", err); }
@@ -96,30 +95,6 @@ runMigrations();
 
 
 function boolInt(val) { return val ? 1 : 0; }
-
-app.get('/api/dev/verify/:id', async (req, res) => {
-    try {
-        const id = req.params.id;
-        console.log(`[AUTH_DEBUG] Direct Dev Verify: ${id}`);
-        
-        // Search globally for developer role
-        const result = await db.execute({ 
-            sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
-            args: [id] 
-        });
-        
-        if (result.rows.length === 0) {
-            console.warn(`[AUTH_DEBUG] Dev NOT FOUND: ${id}`);
-            return res.status(404).json({ error: "Developer ID not recognized by infrastructure." });
-        }
-        
-        console.log(`[AUTH_DEBUG] Dev FOUND: ${id}`);
-        res.json(result.rows[0]);
-    } catch (e) { 
-        console.error(`[AUTH_DEBUG] Dev Verify Error: ${e.message}`);
-        res.status(500).json({ error: e.message }); 
-    }
-});
 
 app.get('/api/users', async (req, res) => {
     try {
@@ -153,54 +128,61 @@ app.post('/api/institutions/verify', async (req, res) => {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: "Code required" });
 
-        // Step 1: Check the formal institutions table
-        const instRes = await db.execute({ sql: "SELECT name FROM institutions WHERE code = ?", args: [code] });
-        if (instRes.rows.length > 0) {
-            return res.json({ success: true, institution: instRes.rows[0].name });
-        }
+        let institution = null;
 
-        // Step 2: Fallback to old config table for backward compatibility
+        // Step 1: Check the dynamic config table (managed by Developer Portal)
         try {
             const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
             if (configResult.rows.length > 0) {
                 const codeMap = JSON.parse(configResult.rows[0].value);
                 if (codeMap && codeMap[code]) {
-                    return res.json({ success: true, institution: codeMap[code] });
+                    institution = codeMap[code];
                 }
             }
-        } catch(dbErr) { }
+        } catch(dbErr) {
+            console.warn('[OVS] DB code lookup failed:', dbErr.message);
+        }
 
-        // Step 3: Hardcoded fallbacks
-        const fallbackMap = { 
-            "VIEW2026": "Vignan's Institute of Engineering for Women", 
-            "VIIT2026": "Vignan's Institute of Information Technology",
-            "TEST2026": "Test University"
-        };
-        if (fallbackMap[code]) return res.json({ success: true, institution: fallbackMap[code] });
+        // Step 2: Fallback to hardcoded codes if not found in DB
+        if (!institution) {
+            const fallbackMap = { 
+                "VIEW2026": "Vignan's Institute of Engineering for Women", 
+                "VIIT2026": "Vignan's Institute of Information Technology", 
+                "TEST2026": "Test University" 
+            };
+            institution = fallbackMap[code] || null;
+        }
 
-        res.status(404).json({ error: "Invalid Gateway Code" });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+        if (!institution) return res.status(401).json({ error: "Invalid access code." });
 
-app.post('/api/institutions/create', async (req, res) => {
-    try {
-        const { name, address, code } = req.body;
-        if (!name || !code) return res.status(400).json({ error: "Name and Code required" });
-        
-        await db.execute({ 
-            sql: "INSERT INTO institutions (name, address, code, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET address = excluded.address, code = excluded.code", 
-            args: [name, address || '', code, new Date().toISOString()] 
+        // Step 3: Verify the institution still has an active Super Admin in the database
+        const saCheck = await db.execute({ 
+            sql: "SELECT regNum FROM users WHERE role = 'superadmin' AND institution = ? LIMIT 1", 
+            args: [institution] 
         });
-        res.json({ success: true });
+        
+        if (saCheck.rows.length === 0) {
+            return res.status(401).json({ error: "This institution no longer exists or has been deactivated." });
+        }
+
+        res.json({ success: true, institution });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/institutions/validate', async (req, res) => {
     try {
-        const name = decodeURIComponent(req.query.name || '');
-        const result = await db.execute({ sql: "SELECT 1 FROM users WHERE institution = ? UNION SELECT 1 FROM institutions WHERE name = ?", args: [name, name] });
-        if (result.rows.length > 0) res.json({ valid: true });
-        else res.status(404).json({ error: "Institution not found" });
+        const name = req.query.name;
+        if (!name) return res.status(400).json({ error: "Name required" });
+        
+        const result = await db.execute({ 
+            sql: "SELECT regNum FROM users WHERE role = 'superadmin' AND institution = ? LIMIT 1", 
+            args: [name] 
+        });
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: "Institution invalid" });
+        }
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -354,56 +336,32 @@ app.patch('/api/superadmins/:id/assign-pack', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        const id = req.params.id;
-        console.log(`[AUTH_DEBUG] Fetching user: ${id}, Institution: ${inst}`);
+        let result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
         
-        // Try exact match with institution first
-        let result = { rows: [] };
-        if (inst) {
-            result = await db.execute({ 
-                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND institution = ?", 
-                args: [id, inst] 
-            });
+        // Developer global fallback — works for any developer account regardless of institution
+        if (result.rows.length === 0 && !inst) {
+            result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND role = 'developer'", args: [req.params.id] });
         }
         
-        // Developer global fallback: Search globally for developer role if not found yet
-        if (result.rows.length === 0) {
-            const devCheck = await db.execute({ 
-                sql: "SELECT * FROM users WHERE LOWER(regNum) = LOWER(?) AND role = 'developer'", 
-                args: [id] 
-            });
-            if (devCheck.rows.length > 0) result = devCheck;
-        }
-        
-        if (result.rows.length === 0) {
-            console.warn(`[AUTH_DEBUG] User NOT FOUND: ${id}`);
-            return res.status(404).json({ error: "Developer ID not found" });
-        }
-        console.log(`[AUTH_DEBUG] User FOUND: ${id} (${result.rows[0].role})`);
+        if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
         res.json(result.rows[0]);
-    } catch (e) { 
-        console.error(`[AUTH_DEBUG] Error: ${e.message}`);
-        res.status(500).json({ error: e.message }); 
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/dev/stats', async (req, res) => {
     try {
-        const [saRes, instTableRes, allUsersRes] = await Promise.all([
+        const [saRes, instRes, allUsersRes] = await Promise.all([
             db.execute({ sql: "SELECT regNum, name, institution, email, status, packId FROM users WHERE role = 'superadmin'", args: [] }),
-            db.execute({ sql: "SELECT * FROM institutions", args: [] }),
+            db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
             db.execute({ sql: "SELECT institution, role, COUNT(*) as count FROM users WHERE role != 'developer' GROUP BY institution, role", args: [] })
         ]);
 
         const superAdmins = saRes.rows || [];
-        const instRecords = instTableRes.rows || [];
+        const instNames = (instRes.rows || []).map(r => r.institution);
         
-        // Identify unique institutions (from table or users)
-        const allInstNames = new Set([...instRecords.map(r => r.name), ...superAdmins.map(r => r.institution)]);
-        
-        const detailedInstitutions = Array.from(allInstNames).map(name => {
+        // Build detailed institutions list
+        const detailedInstitutions = instNames.map(name => {
             const admin = superAdmins.find(sa => sa.institution === name);
-            const record = instRecords.find(r => r.name === name);
             const userCounts = allUsersRes.rows.filter(r => r.institution === name);
             const stats = {
                 admins: userCounts.find(r => r.role === 'admin')?.count || 0,
@@ -412,8 +370,6 @@ app.get('/api/dev/stats', async (req, res) => {
             };
             return {
                 name,
-                address: record ? record.address : 'N/A',
-                code: record ? record.code : 'N/A',
                 superAdmin: admin ? { name: admin.name, email: admin.email, packId: admin.packId } : null,
                 stats
             };
@@ -506,7 +462,6 @@ app.post('/api/deviceFingerprints', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-const otpStore = new Map();
 const otpRateLimit = new Map();
 
 app.post('/api/auth/send-otp', async (req, res) => {
@@ -514,26 +469,33 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
 
+        // Simple Rate Limiting
         const now = Date.now();
         if (otpRateLimit.has(email) && (now - otpRateLimit.get(email)) < 60000) {
             return res.status(429).json({ error: "Please wait 60 seconds before requesting another OTP." });
         }
         otpRateLimit.set(email, now);
-        otpStore.set(email, { otp, expires: now + 600000 }); // 10 mins
 
+        // --- GMAIL SMTP DELIVERY ---
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: 'rohithsaimerupula@gmail.com',
+                user: process.env.SMTP_FROM,
                 pass: process.env.GMAIL_APP_PASSWORD
             }
         });
 
-        await transporter.sendMail({
-            from: '"Vanguard Voting" <rohithsaimerupula@gmail.com>',
+        const mailOptions = {
+            from: `"Vanguard Security" <${process.env.SMTP_FROM}>`,
             to: email,
-            subject: `[OVS] Verification Code: ${otp}`,
+            subject: `${context || 'Verification Code'} — OVS`,
             html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px;"><h2>Vanguard Voting</h2><p>Hello <strong>${name || 'User'}</strong>,</p><p>Your verification code for <strong>${context || 'Secure Activity'}</strong> is:</p><div style="background:#f4f4f4;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:5px;border-radius:5px;">${otp}</div><p style="color:#666;font-size:12px;">This code expires in 10 minutes.</p></div>`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    } catch (e) {
+        console.error("[NODEMAILER_FAIL]", e);
         res.status(500).json({ error: `SMTP Error: ${e.message}` });
     }
 });
@@ -871,29 +833,6 @@ app.post('/api/voters/can-vote-bulk', async (req, res) => {
             args: [boolInt(canVote), institution, ...regNums]
         });
         res.json({ success: true, updated: result.rowsAffected });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/dev/verify-otp-and-update', async (req, res) => {
-    try {
-        const { regNum, name, email, password, otp } = req.body;
-        if (!otp) return res.status(400).json({ error: "OTP required" });
-
-        const stored = otpStore.get(email);
-        if (!stored || stored.otp !== otp) return res.status(400).json({ error: "Invalid OTP" });
-        if (Date.now() > stored.expires) return res.status(400).json({ error: "OTP expired" });
-        
-        // Success: Clear OTP
-        otpStore.delete(email);
-
-        const updates = { name, email };
-        if (password) updates.password = password;
-        
-        const setClause = Object.keys(updates).map(k => `"${k}" = ?`).join(', ');
-        const values = [...Object.values(updates), regNum];
-        
-        await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND role = 'developer'`, args: values });
-        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
