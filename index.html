@@ -479,7 +479,9 @@
         const instName = localStorage.getItem('ovs_inst_name');
 
         async function checkGatePersistence() {
-            // Intentionally left blank: User requested no auto-bypass and no cached code
+            if (gateUnlocked === 'true' && instName) {
+                unlockGateway(instName);
+            }
         }
         checkGatePersistence();
 
