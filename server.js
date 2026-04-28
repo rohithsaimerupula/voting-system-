@@ -332,8 +332,8 @@ app.get('/api/users/:id', async (req, res) => {
         const inst = decodeURIComponent(req.query.institution || '');
         let result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
         
-        // Developer global fallback check
-        if (result.rows.length === 0 && !inst && req.params.id === 'OVS-CORE-ROOT') {
+        // Developer global fallback check: If no institution is provided, search globally for a developer role
+        if (result.rows.length === 0 && !inst) {
             result = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND role = 'developer'", args: [req.params.id] });
         }
         
