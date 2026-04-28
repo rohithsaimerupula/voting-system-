@@ -365,7 +365,6 @@
                 }
 
                 loadLobby();
-                loadLobby();
 
             } catch (err) {
                 console.error(err);
@@ -487,7 +486,7 @@
                 
                 definedCategories = [];
                 try {
-                    const data = await fetchApi('/api/config/categories_' + encodeURIComponent(currentUser.institution));
+                    const data = await fetchApi('/config/categories_' + encodeURIComponent(currentUser.institution));
                     if(data) {
                         definedCategories = data.value?.categories || data.categories || [];
                     }
@@ -672,14 +671,16 @@
             if(video) video.classList.add('hidden');
             const capBtn = document.getElementById('capture-vote-cam');
             if(capBtn) capBtn.classList.add('hidden');
-            if(nextBtn) nextBtn.disabled = false;
+            const nextBtnEl = document.getElementById('modal-next-btn');
+            if(nextBtnEl) nextBtnEl.disabled = false;
         }
 
         document.getElementById('confirm-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (currentStep === 1) {
                 const pwd = document.getElementById('confirm-password').value;
-                if(pwd !== currentUser.password && btoa(pwd) !== currentUser.password) {
+                const hashedInput = await StorageManager.hashPassword(pwd);
+                if (hashedInput !== currentUser.password && btoa(pwd) !== currentUser.password) {
                     setText('modal-error', "Incorrect Password");
                     const err = document.getElementById('modal-error');
                     if(err) err.classList.remove('hidden');

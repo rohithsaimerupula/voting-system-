@@ -445,10 +445,19 @@ app.post('/api/deviceFingerprints', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+const otpRateLimit = new Map();
+
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email, name, otp, context } = req.body;
         if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+
+        // Simple Rate Limiting
+        const now = Date.now();
+        if (otpRateLimit.has(email) && (now - otpRateLimit.get(email)) < 60000) {
+            return res.status(429).json({ error: "Please wait 60 seconds before requesting another OTP." });
+        }
+        otpRateLimit.set(email, now);
 
         // --- GMAIL SMTP DELIVERY ---
         const transporter = nodemailer.createTransport({
@@ -482,6 +491,43 @@ app.get('/api/admin/system-health', authGuard, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Get elections visible to a specific voter (lobby view)
+app.get('/api/voters/my-elections', async (req, res) => {
+    try {
+        const { regNum, institution } = req.query;
+        if (!institution) return res.status(400).json({ error: 'institution required' });
+
+        // Get voter info to check scope eligibility
+        const userRes = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [regNum, institution] });
+        const voter = userRes.rows[0];
+
+        // Fetch all non-completed elections for this institution
+        const elecRes = await db.execute({
+            sql: "SELECT * FROM elections WHERE institution = ? AND (isCompleted = 0 OR isCompleted IS NULL) ORDER BY createdAt DESC",
+            args: [institution]
+        });
+
+        const elections = [];
+        for (const e of elecRes.rows) {
+            const scope = JSON.parse(e.scope || '{}');
+            // Branch elections: only show to voters in that branch
+            if (e.type === 'branch' && voter && scope.branch && scope.branch !== voter.branch) continue;
+            // Class elections: only show to voters whose class is in scope
+            if (e.type === 'class' && voter && scope.classes && scope.classes.length > 0) {
+                if (!scope.classes.includes(voter.class)) continue;
+            }
+            // Check if this voter already voted in this election
+            const ledgerCheck = await db.execute({
+                sql: "SELECT id FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND electionCode = ?",
+                args: [regNum || '', institution, e.electionCode]
+            });
+            elections.push({ ...e, scope, hasVoted: ledgerCheck.rows.length > 0 });
+        }
+
+        res.json(elections);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/vote', authGuard, async (req, res) => {
     try {
         const { voterRegNum, candidateRegNum, votePhoto, secureHash, fp, timestamp, institution, electionCode } = req.body;
@@ -499,10 +545,10 @@ app.post('/api/vote', authGuard, async (req, res) => {
 
         await db.execute({
             sql: "INSERT INTO publicLedger (receiptHash, voterRegNum, electionCode, candidateStr, institution, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            args: [secureHash, voterRegNum, electionCode || 'global', typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum, institution, timestamp, 'pending']
+            args: [secureHash, voterRegNum, electionCode || 'global', typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum, institution, timestamp, 'verified']
         });
         await db.execute({
-            sql: "UPDATE users SET hasVoted = 1, votedFor = ?, votePhoto = ?, voteStatus = 'pending', voteReceiptHash = ? WHERE regNum = ? AND institution = ?",
+            sql: "UPDATE users SET hasVoted = 1, votedFor = ?, votePhoto = ?, voteStatus = 'verified', voteReceiptHash = ? WHERE regNum = ? AND institution = ?",
             args: [typeof candidateRegNum === 'object' ? JSON.stringify(candidateRegNum) : candidateRegNum, votePhoto, secureHash, voterRegNum, institution]
         });
         res.json({ success: true, receipt: secureHash });
@@ -605,29 +651,171 @@ app.get('/api/config/:key', async (req, res) => {
 
 app.post('/api/config/:key', authGuard, async (req, res) => {
     try {
-        const { data } = req.body;
-        await db.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(data)] });
+        const { data, merge } = req.body;
+        let finalData = data;
+        if (merge) {
+            // Read existing value and merge new data into it
+            const existing = await db.execute({ sql: "SELECT value FROM config WHERE key = ?", args: [req.params.key] });
+            if (existing.rows.length > 0) {
+                try {
+                    const existingData = JSON.parse(existing.rows[0].value);
+                    finalData = { ...existingData, ...data };
+                } catch { /* existing value not JSON - overwrite */ }
+            }
+        }
+        await db.execute({ sql: "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [req.params.key, JSON.stringify(finalData)] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/elections', async (req, res) => {
     try {
-        const result = await db.execute({ sql: 'SELECT * FROM elections WHERE institution = ?', args: [req.query.institution] });
+        let sql = 'SELECT * FROM elections WHERE institution = ?';
+        const args = [req.query.institution];
+        if (req.query.type) { sql += ' AND type = ?'; args.push(req.query.type); }
+        if (req.query.createdBy) { sql += ' AND createdBy = ?'; args.push(req.query.createdBy); }
+        const result = await db.execute({ sql, args });
         res.json(result.rows.map(r => ({ ...r, scope: JSON.parse(r.scope || '{}') })));
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/elections', async (req, res) => {
+app.post('/api/elections', authGuard, async (req, res) => {
     try {
-        const { institution, name, type, scope, createdBy } = req.body;
+        const { institution, name, type, scope, createdBy, createdByRole, startTime, endTime } = req.body;
         const id = `ELC-${Date.now()}`;
         const electionCode = Math.random().toString(36).substr(2, 6).toUpperCase();
         await db.execute({
-            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy) VALUES (?,?,?,?,?,?,?,?)`,
-            args: [id, institution, name, type, JSON.stringify(scope || {}), electionCode, new Date().toISOString(), createdBy]
+            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy, createdByRole, startTime, endTime) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+            args: [id, institution, name, type, JSON.stringify(scope || {}), electionCode, new Date().toISOString(), createdBy, createdByRole || null, startTime || null, endTime || null]
         });
         res.json({ success: true, id, electionCode });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/elections/:id', authGuard, async (req, res) => {
+    try {
+        const updates = req.body || {};
+        const keys = Object.keys(updates);
+        if (keys.length === 0) return res.json({ success: true });
+        const setClause = keys.map(k => `"${k}" = ?`).join(', ');
+        const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
+        values.push(req.params.id);
+        await db.execute({ sql: `UPDATE elections SET ${setClause} WHERE id = ?`, args: values });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/elections/:id', authGuard, async (req, res) => {
+    try {
+        await db.execute({ sql: 'DELETE FROM elections WHERE id = ?', args: [req.params.id] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Election analytics: total eligible, allowed, voted for a given election scope
+app.get('/api/elections/:id/analytics', authGuard, async (req, res) => {
+    try {
+        const elec = await db.execute({ sql: 'SELECT * FROM elections WHERE id = ?', args: [req.params.id] });
+        if (!elec.rows.length) return res.status(404).json({ error: 'Election not found' });
+        const e = elec.rows[0];
+        const scope = JSON.parse(e.scope || '{}');
+        let sql = `SELECT * FROM users WHERE institution = ? AND role IN ('voter','contestant') AND status = 'active'`;
+        const args = [e.institution];
+        if (scope.branch) { sql += ' AND branch = ?'; args.push(scope.branch); }
+        if (scope.classes && scope.classes.length) {
+            sql += ` AND "class" IN (${scope.classes.map(() => '?').join(',')})`;  
+            args.push(...scope.classes);
+        }
+        const users = await db.execute({ sql, args });
+        const total = users.rows.length;
+        const allowed = users.rows.filter(u => u.canVote == 1).length;
+        const voted = users.rows.filter(u => u.hasVoted == 1).length;
+        res.json({ total, allowed, voted, turnoutPct: allowed > 0 ? Math.round((voted / allowed) * 100) : 0 });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Election results: vote counts per candidate for a given election
+app.get('/api/elections/:id/results', async (req, res) => {
+    try {
+        const elec = await db.execute({ sql: 'SELECT * FROM elections WHERE id = ?', args: [req.params.id] });
+        if (!elec.rows.length) return res.status(404).json({ error: 'Election not found' });
+        const e = elec.rows[0];
+        // Get all ledger entries for this election
+        const ledger = await db.execute({ sql: `SELECT candidateStr FROM publicLedger WHERE institution = ? AND (electionCode = ? OR electionCode = ?)`, args: [e.institution, e.id, e.electionCode] });
+        const voteCounts = {};
+        ledger.rows.forEach(row => {
+            try {
+                const c = JSON.parse(row.candidateStr);
+                if (typeof c === 'object') {
+                    Object.values(c).forEach(v => { voteCounts[v] = (voteCounts[v] || 0) + 1; });
+                } else { voteCounts[row.candidateStr] = (voteCounts[row.candidateStr] || 0) + 1; }
+            } catch { voteCounts[row.candidateStr] = (voteCounts[row.candidateStr] || 0) + 1; }
+        });
+        // Get candidate details
+        const contestants = await db.execute({ sql: `SELECT regNum, name, institution FROM users WHERE institution = ? AND role = 'contestant'`, args: [e.institution] });
+        const results = contestants.rows.map(c => ({ regNum: c.regNum, name: c.name, votes: voteCounts[c.regNum] || 0 }));
+        results.sort((a, b) => b.votes - a.votes);
+        res.json({ success: true, results });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Get students by branch (for Branch Admin dashboard)
+app.get('/api/voters/by-branch/:branch', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({
+            sql: `SELECT * FROM users WHERE institution = ? AND branch = ? AND role IN ('voter','contestant')`,
+            args: [inst, req.params.branch]
+        });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Get students by class (for Sub-Admin / Class Admin dashboard)
+app.get('/api/voters/by-class/:class', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const year = req.query.year || '';
+        let sql = `SELECT * FROM users WHERE institution = ? AND "class" = ? AND role IN ('voter','contestant')`;
+        const args = [inst, req.params.class];
+        if (year) { sql += ` AND year = ?`; args.push(year); }
+        const result = await db.execute({ sql, args });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Get staff (subadmins) for a branch
+app.get('/api/staff/branch/:branch', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        const result = await db.execute({
+            sql: `SELECT * FROM users WHERE institution = ? AND branch = ? AND role = 'subadmin'`,
+            args: [inst, req.params.branch]
+        });
+        res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Grant or revoke canVote for a single student
+app.post('/api/voters/can-vote', async (req, res) => {
+    try {
+        const { regNum, canVote, institution } = req.body;
+        await db.execute({ sql: 'UPDATE users SET canVote = ? WHERE regNum = ? AND institution = ?', args: [boolInt(canVote), regNum, institution] });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bulk grant canVote for multiple students
+app.post('/api/voters/can-vote-bulk', async (req, res) => {
+    try {
+        const { regNums, canVote, institution } = req.body;
+        if (!Array.isArray(regNums) || !regNums.length) return res.json({ success: true, updated: 0 });
+        const placeholders = regNums.map(() => '?').join(',');
+        const result = await db.execute({
+            sql: `UPDATE users SET canVote = ? WHERE institution = ? AND regNum IN (${placeholders})`,
+            args: [boolInt(canVote), institution, ...regNums]
+        });
+        res.json({ success: true, updated: result.rowsAffected });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

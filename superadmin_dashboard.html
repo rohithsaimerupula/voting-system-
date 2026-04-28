@@ -698,7 +698,6 @@
           <h3>🗳️ Election Status</h3>
           <div id="election-status-info">Loading...</div>
         </div>
-      </div>
 
         <div class="card" id="pack-usage-card" style="display:none; background:rgba(168,85,247,0.04); border:1px solid rgba(168,85,247,0.2);">
           <h3 style="color:#a855f7;">📦 Plan Usage</h3>
@@ -1694,7 +1693,7 @@
         try {
           await apiFetch(`/users/${_saForgotRegNum}?institution=${encodeURIComponent(_saForgotInst)}`, {
             method: 'PATCH',
-            body: JSON.stringify({ password: btoa(newPass) })
+            body: JSON.stringify({ password: await hashSA(newPass) })
           });
           setText('sa-forgot-err', '✅ Password reset successfully! You can now log in.');
           _saForgotOtp = null;
@@ -1973,7 +1972,7 @@
         const pwdErr = validatePassword(pass, 8, 8);
         if (pwdErr) return toast('Admin Index: ' + pwdErr, false);
         try {
-          await apiFetch('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'admin', name, email, branch, institution: saSession.institution, status: 'active' }) });
+          await apiFetch('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: await hashSA(pass), role: 'admin', name, email, branch, institution: saSession.institution, status: 'active' }) });
           toast(`Admin ${id} created for branch ${branch}`);
           ['a-id', 'a-name', 'a-email', 'a-pass'].forEach(i => {
             const el = document.getElementById(i);
@@ -2048,7 +2047,7 @@
         if (pass && pass.trim() !== '') {
           const pwdErr = validPwdFn(pass);
           if (pwdErr) return toast(role + ' password ' + pwdErr, false);
-          updates.password = btoa(pass);
+          updates.password = await hashSA(pass);
         }
 
         try {
@@ -2122,7 +2121,7 @@
         const pwdErr = validatePassword(pass, 6, 6);
         if (pwdErr) return toast('Sub-Admin: ' + pwdErr, false);
         try {
-          await apiFetch('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'subadmin', name, email, branch: branch, class: cls, year: year, institution: saSession.institution, managedBy: saSession.regNum, status: 'active' }) });
+          await apiFetch('/users/add', { method: 'POST', body: JSON.stringify({ regNum: id, password: await hashSA(pass), role: 'subadmin', name, email, branch: branch, class: cls, year: year, institution: saSession.institution, managedBy: saSession.regNum, status: 'active' }) });
           toast(`Sub-Admin ${id} created for class ${cls}`);
           ['sa-id', 'sa-name', 'sa-email', 'sa-class', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
           document.getElementById('sa-branch').value = '';

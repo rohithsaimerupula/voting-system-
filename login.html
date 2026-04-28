@@ -133,6 +133,7 @@
     </style>
 </head>
 
+<body>
     <!-- Cyber Mesh Particles -->
     <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
     <!-- SUPER ADMIN HIDDEN MODAL (Staff mode only) -->
@@ -612,7 +613,6 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert("Login Error: " + err.message);
                 showError("Connection Error: " + err.message);
                 setText('login-btn', "Secure Login"); submitBtn.disabled = false;
             }

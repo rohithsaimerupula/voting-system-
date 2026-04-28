@@ -284,7 +284,7 @@
             <button class="btn-sm btn-e" onclick="copyBrCode()">📋 Copy</button>
             <button class="btn-sm btn-g" id="br-elec-start-btn" onclick="startBrElection()">▶ Start</button>
             <button class="btn-sm btn-d" id="br-elec-stop-btn" onclick="stopBrElection()" style="display:none;">⏹ End</button>
-            <button class="btn-sm btn-d" style="background:rgba(2ef,44,44,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
+            <button class="btn-sm btn-d" style="background:rgba(239,68,68,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
           </div>
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
@@ -364,21 +364,20 @@ let branchSAs=[];
 let branchElection=null;
 let cReg=null,cVote=null;
 
+// Global DOM Utilities
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+function setHTML(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
+
 document.addEventListener('DOMContentLoaded', ()=>{
   if(session&&session.role==='admin'){
     document.getElementById('auth-overlay').style.display='none';
     document.getElementById('main-layout').style.display='flex';
-
-    // Safe DOM Utilities
-    function setText(id, val) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    }
-    function setHTML(id, html) {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = html;
-    }
-
     setText('branch-label', `Branch Admin (${session.branch})`);
     setText('branch-sub', `Managing ${session.branch} — ${session.institution}`);
     loadAll();
@@ -508,7 +507,7 @@ async function loadAll(){
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--green);">${allowed}</span>
             </div>
             <div style="display:flex; justify-content:space-between;">
-                <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Resticted</span>
+                <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Restricted</span>
                 <span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted);">${denied}</span>
             </div>
         `);
@@ -623,7 +622,7 @@ function closeEdit(){document.getElementById('edit-modal').classList.remove('ope
 async function saveEdit(){
     const id=document.getElementById('edit-regnum').value; const rl=document.getElementById('edit-role').value;
     const upd={name:document.getElementById('edit-name').value,email:document.getElementById('edit-email').value,class:document.getElementById('edit-class').value.toUpperCase(),year:document.getElementById('edit-year').value};
-    const p=document.getElementById('edit-pass').value; if(p)upd.password=btoa(p);
+    const p=document.getElementById('edit-pass').value; if(p) { upd.password = await StorageManager.hashPassword(p); }
     try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(upd)});toast('Saved');closeEdit();loadAll();}catch(e){toast(e.message,false);}
 }
 async function createSubadmin(){
@@ -631,7 +630,8 @@ async function createSubadmin(){
     const em=document.getElementById('sa-email').value; const cl=document.getElementById('sa-class').value.toUpperCase();
     const yr=document.getElementById('sa-year').value; const p=document.getElementById('sa-pass').value;
     if(id.length!==9)return toast('ID must be 9 chars',false); if(!nm||!cl||!p)return toast('Fill fields',false);
-    try{await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:btoa(p),role:'subadmin',name:nm,email:em,branch:session.branch,class:cl,year:yr,institution:session.institution,managedBy:session.regNum,status:'active'})});toast('Subadmin created');loadAll();}catch(e){toast(e.message,false);}
+    const hashedPass = await StorageManager.hashPassword(p);
+    try{await apiFetch('/users/add',{method:'POST',body:JSON.stringify({regNum:id,password:hashedPass,role:'subadmin',name:nm,email:em,branch:session.branch,class:cl,year:yr,institution:session.institution,managedBy:session.regNum,status:'active'})});toast('Subadmin created');loadAll();}catch(e){toast(e.message,false);}
 }
 function showP(s,isPdf){
     if(isPdf){const w=window.open('','_blank');if(w)w.document.body.innerHTML=`<iframe src="${s}" width="100%" height="100%" style="border:none;"></iframe>`;return;}

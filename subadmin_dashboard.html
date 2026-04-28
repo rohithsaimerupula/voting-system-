@@ -16,8 +16,8 @@
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root {
-      --bg:#050505; --surface:#111111; --border:rgba(255,42,77,0.3);
-      --purple:#ff2a4d; --cyan:#ff2a4d; --green:#ff2a4d; --red:#ff2a4d; --gold:#cccccc;
+      --bg:#050505; --surface:#111111; --border:rgba(168,85,247,0.3);
+      --purple:#a855f7; --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --gold:#f59e0b;
       --text:#f8fafc; --muted:#cbd5e1;
     }
     body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
@@ -26,9 +26,9 @@
     select option{background:#1e293b;}
     label{display:block;color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
     .btn{padding:0.75rem 1.5rem;border-radius:10px;border:none;cursor:pointer;font-size:0.95rem;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.3s;}
-    .btn-purple{background:linear-gradient(135deg,var(--purple),#cc223e);color:white;}
-    .btn-green{background:linear-gradient(135deg,var(--green),#cc223e);color:white;}
-    .btn-red{background:linear-gradient(135deg,var(--red),#cc223e);color:white;}
+    .btn-purple{background:linear-gradient(135deg,var(--purple),#7c3aed);color:white;}
+    .btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:white;}
+    .btn-red{background:linear-gradient(135deg,var(--red),#dc2626);color:white;}
     .btn:hover{transform:translateY(-2px);opacity:0.9;}
     .btn-sm{padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif;font-weight:600;}
     .btn-d{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
@@ -518,9 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('class-sub', `Managing ${session.year||''} ${session.class} — ${session.branch} — ${session.institution}`);
     setText('class-students-sub', `Students in ${session.year||''} ${session.class}`);
     loadAll();
-  } else {
-    window.location.href='login.html?admin=true';
   }
+  // If no session, auth-overlay is shown by default (display:flex in HTML) — user must log in via the overlay form
 });
 
 async function apiFetch(path, opts = {}) {
@@ -857,7 +856,7 @@ async function saveEdit(){
   if(!name)return toast('Name required',false);
   if(section&&!/^[1-9]$/.test(section))return toast('Section must be 1-9',false);
   const updates={name,email,year,class:session.branch+'-'+section};
-  if(pass){if(pass.length<6)return toast('Password too short',false);updates.password=btoa(pass);}
+  if(pass){if(pass.length<6)return toast('Password too short',false);updates.password=await StorageManager.hashPassword(pass);}
   try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(updates)});toast('Updated!');closeEdit();loadAll();}catch(e){toast(e.message,false);}
 }
 
