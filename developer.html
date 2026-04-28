@@ -1118,22 +1118,23 @@
 
     function openDevProfile() {
         if (!devSession) return;
+        // Reset all fields
         document.getElementById('dev-edit-name').value = devSession.name || '';
         document.getElementById('dev-edit-email').value = devSession.email || '';
         document.getElementById('dev-edit-pass').value = '';
         document.getElementById('dev-edit-otp').value = '';
         document.getElementById('dev-profile-error').textContent = '';
+        // Reset OTP section state fully
         document.getElementById('dev-profile-otp-section').style.display = 'none';
-        document.getElementById('dev-profile-otp-btn').style.display = 'inline-block';
+        const otpBtn = document.getElementById('dev-profile-otp-btn');
+        otpBtn.style.display = 'inline-block';
+        otpBtn.textContent = '📧 Send OTP & Verify';
+        otpBtn.disabled = false;
         document.getElementById('dev-profile-save-btn').style.display = 'none';
         _devProfileOtp = null;
+        // Show modal
         const m = document.getElementById('dev-profile-modal');
-        m.style.display = 'flex';
-        m.style.position = 'fixed';
-        m.style.inset = '0';
-        m.style.background = 'rgba(5,10,20,0.88)';
-        m.style.backdropFilter = 'blur(10px)';
-        m.style.zIndex = '99999';
+        m.style.cssText = 'display:flex; position:fixed; inset:0; background:rgba(5,10,20,0.88); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;';
     }
 
     function closeDevProfileModal() {
