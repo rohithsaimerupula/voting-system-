@@ -755,8 +755,8 @@
       btn.innerText = 'Initializing Developer Access...';
 
       try {
-        // Fetch user directly without institution context
-        const res = await fetch(API + '/users/' + encodeURIComponent(id), {
+        // Fetch user via dedicated dev verification endpoint
+        const res = await fetch(API + '/dev/verify/' + encodeURIComponent(id), {
             headers: { 'Content-Type': 'application/json' }
         });
         
