@@ -369,23 +369,15 @@
         <span id="dev-name-label" style="color:#ff2a4d; font-weight:900; letter-spacing:1px;">DEVELOPER OPERATOR</span>
         <button class="btn btn-red-outline" style="border-color: var(--cyan); color: var(--cyan);" onclick="loadConsole()">🔄 Refresh Data</button>
         <button class="btn btn-red-outline" style="border-color:#f59e0b;color:#f59e0b;" onclick="openDevProfile()">⚙️ My Profile</button>
-        <button class="btn btn-red-outline" onclick="devLogout()">Deauthorize Session</button>
+        <button class="btn btn-red-outline" onclick="devLogout()">Authorize Session</button>
       </div>
     </header>
     <div class="container">
       <!-- Stats -->
       <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showSaDetails()">
-          <div class="number" id="stat-sa" style="color:var(--gold)">-</div>
-          <div class="label">Super Admins ℹ️</div>
-        </div>
         <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showInstDetails()">
           <div class="number" id="stat-inst" style="color:var(--cyan)">-</div>
           <div class="label">Institutions ℹ️</div>
-        </div>
-        <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="showTotalUsersDetails()">
-          <div class="number" id="stat-users" style="color:var(--green)">-</div>
-          <div class="label">Total Users ℹ️</div>
         </div>
       </div>
 
@@ -451,7 +443,7 @@
       <!-- Super Admins Table -->
       <div class="section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="margin-bottom: 0;">📋 All Super Admins</h2>
+            <h2 style="margin-bottom: 0;">📋 All Institutions</h2>
             <button class="btn btn-red-outline" style="border-color: #f59e0b; color: #f59e0b;" onclick="purgeOrphanedUsers()">🧹 Purge Orphaned Users</button>
         </div>
         <table>
