@@ -367,6 +367,7 @@
       <h1>CORE INFRASTRUCTURE PRIME</h1>
       <div style="display:flex;align-items:center;gap:1rem;">
         <span id="dev-name-label" style="color:#ff2a4d; font-weight:900; letter-spacing:1px;">DEVELOPER OPERATOR</span>
+        <button class="btn btn-red-outline" style="border-color: #a855f7; color: #a855f7;" onclick="openDevProfile()">⚙️ Settings</button>
         <button class="btn btn-red-outline" style="border-color: var(--cyan); color: var(--cyan);" onclick="loadConsole()">🔄 Refresh Data</button>
         <button class="btn btn-red-outline" onclick="devLogout()">Deauthorize Session</button>
       </div>
@@ -427,31 +428,20 @@
             <tr><td colspan="6" class="empty">No packs created yet. Create one above.</td></tr>
           </tbody>
         </table>
-      </div>
-
-      <!-- Create Super Admin -->
+        <!-- Register New Institution -->
       <div class="section">
-        <h2>🏛️ Create Super Admin</h2>
+        <h2>🏛️ Register New Institution</h2>
+        <p class="sub" style="margin-bottom:1.5rem;">Initialize a new infrastructure node by providing institutional details.</p>
         <div class="form-row">
-          <div><label>Admin ID (e.g. SADMIN-KLU)</label><input type="text" id="sa-id" placeholder="SADMIN001"></div>
-          <div><label>Full Name</label><input type="text" id="sa-name" placeholder="Dr. John Smith"></div>
+          <div><label>Institution Name</label><input type="text" id="inst-reg-name" placeholder="e.g. KL University"></div>
+          <div><label>Gateway Access Code</label><input type="text" id="inst-reg-code" placeholder="e.g. KLU2026" maxlength="12" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
         </div>
-        <div class="form-row">
-          <div><label>Email</label><input type="email" id="sa-email" placeholder="admin@institution.edu"></div>
-          <div><label>Institution Name</label><input type="text" id="sa-institution" placeholder="KL University"></div>
+        <div style="margin-bottom:1.5rem;">
+          <label>Physical Address / Location</label>
+          <textarea id="inst-reg-address" placeholder="Enter the full campus address..." style="width:100%; height:80px; padding:1rem; border-radius:12px; border:1px solid rgba(168,85,247,0.3); background:rgba(0,0,0,0.2); color:white; font-family:inherit; resize:none; outline:none;"></textarea>
         </div>
-        <div class="form-row">
-          <div><label>Gateway Access Code</label><input type="text" id="sa-code" placeholder="e.g. KLU2026" maxlength="10" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
-          <div><label>Password <small style="color:var(--muted);text-transform:none">(Exactly 10 chars · 3 letters · 1 special · 1 number)</small></label><input type="password" id="sa-pass" placeholder="e.g. Sup@er10ad"></div>
-        </div>
-        <div class="form-row">
-          <div style="grid-column:1/-1;"><label>Assign Pack <small style="color:var(--muted);text-transform:none">— Select a pack to apply member limits to this institution</small></label>
-            <select id="sa-pack" style="width:100%;padding:0.9rem 1.2rem;border-radius:10px;border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.06);color:white;font-size:1rem;font-family:'Outfit',sans-serif;outline:none;">
-              <option value="">-- No Pack (Unlimited) --</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn" style="width:100%; max-width:100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, #ff2a4d, #b91c1c); color: white; box-shadow: 0 4px 15px rgba(255, 42, 77, 0.4); border: 1px solid #ff2a4d; text-transform: uppercase; letter-spacing: 1px;" onclick="createSuperAdmin()">🚀 Create Super Admin</button>
+        <button class="btn btn-red" style="width:100%;" onclick="openSaAssignment()">Continue to Admin Setup &nbsp;→</button>
+      </div>
       </div>
 
       <!-- Super Admins Table -->
@@ -605,6 +595,67 @@
                   <div style="display:flex; justify-content:space-between;"><span>Voters/Contestants:</span> <strong id="det-count-voters">0</strong></div>
               </div>
           </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SA ASSIGNMENT MODAL -->
+  <div class="modal-overlay" id="sa-modal" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-box" style="max-width:550px;">
+      <button class="modal-close" onclick="closeSaModal()">✕</button>
+      <h3>👤 Assign Super Admin</h3>
+      <p class="sub">Specify the primary administrator for <strong id="assign-inst-name" style="color:white;"></strong>.</p>
+      
+      <div style="margin-top:1.5rem;">
+        <div class="form-row">
+          <div><label>Admin ID</label><input type="text" id="sa-regNum" placeholder="e.g. SA-KLU-01"></div>
+          <div><label>Full Name</label><input type="text" id="sa-fullName" placeholder="e.g. Dr. Jane Doe"></div>
+        </div>
+        <div style="margin-top:1rem;">
+          <label>Professional Email</label>
+          <input type="email" id="sa-assign-email" placeholder="admin@institute.edu">
+        </div>
+        <div class="form-row" style="margin-top:1rem;">
+          <div><label>Login Password</label><input type="password" id="sa-password" placeholder="Secure Password"></div>
+          <div>
+            <label>Membership Pack</label>
+            <select id="sa-assign-pack" style="width:100%; padding:0.9rem; border-radius:10px; border:1px solid rgba(168,85,247,0.3); background:rgba(0,0,0,0.3); color:white; outline:none;">
+              <option value="">-- Unlimited --</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:2rem;">
+            <button class="btn btn-red" style="width:100%;" onclick="finalizeInstitution()">Finalize & Create Infrastructure</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVELOPER PROFILE MODAL -->
+  <div class="modal-overlay" id="dev-profile-modal" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-box" style="max-width:450px;">
+      <button class="modal-close" onclick="closeDevProfile()">✕</button>
+      <h3>⚙️ Developer Settings</h3>
+      <p class="sub">Update your infrastructure credentials. Changes require OTP.</p>
+      
+      <div style="margin-top:1.5rem;">
+        <label>Full Name</label>
+        <input type="text" id="dev-profile-name" style="margin-bottom:1rem;">
+        
+        <label>Registered Email</label>
+        <input type="email" id="dev-profile-email" style="margin-bottom:1rem;">
+        
+        <label>New Password (Optional)</label>
+        <input type="password" id="dev-profile-pass" placeholder="Leave blank to keep current" style="margin-bottom:1.5rem;">
+        
+        <div id="otp-section" style="display:none; background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; margin-bottom:1.5rem;">
+            <label style="color:var(--cyan);">Verification Code (OTP)</label>
+            <input type="text" id="dev-otp-input" placeholder="● ● ● ● ● ●" maxlength="6" style="text-align:center; letter-spacing:0.5rem; font-weight:bold;">
+            <p style="font-size:0.7rem; color:var(--muted); margin-top:0.5rem;">Enter the 6-digit code sent to your email.</p>
+        </div>
+
+        <button class="btn btn-red-outline" id="dev-otp-btn" style="width:100%; margin-bottom:1rem;" onclick="requestDevUpdateOtp()">Send Verification OTP</button>
+        <button class="btn btn-red" id="dev-save-btn" style="width:100%; display:none;" onclick="saveDevProfile()">Verify & Save Changes</button>
       </div>
     </div>
   </div>
@@ -1177,7 +1228,146 @@
       alert(breakdown + '\n\n(Tip: Users stored here include voters, admins, sub-admins, and super-admins across the database.)');
     }
 
+    // --- NEW INSTITUTION FLOW ---
+    function openSaAssignment() {
+        const name = document.getElementById('inst-reg-name').value.trim();
+        const code = document.getElementById('inst-reg-code').value.trim();
+        const addr = document.getElementById('inst-reg-address').value.trim();
+
+        if (!name || !code) return showToast('Name and Code are required.', false);
+        
+        document.getElementById('assign-inst-name').textContent = name;
+        
+        // Populate packs dropdown
+        const select = document.getElementById('sa-assign-pack');
+        select.innerHTML = '<option value="">-- Unlimited --</option>';
+        (window.packsCache || []).forEach(p => {
+            select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+        });
+
+        document.getElementById('sa-modal').style.display = 'flex';
+    }
+
+    function closeSaModal() {
+        document.getElementById('sa-modal').style.display = 'none';
+    }
+
+    async function finalizeInstitution() {
+        const instName = document.getElementById('inst-reg-name').value.trim();
+        const instCode = document.getElementById('inst-reg-code').value.trim();
+        const instAddr = document.getElementById('inst-reg-address').value.trim();
+
+        const saId = document.getElementById('sa-regNum').value.trim();
+        const saName = document.getElementById('sa-fullName').value.trim();
+        const saEmail = document.getElementById('sa-assign-email').value.trim();
+        const saPass = document.getElementById('sa-password').value.trim();
+        const saPack = document.getElementById('sa-assign-pack').value;
+
+        if (!saId || !saName || !saEmail || !saPass) return showToast('All Super Admin fields required.', false);
+
+        try {
+            showLoading(true);
+            // 1. Create Institution
+            await api('/institutions/create', {
+                method: 'POST',
+                body: JSON.stringify({ name: instName, address: instAddr, code: instCode })
+            });
+
+            // 2. Create Super Admin
+            await api('/users/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    regNum: saId,
+                    name: saName,
+                    email: saEmail,
+                    password: saPass,
+                    role: 'superadmin',
+                    institution: instName,
+                    status: 'active',
+                    packId: saPack || null
+                })
+            });
+
+            showToast(`Success! ${instName} registered with ${saName} as Super Admin.`);
+            closeSaModal();
+            loadConsole();
+        } catch (e) {
+            showToast(e.message, false);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // --- DEVELOPER PROFILE ---
+    function openDevProfile() {
+        if (!devSession) return;
+        document.getElementById('dev-profile-name').value = devSession.name || '';
+        document.getElementById('dev-profile-email').value = devSession.email || '';
+        document.getElementById('dev-profile-pass').value = '';
+        
+        document.getElementById('otp-section').style.display = 'none';
+        document.getElementById('dev-otp-btn').style.display = 'block';
+        document.getElementById('dev-save-btn').style.display = 'none';
+        
+        document.getElementById('dev-profile-modal').style.display = 'flex';
+    }
+
+    function closeDevProfile() {
+        document.getElementById('dev-profile-modal').style.display = 'none';
+    }
+
+    async function requestDevUpdateOtp() {
+        const email = document.getElementById('dev-profile-email').value.trim();
+        if (!email) return showToast('Email required for OTP.', false);
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        try {
+            await api('/auth/send-otp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email,
+                    name: document.getElementById('dev-profile-name').value,
+                    otp,
+                    context: 'Developer Profile Update'
+                })
+            });
+            showToast('Verification OTP sent to your email.');
+            document.getElementById('otp-section').style.display = 'block';
+            document.getElementById('dev-otp-btn').style.display = 'none';
+            document.getElementById('dev-save-btn').style.display = 'block';
+            
+            // For testing convenience (remove in prod if desired)
+            console.log('DEV_PROFILE_OTP:', otp);
+        } catch (e) { showToast(e.message, false); }
+    }
+
+    async function saveDevProfile() {
+        const name = document.getElementById('dev-profile-name').value.trim();
+        const email = document.getElementById('dev-profile-email').value.trim();
+        const pass = document.getElementById('dev-profile-pass').value;
+        const otp = document.getElementById('dev-otp-input').value.trim();
+
+        if (!otp) return showToast('Please enter the OTP.', false);
+
+        try {
+            await api('/dev/verify-otp-and-update', {
+                method: 'POST',
+                body: JSON.stringify({
+                    regNum: devSession.regNum,
+                    name,
+                    email,
+                    password: pass || null,
+                    otp
+                })
+            });
+            showToast('Profile updated successfully! Re-authenticating...');
+            setTimeout(() => location.reload(), 1500);
+        } catch (e) { showToast(e.message, false); }
+    }
+
+
     async function saveEditSA() {
+
       const id = document.getElementById('edit-sa-id').value;
       const nameInput = document.getElementById('edit-sa-name').value;
       if (nameInput.startsWith(' ')) return showToast('Name cannot start with a space.', false);
