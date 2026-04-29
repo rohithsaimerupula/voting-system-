@@ -60,15 +60,19 @@ const StorageManager = {
 
     async validateInstitution() {
         const inst = localStorage.getItem('ovs_inst_name');
+        const code = localStorage.getItem('ovs_inst_code');
         if (!inst) return false;
         try {
-            const res = await fetch(`${API_BASE}/institutions/validate?name=${encodeURIComponent(inst)}`);
+            let url = `${API_BASE}/institutions/validate?name=${encodeURIComponent(inst)}`;
+            if (code) url += `&code=${encodeURIComponent(code)}`;
+            const res = await fetch(url);
             if (!res.ok) {
-                // Institution was likely deleted
+                // Institution was likely deleted or disabled
                 localStorage.removeItem('ovs_inst_name');
                 localStorage.removeItem('ovs_inst_code');
                 localStorage.removeItem('ovs_inst_logo');
                 localStorage.removeItem('ovs_gate_unlocked');
+                localStorage.removeItem('ovs_currentUser'); // Force logout
                 return false;
             }
             return true;

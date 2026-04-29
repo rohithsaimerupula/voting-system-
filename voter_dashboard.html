@@ -8,6 +8,15 @@
 
     <link rel="stylesheet" href="style.css">
     <script src="storage.js"></script>
+    <script>
+        // Safety: Logout if institution is deleted
+        StorageManager.validateInstitution().then(isValid => {
+            if (!isValid) {
+                alert('Access Denied. Your institution is no longer active.');
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <script>

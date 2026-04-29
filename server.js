@@ -196,9 +196,19 @@ app.get('/api/institutions/validate', async (req, res) => {
         const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
         if (configResult.rows.length > 0) {
             const codeMap = JSON.parse(configResult.rows[0].value);
-            const instsInMap = Object.values(codeMap).map(v => v.toLowerCase());
-            if (!instsInMap.includes(name.toLowerCase())) {
-                return res.status(401).json({ error: "Institution access code has been removed or changed." });
+            
+            // If code is provided, check if it matches the institution
+            const code = req.query.code;
+            if (code) {
+                if (codeMap[code] !== name) {
+                    return res.status(401).json({ error: "Institution access code has been changed." });
+                }
+            } else {
+                // Fallback: check if the institution has ANY code (legacy or general check)
+                const instsInMap = Object.values(codeMap).map(v => v.toLowerCase());
+                if (!instsInMap.includes(name.toLowerCase())) {
+                    return res.status(401).json({ error: "Institution access code has been removed." });
+                }
             }
         }
         
@@ -724,13 +734,40 @@ app.get('/api/elections', async (req, res) => {
 
 app.post('/api/elections', authGuard, async (req, res) => {
     try {
-        const { institution, name, type, scope, createdBy, createdByRole, startTime, endTime } = req.body;
+        const { institution, name, type, scope, createdBy, createdByRole, startTime, endTime, categories, candidates } = req.body;
+        
+        // Step 1: Enforce "One Active Election per Creator" policy
+        const activeCheck = await db.execute({
+            sql: "SELECT id FROM elections WHERE createdBy = ? AND institution = ? AND isCompleted = 0",
+            args: [createdBy, institution]
+        });
+        if (activeCheck.rows.length > 0) {
+            return res.status(400).json({ error: "You already have an active or pending election. You must complete or delete it before starting a new one." });
+        }
+
         const id = `ELC-${Date.now()}`;
         const electionCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+        
+        // Step 2: Create Election Record
+        const electionScope = { ...(scope || {}), categories: categories || [] };
         await db.execute({
-            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy, createdByRole, startTime, endTime) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-            args: [id, institution, name, type, JSON.stringify(scope || {}), electionCode, new Date().toISOString(), createdBy, createdByRole || null, startTime || null, endTime || null]
+            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy, createdByRole, startTime, endTime, isActive) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,
+            args: [id, institution, name, type, JSON.stringify(electionScope), electionCode, new Date().toISOString(), createdBy, createdByRole || null, startTime || null, endTime || null]
         });
+
+        // Step 3: Register Candidates as Contestants (if provided)
+        if (candidates && candidates.length > 0) {
+            for (const cand of candidates) {
+                // Ensure candidate exists or create a basic record
+                // We'll use a transaction/batch for this usually, but here we'll just insert/ignore
+                await db.execute({
+                    sql: `INSERT INTO users (regNum, institution, role, name, status, category) VALUES (?, ?, 'contestant', ?, 'active', ?)
+                          ON CONFLICT(regNum, institution) DO UPDATE SET role='contestant', category=EXCLUDED.category`,
+                    args: [cand.regNum, institution, cand.name, cand.category]
+                });
+            }
+        }
+
         res.json({ success: true, id, electionCode });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -798,7 +835,7 @@ app.get('/api/elections/:id/results', async (req, res) => {
         const contestants = await db.execute({ sql: `SELECT regNum, name, institution FROM users WHERE institution = ? AND role = 'contestant'`, args: [e.institution] });
         const results = contestants.rows.map(c => ({ regNum: c.regNum, name: c.name, votes: voteCounts[c.regNum] || 0 }));
         results.sort((a, b) => b.votes - a.votes);
-        res.json({ success: true, results });
+        res.json(results);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

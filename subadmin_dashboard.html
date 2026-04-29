@@ -91,6 +91,15 @@
 </head>
 <body>
   <script src="storage.js"></script>
+  <script>
+      // Safety: Logout if institution is deleted
+      StorageManager.validateInstitution().then(isValid => {
+          if (!isValid) {
+              alert('Access Denied. Your institution is no longer active.');
+              window.location.href = 'index.html';
+          }
+      });
+  </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
 <!-- AUTH -->

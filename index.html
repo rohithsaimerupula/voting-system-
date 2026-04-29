@@ -479,8 +479,25 @@
         const instName = localStorage.getItem('ovs_inst_name');
 
         async function checkGatePersistence() {
+            // 1. Check URL for auto-unlock link: ?inst_code=VIIT2026
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlCode = urlParams.get('inst_code');
+            if (urlCode) {
+                console.log("[Gateway] Auto-verifying code from link:", urlCode);
+                const codeInput = document.getElementById('inst-code');
+                if (codeInput) {
+                    codeInput.value = urlCode;
+                    verifyGateway();
+                    return;
+                }
+            }
+
+            // 2. Check local storage memory
             if (gateUnlocked === 'true' && instName) {
-                unlockGateway(instName);
+                // Verify it's still valid on every fresh load to prevent ghost sessions
+                const isValid = await StorageManager.validateInstitution();
+                if (isValid) unlockGateway(instName);
+                else console.warn("[Gateway] Cached institution is no longer valid.");
             }
         }
         checkGatePersistence();
@@ -515,6 +532,7 @@
                 // Persistence: Unlock the gateway for this device
                 localStorage.setItem('ovs_gate_unlocked', 'true');
                 localStorage.setItem('ovs_inst_name', data.institution);
+                localStorage.setItem('ovs_inst_code', code); // Store the code used
                 
                 unlockGateway(data.institution);
             } catch (e) {
