@@ -843,9 +843,10 @@
       setText('db-loading-msg', 'Connecting to database...');
       if(retryBtn) retryBtn.style.display = 'none';
       try {
-        const [statsRes, packsRes] = await Promise.all([
+        const [statsRes, packsRes, codesRes] = await Promise.all([
             fetch(API + '/dev/stats', { headers: { 'Content-Type': 'application/json' } }),
-            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } })
+            fetch(API + '/packs', { headers: { 'Content-Type': 'application/json' } }),
+            fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } })
         ]);
 
         if (!statsRes.ok) {
@@ -867,6 +868,11 @@
         if (packsRes.ok) packs = await packsRes.json();
         window.packsCache = packs;
 
+        // Load Gateway Codes
+        let codes = {};
+        if (codesRes.ok) codes = await codesRes.json();
+        window.instCodesCache = codes;
+
         if(overlay) overlay.style.display = 'none';
 
         setText('stat-sa', counts.saCount || 0);
@@ -877,6 +883,12 @@
         renderPackRequests(window.saCache);
         renderPacksTable(window.packsCache);
         populatePackDropdown(window.packsCache);
+
+        // If institution details modal is open, refresh its view
+        const instModal = document.getElementById('inst-modal');
+        if (instModal && instModal.style.display === 'flex') {
+            showInstList();
+        }
       } catch (e) {
         const msg = e.message || 'Unknown error';
         setText('db-loading-msg', '❌ ' + msg);
