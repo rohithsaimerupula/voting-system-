@@ -373,21 +373,6 @@
             const fpContainer = document.getElementById('forgot-password-container');
 
             // --- INSTITUTION GATEWAY CHECK (Universal) ---
-            const urlCode = urlParams.get('inst_code');
-            if (urlCode && !localStorage.getItem('ovs_inst_name')) {
-                console.log("[Login] Attempting auto-unlock from link...");
-                fetchApi('/institutions/verify', {
-                    method: 'POST',
-                    body: JSON.stringify({ code: urlCode })
-                }).then(data => {
-                    localStorage.setItem('ovs_gate_unlocked', 'true');
-                    localStorage.setItem('ovs_inst_name', data.institution);
-                    window.location.reload();
-                }).catch(e => {
-                    console.warn("Auto-unlock failed:", e.message);
-                });
-                return;
-            }
 
             const userInst = localStorage.getItem('ovs_inst_name');
             if (!userInst) {
