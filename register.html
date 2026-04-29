@@ -155,21 +155,9 @@
                 <div id="inst-badge" style="display:inline-block; margin-bottom: 2rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.82rem; color: var(--muted);">⛩️ Loading Institution...</div>
 
                 <form id="register-form">
-                    <div class="form-group">
-                        <label>Register As</label>
-                        <select id="role" onchange="toggleFields()">
-                            <option value="voter">Voter</option>
-                            <option value="contestant">Candidate</option>
-                        </select>
-                    </div>
+                    <!-- Consolidated Student Registration (All are registered as Voters initially) -->
+                    <input type="hidden" id="role" value="voter">
 
-                    <div class="form-group hidden" id="category-group">
-                        <label>Election Category</label>
-                        <select id="category">
-                            <option value="">Loading Categories...</option>
-                        </select>
-                        <small style="color: var(--text-muted); font-size: 0.8rem;">Select the position you are running for.</small>
-                    </div>
 
                     <div class="form-group">
                         <label>Full Name</label>
@@ -296,19 +284,6 @@
                             verification during voting.</small>
                     </div>
 
-                    <!-- Contestant Specific -->
-                    <div class="form-group hidden" id="symbol-group">
-                        <label>Election Symbol (Emoji Only)</label>
-                        <input type="text" id="symbol" placeholder="🦁">
-                        <small style="color: var(--text-muted);">Please enter a single Emoji.</small>
-                    </div>
-
-                    <div class="form-group hidden" id="manifesto-group">
-                        <label>Manifesto / Slogan</label>
-                        <textarea id="manifesto" placeholder="Why should people vote for you? (Max 150 chars)"
-                            maxlength="150" rows="3"
-                            style="width:100%; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
-                    </div>
 
                     <div class="form-group" id="password-group">
                         <label>Password</label>
@@ -372,7 +347,6 @@
             }
 
             setText('inst-badge', `⛩️ ${inst}`);
-            loadCategories(inst);
             initRegistrationTimer();
         });
 
@@ -988,7 +962,6 @@
         const regInput = document.getElementById('regNum');
         const passInput = document.getElementById('password');
         const sectionInput = document.getElementById('section');
-        const symbolInput = document.getElementById('symbol');
 
         // Name: Alphabets & Spaces only. Max 50. No leading space.
         nameInput.addEventListener('input', function (e) {
@@ -1028,47 +1001,6 @@
         }
 
         // Symbol: Emoji Only (Basic Check)
-        symbolInput.addEventListener('input', function (e) {
-            // Strip all ASCII characters (0-127) effectively removing letters, numbers, and standard keyboard symbols.
-            // This leaves high-bit characters like Emojis.
-            // Note: This prevents entering normal text.
-            this.value = this.value.replace(/[\x00-\x7F]/g, '');
-        });
-
-        function toggleFields() {
-            const role = document.getElementById('role').value;
-            const symbolGroup = document.getElementById('symbol-group');
-            const passGroup = document.getElementById('password-group');
-            const categoryGroup = document.getElementById('category-group');
-
-            if (role === 'contestant') {
-                symbolGroup.classList.remove('hidden');
-                document.getElementById('symbol').required = true;
-                
-                categoryGroup.classList.remove('hidden');
-                document.getElementById('category').required = true;
-
-                passGroup.classList.add('hidden'); // Candidate: No Password
-                document.getElementById('password').required = false;
-
-                document.getElementById('manifesto-group').classList.remove('hidden');
-                document.getElementById('manifesto').required = true;
-            } else {
-                symbolGroup.classList.add('hidden');
-                document.getElementById('symbol').required = false;
-
-                categoryGroup.classList.add('hidden');
-                document.getElementById('category').required = false;
-
-                passGroup.classList.remove('hidden'); // Voter: Password Required
-                document.getElementById('password').required = true;
-
-                document.getElementById('manifesto-group').classList.add('hidden');
-                document.getElementById('manifesto').required = false;
-
-                document.getElementById('social-link-group').classList.add('hidden');
-            }
-        }
 
         // --- SUBMIT LOGIC ---
         document.getElementById('register-form').addEventListener('submit', async (e) => {
@@ -1117,38 +1049,16 @@
             const regNum = regInput.value;
             const section = sectionInput.value;
             const password = passInput.value;
-            const symbol = symbolInput.value;
             const email = document.getElementById('email').value;
-            const categoryVal = role === 'contestant' ? document.getElementById('category').value : null;
-            const manifestoVal = role === 'contestant' ? document.getElementById('manifesto').value : null;
 
             if (name.length > 50) return showError("Name too long (Max 50).");
             if (name.trim().length === 0) return showError("Name required.");
             if (!/^[A-Za-z ]+$/.test(name)) return showError("Name must contain only alphabets and spaces.");
             if (regNum.length > 10) return showError("Reg Num too long (Max 10).");
             if (!/^[1-9]$/.test(section)) return showError("Section must be a single digit (1-9).");
-            if (role === 'voter') {
-                const pwdError = validatePassword(password, 6, 10);
-                if (pwdError) return showError(pwdError);
-            }
-            
 
-
-            // --- AI MODERATION SIMULATION ---
-            if (role === 'contestant' && manifestoVal) {
-                const blockedWords = ['hate', 'violence', 'bribe', 'fake'];
-                const lowerMan = manifestoVal.toLowerCase();
-                const found = blockedWords.filter(w => lowerMan.includes(w));
-                if (found.length > 0) {
-                    return showError(`[AI Moderation Blocked] Manifesto contains inappropriate content: "${found.join(', ')}". Please revise.`);
-                }
-            }
-
-            if (role === 'contestant') {
-                const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/;
-                if (!emojiRegex.test(symbol)) { return showError("Symbol must be a valid Emoji (e.g. 🦁)."); }
-                if (!categoryVal) { return showError("Super Admin has not defined any valid Electoral Categories yet. You cannot register as a candidate."); }
-            }
+            const pwdError = validatePassword(password, 6, 10);
+            if (pwdError) return showError(pwdError);
 
             errorContainer.classList.add('hidden');
             btn.disabled = true;
