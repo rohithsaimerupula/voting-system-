@@ -999,7 +999,13 @@
                   <input type="checkbox" id="sa-scope-all" onchange="toggleSaScopeAll()" checked> Select All Students
                   (Entire Institution)
                 </label>
-                <div id="sa-scope-hierarchy"></div>
+                <div id="sa-scope-hierarchy" style="max-height:300px; overflow-y:auto; padding:1rem; background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid rgba(255,255,255,0.08); margin-top:0.5rem;">
+                   <div id="sa-scope-empty-msg" style="color:var(--muted); font-size:0.85rem; text-align:center; padding:1.5rem;">
+                      <div style="font-size:1.5rem; margin-bottom:0.5rem;">📂</div>
+                      No student cohorts detected. <br>
+                      <small style="opacity:0.7;">Upload students with Year/Branch/Class to enable granular scoping.</small>
+                   </div>
+                </div>
               </div>
 
               <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:1.2rem; margin-bottom:1.5rem;">
@@ -2515,17 +2521,24 @@
           }
         });
 
-        const c = document.getElementById('sa-scope-hierarchy');
-        if (!c) return;
+        const hierarchyContainer = document.getElementById('sa-scope-hierarchy');
+        const emptyMsg = document.getElementById('sa-scope-empty-msg');
+        
+        if (Object.keys(scopeMap).length === 0) {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            return;
+        }
+        if (emptyMsg) emptyMsg.style.display = 'none';
+
         let html = '';
         years.forEach(yy => {
           if (scopeMap[yy]) {
             html += `<div style="margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
                 <div style="font-weight:bold; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.5rem; cursor:pointer;" onclick="toggleSaY('${yy}')">
-                    <span id="sa-icon-${yy}">▶</span> 
+                    <span id="sa-icon-${yy}">▼</span> 
                     <input type="checkbox" class="cb-sa-year cb-sa-all" id="cb-sa-y-${yy}" onclick="event.stopPropagation(); checkSaY('${yy}')" checked> ${yy} Year
                 </div>
-                <div id="sa-hc-${yy}" style="margin-left: 1.5rem; display: none; flex-direction: column; gap: 0.5rem; margin-top:0.3rem;">
+                <div id="sa-hc-${yy}" style="margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; margin-top:0.3rem;">
                     ${Object.keys(scopeMap[yy]).sort().map(br => `
                       <div style="margin-bottom:0.3rem;">
                         <div style="font-size:0.85rem; color:var(--gold); font-weight:600; display:flex; align-items:center; gap:0.4rem;">
@@ -2544,15 +2557,16 @@
             </div>`;
           }
         });
-        c.innerHTML = html;
+        hierarchyContainer.innerHTML = html;
+        toggleSaScopeAll(); // Initialize visibility/state
       };
 
       window.toggleSaY = function (yy) {
         const el = document.getElementById(`sa-hc-${yy}`);
         const ic = document.getElementById(`sa-icon-${yy}`);
         if (!el || !ic) return;
-        if (el.style.display === 'flex') { el.style.display = 'none'; ic.textContent = '▶'; }
-        else { el.style.display = 'flex'; ic.textContent = '▼'; }
+        if (el.style.display === 'none') { el.style.display = 'flex'; ic.textContent = '▼'; }
+        else { el.style.display = 'none'; ic.textContent = '▶'; }
       };
 
       window.checkSaY = function (yy) {
@@ -2566,8 +2580,15 @@
       };
 
       window.toggleSaScopeAll = function () {
-        const sa = document.getElementById('sa-scope-all').checked;
-        document.querySelectorAll('.cb-sa-all').forEach(cb => cb.checked = sa);
+        const saAll = document.getElementById('sa-scope-all').checked;
+        document.querySelectorAll('.cb-sa-all').forEach(cb => cb.checked = saAll);
+        
+        // Visual feedback: dim hierarchy if 'All' is selected
+        const hierarchy = document.getElementById('sa-scope-hierarchy');
+        if (hierarchy) {
+            hierarchy.style.opacity = saAll ? '0.5' : '1';
+            hierarchy.style.pointerEvents = saAll ? 'none' : 'auto';
+        }
       };
 
       async function loadMultiTierElections() {

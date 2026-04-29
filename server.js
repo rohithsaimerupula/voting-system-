@@ -751,10 +751,14 @@ app.post('/api/elections', authGuard, async (req, res) => {
         const electionCode = Math.random().toString(36).substr(2, 6).toUpperCase();
         
         // Step 2: Create Election Record
+        const now = new Date();
+        const electionStart = startTime ? new Date(startTime) : now;
+        const autoActive = (electionStart <= now) ? 1 : 0;
+
         const electionScope = { ...(scope || {}), categories: categories || [] };
         await db.execute({
-            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy, createdByRole, startTime, endTime, isActive) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,
-            args: [id, institution, name, type, JSON.stringify(electionScope), electionCode, new Date().toISOString(), createdBy, createdByRole || null, startTime || null, endTime || null]
+            sql: `INSERT INTO elections (id, institution, name, type, scope, electionCode, createdAt, createdBy, createdByRole, startTime, endTime, isActive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            args: [id, institution, name, type, JSON.stringify(electionScope), electionCode, now.toISOString(), createdBy, createdByRole || null, startTime || null, endTime || null, autoActive]
         });
 
         // Step 3: Register Candidates as Contestants (if provided)
