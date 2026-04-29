@@ -1161,7 +1161,9 @@
             if (!currentEmail) {
                 // No old email registered, verify the new one directly
                 _devProfileNewEmailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
+                console.warn("🔐 DEV FALLBACK NEW EMAIL OTP:", _devProfileNewEmailOtp);
+                const res = await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
+                if (res && res.warning) showToast(res.warning, false);
                 
                 document.getElementById('dev-profile-otp-section').style.display = 'block';
                 document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to NEW email: ${newEmail})</small>`;
@@ -1173,7 +1175,9 @@
 
             // Send to OLD email
             _devProfileOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            await StorageManager.sendEmailOtp(currentEmail, devSession.name || 'Developer', _devProfileOtp, 'Authorize Profile Change');
+            console.warn("🔐 DEV FALLBACK OLD EMAIL OTP:", _devProfileOtp);
+            const res = await StorageManager.sendEmailOtp(currentEmail, devSession.name || 'Developer', _devProfileOtp, 'Authorize Profile Change');
+            if (res && res.warning) showToast(res.warning, false);
             
             document.getElementById('dev-profile-otp-section').style.display = 'block';
             document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to OLD email: ${currentEmail})</small>`;
@@ -1212,7 +1216,9 @@
                 btn.disabled = true;
 
                 _devProfileNewEmailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
+                console.warn("🔐 DEV FALLBACK NEW EMAIL OTP:", _devProfileNewEmailOtp);
+                const res = await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
+                if (res && res.warning) showToast(res.warning, false);
                 
                 document.getElementById('dev-edit-otp').value = '';
                 document.getElementById('dev-edit-otp-label').innerHTML = `New Email OTP <small>(sent to NEW email: ${newEmail})</small>`;
