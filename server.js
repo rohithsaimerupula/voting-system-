@@ -436,8 +436,14 @@ app.patch('/api/users/:id', async (req, res) => {
         
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
-        values.push(req.params.id, inst);
-        await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND institution = ?`, args: values });
+        
+        if (!inst) {
+            values.push(req.params.id);
+            await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND role = 'developer'`, args: values });
+        } else {
+            values.push(req.params.id, inst);
+            await db.execute({ sql: `UPDATE users SET ${setClause} WHERE regNum = ? AND institution = ?`, args: values });
+        }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

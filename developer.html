@@ -566,7 +566,7 @@
         </div>
         <div class="modal-field">
           <label>Email <small style="text-transform:none">(used for OTP)</small></label>
-          <input type="email" id="dev-edit-email" placeholder="dev@example.com">
+          <input type="email" id="dev-edit-email" placeholder="dev@example.com" disabled>
         </div>
         <div class="modal-field">
           <label>New Password <small style="text-transform:none">(leave blank to keep current, max 12 chars)</small></label>
@@ -1158,18 +1158,12 @@
             document.getElementById('dev-profile-otp-btn').textContent = 'Sending...';
             document.getElementById('dev-profile-otp-btn').disabled = true;
 
+            // Send to current email
             if (!currentEmail) {
-                // No old email registered, verify the new one directly
-                _devProfileNewEmailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                console.warn("🔐 DEV FALLBACK NEW EMAIL OTP:", _devProfileNewEmailOtp);
-                const res = await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
-                if (res && res.warning) showToast(res.warning, false);
-                
-                document.getElementById('dev-profile-otp-section').style.display = 'block';
-                document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to NEW email: ${newEmail})</small>`;
-                document.getElementById('dev-profile-otp-btn').style.display = 'none';
-                document.getElementById('dev-profile-save-btn').style.display = 'inline-block';
-                showToast(`OTP sent to ${newEmail}`);
+                document.getElementById('dev-profile-error').style.color = 'var(--red)';
+                document.getElementById('dev-profile-error').textContent = 'No registered email found for this developer account.';
+                document.getElementById('dev-profile-otp-btn').textContent = '📧 Send OTP & Verify';
+                document.getElementById('dev-profile-otp-btn').disabled = false;
                 return;
             }
 
@@ -1201,63 +1195,27 @@
         const entered = document.getElementById('dev-edit-otp').value.trim();
         if (!_devProfileOtp || entered !== _devProfileOtp) {
             document.getElementById('dev-profile-error').style.color = 'var(--red)';
-            document.getElementById('dev-profile-error').textContent = 'Invalid OTP for old email. Try again.';
+            document.getElementById('dev-profile-error').textContent = 'Invalid OTP for email. Try again.';
             return;
         }
         
-        const newEmail = document.getElementById('dev-edit-email').value.trim();
-        const currentEmail = devSession?.email;
-        const newName = document.getElementById('dev-edit-name').value.trim();
-
-        if (newEmail && newEmail !== currentEmail) {
-            try {
-                const btn = document.getElementById('dev-profile-otp-btn');
-                btn.textContent = 'Sending...';
-                btn.disabled = true;
-
-                _devProfileNewEmailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                console.warn("🔐 DEV FALLBACK NEW EMAIL OTP:", _devProfileNewEmailOtp);
-                const res = await StorageManager.sendEmailOtp(newEmail, newName || 'Developer', _devProfileNewEmailOtp, 'Verify New Email');
-                if (res && res.warning) showToast(res.warning, false);
-                
-                document.getElementById('dev-edit-otp').value = '';
-                document.getElementById('dev-edit-otp-label').innerHTML = `New Email OTP <small>(sent to NEW email: ${newEmail})</small>`;
-                
-                btn.style.display = 'none';
-                document.getElementById('dev-profile-save-btn').style.display = 'inline-block';
-                document.getElementById('dev-profile-error').style.color = '#22c55e';
-                document.getElementById('dev-profile-error').textContent = 'Old email verified! Now enter the OTP sent to your new email.';
-                showToast(`OTP sent to new email: ${newEmail}`);
-            } catch (e) {
-                document.getElementById('dev-profile-error').style.color = 'var(--red)';
-                document.getElementById('dev-profile-error').textContent = 'Failed to send to new email: ' + e.message;
-                const btn = document.getElementById('dev-profile-otp-btn');
-                btn.textContent = '✔️ Verify Old Email OTP';
-                btn.disabled = false;
-            }
-        } else {
-            // No email change, save directly
-            saveDevProfile(true);
-        }
+        // OTP verified successfully
+        const btn = document.getElementById('dev-profile-otp-btn');
+        btn.style.display = 'none';
+        document.getElementById('dev-profile-save-btn').style.display = 'inline-block';
+        document.getElementById('dev-profile-error').style.color = '#22c55e';
+        document.getElementById('dev-profile-error').textContent = 'Email verified! You can now save your changes.';
+        
+        saveDevProfile(true);
     }
 
     async function saveDevProfile(skipOtpCheck = false) {
         if (!skipOtpCheck) {
             const enteredOtp = document.getElementById('dev-edit-otp').value.trim();
-            const currentEmail = devSession?.email;
-
-            if (_devProfileNewEmailOtp) {
-                if (enteredOtp !== _devProfileNewEmailOtp) {
-                    document.getElementById('dev-profile-error').style.color = 'var(--red)';
-                    document.getElementById('dev-profile-error').textContent = 'Invalid OTP for new email.';
-                    return;
-                }
-            } else if (!currentEmail && _devProfileNewEmailOtp) {
-                 if (enteredOtp !== _devProfileNewEmailOtp) {
-                    document.getElementById('dev-profile-error').style.color = 'var(--red)';
-                    document.getElementById('dev-profile-error').textContent = 'Invalid OTP.';
-                    return;
-                }
+            if (!_devProfileOtp || enteredOtp !== _devProfileOtp) {
+                document.getElementById('dev-profile-error').style.color = 'var(--red)';
+                document.getElementById('dev-profile-error').textContent = 'Invalid OTP.';
+                return;
             }
         }
 
