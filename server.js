@@ -67,7 +67,8 @@ async function initDb() {
             `CREATE TABLE IF NOT EXISTS globalChat (id INTEGER PRIMARY KEY AUTOINCREMENT, voterName TEXT, text TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS system_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`,
-            `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`
+            `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`,
+            `ALTER TABLE users ADD COLUMN packRequest TEXT`
         ], "write");
         console.log("Database initialized.");
     } catch (err) { console.error("Error initializing DB:", err); }
@@ -77,7 +78,8 @@ initDb();
 // Migration: safely add new columns to existing tables
 async function runMigrations() {
     const migrations = [
-        { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" }
+        { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" },
+        { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" }
     ];
     for (const m of migrations) {
         try {
@@ -120,6 +122,15 @@ app.get('/api/auditLogs', async (req, res) => {
         const inst = decodeURIComponent(req.query.institution || '');
         const result = await db.execute({ sql: "SELECT * FROM auditLogs WHERE institution = ? ORDER BY timestamp DESC LIMIT 100", args: [inst] });
         res.json(result.rows);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/auditLogs', async (req, res) => {
+    try {
+        const inst = decodeURIComponent(req.query.institution || '');
+        if (!inst) return res.status(400).json({ error: "Institution required" });
+        await db.execute({ sql: "DELETE FROM auditLogs WHERE institution = ?", args: [inst] });
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -174,14 +185,23 @@ app.get('/api/institutions/validate', async (req, res) => {
         const name = req.query.name;
         if (!name) return res.status(400).json({ error: "Name required" });
         
-        const result = await db.execute({ 
+        // Step 1: Check if Super Admin exists
+        const saCheck = await db.execute({ 
             sql: "SELECT regNum FROM users WHERE role = 'superadmin' AND institution = ? LIMIT 1", 
             args: [name] 
         });
-        
-        if (result.rows.length === 0) {
-            return res.status(401).json({ error: "Institution invalid" });
+        if (saCheck.rows.length === 0) return res.status(401).json({ error: "Institution no longer active." });
+
+        // Step 2: Check if institution still has a mapping in codes config
+        const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+        if (configResult.rows.length > 0) {
+            const codeMap = JSON.parse(configResult.rows[0].value);
+            const instsInMap = Object.values(codeMap);
+            if (!instsInMap.includes(name)) {
+                return res.status(401).json({ error: "Institution access code has been removed or changed." });
+            }
         }
+        
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

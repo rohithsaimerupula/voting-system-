@@ -717,11 +717,38 @@ const StorageManager = {
         }
     },
 
+    async validateInstitution() {
+        const inst = localStorage.getItem('ovs_inst_name');
+        if (!inst) return false;
+        try {
+            const res = await fetchApi(`/institutions/validate?name=${encodeURIComponent(inst)}`);
+            return res.success === true;
+        } catch (e) {
+            return false;
+        }
+    },
+
     async verifyCurrentSession() {
         const user = this.getCurrentUser();
+        const inst = localStorage.getItem('ovs_inst_name');
+
+        // Security Policy: If we are in a tenant-specific context (non-developer), 
+        // we must verify that the institution is still active and the code hasn't changed.
+        if (user && user.role !== 'developer' && inst) {
+            const isInstValid = await this.validateInstitution();
+            if (!isInstValid) {
+                console.warn("[OVS Security] Institution no longer valid or code changed. Invalidating session.");
+                this.logout();
+                localStorage.removeItem('ovs_inst_name');
+                localStorage.removeItem('ovs_gate_unlocked');
+                alert('Session Invalid: This institution is no longer active or the access code has changed.');
+                window.location.href = 'index.html';
+                return false;
+            }
+        }
+
         if (!user) return true;
         try {
-            const inst = localStorage.getItem('ovs_inst_name');
             // Check without inst if developer, else with inst
             const apiPath = (user.role === 'developer' || !inst) ? `/users/${encodeURIComponent(user.regNum)}` : `/users/${encodeURIComponent(user.regNum)}?institution=${encodeURIComponent(inst)}`;
             const latestUser = await fetchApi(apiPath);
@@ -757,6 +784,9 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (path.includes('admin_dashboard')) themeClass = 'theme-admin';
     document.body.classList.add(themeClass);
     
-    // Asynchronously verify session integrity globally
-    setTimeout(() => { StorageManager.verifyCurrentSession(); }, 100);
+    // Asynchronously verify session integrity globally and periodically
+    setTimeout(() => { 
+        StorageManager.verifyCurrentSession(); 
+        setInterval(() => StorageManager.verifyCurrentSession(), 30000);
+    }, 100);
 });

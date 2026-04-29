@@ -694,6 +694,16 @@
           </div>
         </div>
 
+        <div class="card" id="pack-request-card" style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2);">
+          <h3 style="color:var(--gold);">🚀 Update Your Pack</h3>
+          <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1rem;">Request a plan upgrade to increase your institution's capacity for admins, sub-admins, and students.</p>
+          <div style="display:flex; gap:1rem; align-items:center;">
+             <select id="request-pack-id" style="max-width:250px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white;"></select>
+             <button class="btn btn-gold" onclick="requestPackUpgrade()" id="request-pack-btn">Request Upgrade</button>
+          </div>
+          <div id="pack-request-status" style="margin-top:0.8rem; font-size:0.85rem; font-weight:600;"></div>
+        </div>
+
         <div class="card">
           <h3>🗳️ Election Status</h3>
           <div id="election-status-info">Loading...</div>
@@ -1142,19 +1152,16 @@
           <button class="btn-sm"
             style="margin-top:1rem; width:100%; border:1px solid var(--purple); color:var(--purple); background:rgba(168,85,247,0.1);"
             onclick="saveCategories()">💾 Save Categories</button>
+        <!-- Results Chart -->
+        <div class="card">
+          <h3>🏆 Live Vote Results</h3>
+          <button class="btn btn-gold" onclick="loadVoting()"
+            style="margin-bottom:1.5rem; padding:0.5rem 1.4rem; font-size:0.9rem;">🔄 Refresh Results</button>
+          <div style="position:relative; height:280px;">
+            <canvas id="results-chart"></canvas>
+          </div>
+          <div id="candidate-tally" style="margin-top:1.5rem;"></div>
         </div>
-
-      </div>
-
-      <!-- Results Chart -->
-      <div class="card">
-        <h3>🏆 Live Vote Results</h3>
-        <button class="btn btn-gold" onclick="loadVoting()"
-          style="margin-bottom:1.5rem; padding:0.5rem 1.4rem; font-size:0.9rem;">🔄 Refresh Results</button>
-        <div style="position:relative; height:280px;">
-          <canvas id="results-chart"></canvas>
-        </div>
-        <div id="candidate-tally" style="margin-top:1.5rem;"></div>
       </div>
     </div>
 
@@ -1374,6 +1381,7 @@
       async function clearAuditLogs() {
         if (!confirm('Are you sure you want to permanently clear ALL audit logs for your institution? This action cannot be undone.')) return;
         try {
+          // Pointing to the new DELETE endpoint added in server.js
           await apiFetch(`/auditLogs?institution=${encodeURIComponent(saSession.institution)}`, { method: 'DELETE' });
           toast('Institution audit logs cleared');
           loadAudit();
@@ -1774,7 +1782,52 @@
 
           // Load pack usage widget
           loadPackUsage();
+          loadAvailablePacks();
         } catch (e) { toast(e.message, false); }
+      }
+
+      async function loadAvailablePacks() {
+        try {
+          const packs = await apiFetch('/packs');
+          const sel = document.getElementById('request-pack-id');
+          if (!sel) return;
+          sel.innerHTML = packs.map(p => `<option value="${p.id}">${p.name} (Admins: ${p.maxAdmins}, Students: ${p.maxStudents})</option>`).join('');
+          
+          // Check for pending request
+          const user = await apiFetch(`/users/${saSession.regNum}?institution=${encodeURIComponent(saSession.institution)}`);
+          const statusEl = document.getElementById('pack-request-status');
+          if (user && user.packRequest) {
+            const req = JSON.parse(user.packRequest);
+            if (req.status === 'pending') {
+              statusEl.textContent = `⏳ Pending request for "${req.packName}" plan. Developer must accept.`;
+              statusEl.style.color = 'var(--gold)';
+              document.getElementById('request-pack-btn').disabled = true;
+            }
+          }
+        } catch(e) {}
+      }
+
+      async function requestPackUpgrade() {
+        const packId = document.getElementById('request-pack-id').value;
+        const packName = document.getElementById('request-pack-id').options[document.getElementById('request-pack-id').selectedIndex].text.split(' (')[0];
+        const btn = document.getElementById('request-pack-btn');
+        
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        
+        try {
+          const reqObj = { packId, packName, status: 'pending', timestamp: new Date().toISOString() };
+          await apiFetch(`/users/${saSession.regNum}?institution=${encodeURIComponent(saSession.institution)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ packRequest: JSON.stringify(reqObj) })
+          });
+          toast('Upgrade request sent to developer!');
+          loadAvailablePacks();
+        } catch(e) {
+          toast(e.message, false);
+          btn.disabled = false;
+          btn.textContent = 'Request Upgrade';
+        }
       }
 
       async function loadPackUsage() {
@@ -1997,6 +2050,7 @@
         document.getElementById('edit-email').value = email || '';
         document.getElementById('edit-branch').value = branch || 'CSE';
         document.getElementById('edit-class-group').style.display = 'none';
+        document.getElementById('edit-year-group').style.display = 'none'; // HIDE YEAR FOR ADMIN
         document.getElementById('edit-class').value = '';
         document.getElementById('edit-pass').value = '';
         document.getElementById('edit-modal').classList.add('open');
@@ -2013,6 +2067,7 @@
         document.getElementById('edit-email').value = email || '';
         document.getElementById('edit-branch').value = branch || 'CSE';
         document.getElementById('edit-class-group').style.display = 'flex';
+        document.getElementById('edit-year-group').style.display = 'flex'; // SHOW YEAR FOR SUB-ADMIN
         document.getElementById('edit-class').value = cls || '';
         document.getElementById('edit-year').value = year || '1st';
         document.getElementById('edit-pass').value = '';
@@ -2714,7 +2769,8 @@
       async function loadMultiTierElections() {
         const list = document.getElementById('multi-tier-elections-list');
         try {
-          const elections = await apiFetch(`/elections?institution=${encodeURIComponent(saSession.institution)}`);
+          // RESTRICTION: Only show elections created by this Super Admin
+          const elections = await apiFetch(`/elections?institution=${encodeURIComponent(saSession.institution)}&createdBy=${saSession.regNum}`);
           if (elections.length === 0) {
             list.innerHTML = '<p class="text-muted" style="grid-column:1/-1; text-align:center;">No specialized elections found.</p>';
             return;

@@ -371,6 +371,25 @@
 
         function buildUI() {
             const fpContainer = document.getElementById('forgot-password-container');
+
+            // --- INSTITUTION GATEWAY CHECK (Universal) ---
+            const userInst = localStorage.getItem('ovs_inst_name');
+            if (!userInst) {
+                alert('Access Denied. Please enter your College Access Code first.');
+                window.location.href = 'index.html';
+                return;
+            } else {
+                StorageManager.validateInstitution().then(isValid => {
+                    if (!isValid) {
+                        alert('This institution is no longer active. Redirecting to gateway...');
+                        window.location.href = 'index.html';
+                    } else {
+                        setText('inst-display', "⛩️ " + userInst);
+                        if (isVoter) checkElectionCountdown(); 
+                    }
+                });
+            }
+
             if (!isStaffMode) {
                 if (fpContainer) fpContainer.style.display = 'block';
                 // Pure Voter Mode: show Manage Profile, Register, and Back button
@@ -387,23 +406,6 @@
                 if(regInput) regInput.placeholder = 'Enter Reg Number';
                 if(passInput) passInput.placeholder = 'Enter Password (6-10 chars)';
                 // NO logo click trick in voter mode
-
-                // --- INSTITUTION GATEWAY CHECK ---
-                const userInst = localStorage.getItem('ovs_inst_name');
-                if (!userInst) {
-                    alert('Access Denied. Please enter your College Access Code first.');
-                    window.location.href = 'index.html';
-                } else {
-                    StorageManager.validateInstitution().then(isValid => {
-                        if (!isValid) {
-                            alert('This institution is no longer active. Redirecting to gateway...');
-                            window.location.href = 'index.html';
-                        } else {
-                            setText('inst-display', "⛩️ " + userInst);
-                            checkElectionCountdown(); // Load countdown if active
-                        }
-                    });
-                }
             } else {
                 if (fpContainer) {
                     fpContainer.style.display = 'block';
