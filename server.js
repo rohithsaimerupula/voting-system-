@@ -196,8 +196,8 @@ app.get('/api/institutions/validate', async (req, res) => {
         const configResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
         if (configResult.rows.length > 0) {
             const codeMap = JSON.parse(configResult.rows[0].value);
-            const instsInMap = Object.values(codeMap);
-            if (!instsInMap.includes(name)) {
+            const instsInMap = Object.values(codeMap).map(v => v.toLowerCase());
+            if (!instsInMap.includes(name.toLowerCase())) {
                 return res.status(401).json({ error: "Institution access code has been removed or changed." });
             }
         }

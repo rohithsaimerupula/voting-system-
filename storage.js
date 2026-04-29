@@ -735,15 +735,24 @@ const StorageManager = {
         // Security Policy: If we are in a tenant-specific context (non-developer), 
         // we must verify that the institution is still active and the code hasn't changed.
         if (user && user.role !== 'developer' && inst) {
-            const isInstValid = await this.validateInstitution();
-            if (!isInstValid) {
-                console.warn("[OVS Security] Institution no longer valid or code changed. Invalidating session.");
-                this.logout();
-                localStorage.removeItem('ovs_inst_name');
-                localStorage.removeItem('ovs_gate_unlocked');
-                alert('Session Invalid: This institution is no longer active or the access code has changed.');
-                window.location.href = 'index.html';
-                return false;
+            try {
+                const res = await fetchApi(`/institutions/validate?name=${encodeURIComponent(inst)}`);
+                if (res.success !== true) throw new Error("Invalid");
+            } catch (e) {
+                // ONLY logout if the error is an explicit 401 Unauthorized or 403 Forbidden
+                // (which fetchApi should bubble up as an error with that status/message)
+                const errorText = e.message ? e.message.toLowerCase() : "";
+                if (errorText.includes("no longer active") || errorText.includes("removed or changed") || errorText.includes("401") || errorText.includes("403")) {
+                    console.warn("[OVS Security] Institution validation failed explicitly. Invalidating session.");
+                    this.logout();
+                    localStorage.removeItem('ovs_inst_name');
+                    localStorage.removeItem('ovs_gate_unlocked');
+                    alert('Session Invalid: This institution is no longer active or the access code has changed.');
+                    window.location.href = 'index.html';
+                    return false;
+                }
+                // For transient network errors (e.g. 500, 503, or failed to fetch), we keep the session.
+                console.warn("[OVS Security] Transient validation error, keeping session:", e.message);
             }
         }
 
