@@ -1121,13 +1121,9 @@
         document.getElementById('dev-edit-name').value = devSession.name || '';
         
         const emailInput = document.getElementById('dev-edit-email');
-        emailInput.value = devSession.email || '';
-        if (!devSession.email) {
-            emailInput.disabled = false;
-            emailInput.placeholder = "Enter email for OTP";
-        } else {
-            emailInput.disabled = true;
-        }
+        // Fixed developer email for OTP as requested
+        emailInput.value = 'rohithsaimerupula01@gmail.com';
+        emailInput.disabled = true;
 
         document.getElementById('dev-edit-pass').value = '';
         document.getElementById('dev-edit-otp').value = '';
@@ -1153,27 +1149,17 @@
     }
 
     async function sendDevProfileOtp() {
-        const currentEmail = devSession?.email;
-        const newEmail = document.getElementById('dev-edit-email').value.trim();
+        const targetEmail = 'rohithsaimerupula01@gmail.com';
         const newName = document.getElementById('dev-edit-name').value.trim();
-
-        if (!currentEmail && !newEmail) {
-            document.getElementById('dev-profile-error').style.color = 'var(--red)';
-            document.getElementById('dev-profile-error').textContent = 'You must provide an email.';
-            return;
-        }
 
         try {
             document.getElementById('dev-profile-otp-btn').textContent = 'Sending...';
             document.getElementById('dev-profile-otp-btn').disabled = true;
 
-            const targetEmail = currentEmail || newEmail;
-            const isFirstTimeEmail = !currentEmail;
-
             _devProfileOtp = Math.floor(100000 + Math.random() * 900000).toString();
             console.warn("🔐 DEV PROFILE OTP:", _devProfileOtp);
             
-            const context = isFirstTimeEmail ? 'Verify Developer Email' : 'Authorize Profile Change';
+            const context = 'Authorize Profile Change';
             const res = await StorageManager.sendEmailOtp(targetEmail, devSession.name || 'Developer', _devProfileOtp, context);
             if (res && res.warning) showToast(res.warning, false);
             
@@ -1181,8 +1167,8 @@
             document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to: ${targetEmail})</small>`;
             
             const btn = document.getElementById('dev-profile-otp-btn');
-            btn.textContent = isFirstTimeEmail ? '✔️ Verify OTP' : '✔️ Verify Old Email OTP';
-            btn.onclick = verifyOldEmailOtp; // Both flows end up here to enable Save
+            btn.textContent = '✔️ Verify OTP';
+            btn.onclick = verifyOldEmailOtp; 
             btn.disabled = false;
             
             showToast(`OTP sent to: ${targetEmail}`);
