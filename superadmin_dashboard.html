@@ -1065,6 +1065,15 @@
               <button class="btn btn-red" style="flex:1" onclick="stopElection()">⏹ End Election</button>
             </div>
           </div>
+          
+          <!-- Election Structure (Categories) -->
+          <div class="card" id="integrated-structure-card" style="display:none; border-color: rgba(168,85,247,0.2);">
+            <h3 style="color:var(--purple);">🏛️ Election Structure</h3>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem;">Categories included in this election:</p>
+            <div id="integrated-categories-list" style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                <!-- Filled by JS -->
+            </div>
+          </div>
 
         <!-- Election Categories -->
         <div class="card" id="categories-manager-card">
