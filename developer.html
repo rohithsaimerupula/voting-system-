@@ -706,7 +706,7 @@
                     const consS = document.getElementById('console-screen');
                     if (authS) authS.style.display = 'none';
                     if (consS) consS.style.display = 'block';
-                    setText('dev-name-label', `${user.name || 'Developer'} ${user.email ? `(${user.email})` : ''}`);
+                    setText('dev-name-label', user.name || 'Developer');
                     loadConsole();
                 }
             } catch(e) {
