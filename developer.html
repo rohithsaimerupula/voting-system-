@@ -1119,7 +1119,16 @@
     function openDevProfile() {
         if (!devSession) return;
         document.getElementById('dev-edit-name').value = devSession.name || '';
-        document.getElementById('dev-edit-email').value = devSession.email || '';
+        
+        const emailInput = document.getElementById('dev-edit-email');
+        emailInput.value = devSession.email || '';
+        if (!devSession.email) {
+            emailInput.disabled = false;
+            emailInput.placeholder = "Enter email for OTP";
+        } else {
+            emailInput.disabled = true;
+        }
+
         document.getElementById('dev-edit-pass').value = '';
         document.getElementById('dev-edit-otp').value = '';
         document.getElementById('dev-profile-error').textContent = '';
@@ -1158,30 +1167,25 @@
             document.getElementById('dev-profile-otp-btn').textContent = 'Sending...';
             document.getElementById('dev-profile-otp-btn').disabled = true;
 
-            // Send to current email
-            if (!currentEmail) {
-                document.getElementById('dev-profile-error').style.color = 'var(--red)';
-                document.getElementById('dev-profile-error').textContent = 'No registered email found for this developer account.';
-                document.getElementById('dev-profile-otp-btn').textContent = '📧 Send OTP & Verify';
-                document.getElementById('dev-profile-otp-btn').disabled = false;
-                return;
-            }
+            const targetEmail = currentEmail || newEmail;
+            const isFirstTimeEmail = !currentEmail;
 
-            // Send to OLD email
             _devProfileOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            console.warn("🔐 DEV FALLBACK OLD EMAIL OTP:", _devProfileOtp);
-            const res = await StorageManager.sendEmailOtp(currentEmail, devSession.name || 'Developer', _devProfileOtp, 'Authorize Profile Change');
+            console.warn("🔐 DEV PROFILE OTP:", _devProfileOtp);
+            
+            const context = isFirstTimeEmail ? 'Verify Developer Email' : 'Authorize Profile Change';
+            const res = await StorageManager.sendEmailOtp(targetEmail, devSession.name || 'Developer', _devProfileOtp, context);
             if (res && res.warning) showToast(res.warning, false);
             
             document.getElementById('dev-profile-otp-section').style.display = 'block';
-            document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to OLD email: ${currentEmail})</small>`;
+            document.getElementById('dev-edit-otp-label').innerHTML = `OTP <small>(sent to: ${targetEmail})</small>`;
             
             const btn = document.getElementById('dev-profile-otp-btn');
-            btn.textContent = '✔️ Verify Old Email OTP';
-            btn.onclick = verifyOldEmailOtp;
+            btn.textContent = isFirstTimeEmail ? '✔️ Verify OTP' : '✔️ Verify Old Email OTP';
+            btn.onclick = verifyOldEmailOtp; // Both flows end up here to enable Save
             btn.disabled = false;
             
-            showToast(`OTP sent to old email: ${currentEmail}`);
+            showToast(`OTP sent to: ${targetEmail}`);
             document.getElementById('dev-profile-error').textContent = '';
         } catch(e) {
             document.getElementById('dev-profile-error').style.color = 'var(--red)';
