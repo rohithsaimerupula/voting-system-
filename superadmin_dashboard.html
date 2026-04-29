@@ -2161,7 +2161,7 @@
       }
 
       // ── New Integrated Election Creation ────────────────
-      let creationCategories = [{ name: '', candidates: [{ name: '', regNum: '' }, { name: '', regNum: '' }] }];
+      let creationCategories = [{ name: '', candidates: [{ name: '', regNum: '', symbol: '👑' }, { name: '', regNum: '', symbol: '🔥' }] }];
 
       function renderCreationCategories() {
         const container = document.getElementById('creation-categories-container');
@@ -2177,10 +2177,15 @@
             <div style="display:flex; flex-direction:column; gap:0.5rem;">
               ${cat.candidates.map((cand, candIdx) => `
                 <div style="display:flex; gap:0.5rem; align-items:center;">
-                  <input type="text" placeholder="Candidate Name" value="${cand.name}" 
+                  <div id="portrait-preview-${catIdx}-${candIdx}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); overflow:hidden; flex-shrink:0;">
+                     <img src="https://via.placeholder.com/32" style="width:100%; height:100%; object-fit:cover;">
+                  </div>
+                  <input type="text" placeholder="Reg Num" value="${cand.regNum}" 
+                    oninput="creationCategories[${catIdx}].candidates[${candIdx}].regNum=this.value.toUpperCase(); tryAutoFillCandidate(${catIdx}, ${candIdx})" style="width:120px;">
+                  <input type="text" id="cand-name-${catIdx}-${candIdx}" placeholder="Candidate Name" value="${cand.name}" 
                     oninput="creationCategories[${catIdx}].candidates[${candIdx}].name=this.value" style="flex:2;">
-                  <input type="text" placeholder="ID/Reg Num" value="${cand.regNum}" 
-                    oninput="creationCategories[${catIdx}].candidates[${candIdx}].regNum=this.value" style="flex:1;">
+                  <input type="text" placeholder="Sym" value="${cand.symbol || ''}" 
+                    oninput="creationCategories[${catIdx}].candidates[${candIdx}].symbol=this.value" style="width:50px; text-align:center;">
                   ${candIdx > 1 ? `<button style="background:none; border:none; color:var(--red); cursor:pointer;" onclick="removeCreationCandidate(${catIdx}, ${candIdx})">✕</button>` : ''}
                 </div>
               `).join('')}
@@ -2191,7 +2196,7 @@
       }
 
       window.addCreationCategory = function() {
-        creationCategories.push({ name: '', candidates: [{ name: '', regNum: '' }, { name: '', regNum: '' }] });
+        creationCategories.push({ name: '', candidates: [{ name: '', regNum: '', symbol: '⭐' }, { name: '', regNum: '', symbol: '🚀' }] });
         renderCreationCategories();
       };
       window.removeCreationCategory = function(idx) {
@@ -2199,12 +2204,30 @@
         renderCreationCategories();
       };
       window.addCreationCandidate = function(catIdx) {
-        creationCategories[catIdx].candidates.push({ name: '', regNum: '' });
+        const symbols = ['💎', '🎯', '🌈', '⚡', '🍀', '🍎', '⚽', '🎸'];
+        const sym = symbols[creationCategories[catIdx].candidates.length % symbols.length];
+        creationCategories[catIdx].candidates.push({ name: '', regNum: '', symbol: sym });
         renderCreationCategories();
       };
       window.removeCreationCandidate = function(catIdx, candIdx) {
         creationCategories[catIdx].candidates.splice(candIdx, 1);
         renderCreationCategories();
+      };
+
+      window.tryAutoFillCandidate = function(catIdx, candIdx) {
+          const reg = creationCategories[catIdx].candidates[candIdx].regNum;
+          const student = allStudents.find(s => s.regNum === reg);
+          if (student) {
+              creationCategories[catIdx].candidates[candIdx].name = student.name;
+              creationCategories[catIdx].candidates[candIdx].portrait = student.portrait;
+              // Update UI immediately without full re-render to avoid losing focus
+              const nameInput = document.getElementById(`cand-name-${catIdx}-${candIdx}`);
+              if (nameInput) nameInput.value = student.name;
+              const preview = document.getElementById(`portrait-preview-${catIdx}-${candIdx}`);
+              if (preview) {
+                  preview.innerHTML = `<img src="${student.portrait || 'https://via.placeholder.com/32'}" style="width:100%; height:100%; object-fit:cover;">`;
+              }
+          }
       };
 
       async function startNewElection() {

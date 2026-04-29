@@ -68,7 +68,8 @@ async function initDb() {
             `CREATE TABLE IF NOT EXISTS system_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS elections (id TEXT PRIMARY KEY, institution TEXT, name TEXT, type TEXT, scope TEXT, electionCode TEXT, isActive INTEGER DEFAULT 0, isCompleted INTEGER DEFAULT 0, registrationOpen INTEGER DEFAULT 1, startTime TEXT, endTime TEXT, createdBy TEXT, createdByRole TEXT, createdAt TEXT)`,
             `CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT, maxAdmins INTEGER DEFAULT 20, maxSubAdmins INTEGER DEFAULT 4, maxStudents INTEGER DEFAULT 1000, createdAt TEXT)`,
-            `ALTER TABLE users ADD COLUMN packRequest TEXT`
+            `ALTER TABLE users ADD COLUMN packRequest TEXT`,
+            `ALTER TABLE users ADD COLUMN symbol TEXT`
         ], "write");
         console.log("Database initialized.");
     } catch (err) { console.error("Error initializing DB:", err); }
@@ -79,7 +80,8 @@ initDb();
 async function runMigrations() {
     const migrations = [
         { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" },
-        { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" }
+        { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" },
+        { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" }
     ];
     for (const m of migrations) {
         try {
@@ -761,9 +763,9 @@ app.post('/api/elections', authGuard, async (req, res) => {
                 // Ensure candidate exists or create a basic record
                 // We'll use a transaction/batch for this usually, but here we'll just insert/ignore
                 await db.execute({
-                    sql: `INSERT INTO users (regNum, institution, role, name, status, category) VALUES (?, ?, 'contestant', ?, 'active', ?)
-                          ON CONFLICT(regNum, institution) DO UPDATE SET role='contestant', category=EXCLUDED.category`,
-                    args: [cand.regNum, institution, cand.name, cand.category]
+                    sql: `INSERT INTO users (regNum, institution, role, name, status, category, symbol, portrait) VALUES (?, ?, 'contestant', ?, 'active', ?, ?, ?)
+                          ON CONFLICT(regNum, institution) DO UPDATE SET role='contestant', category=EXCLUDED.category, symbol=EXCLUDED.symbol, portrait=EXCLUDED.portrait`,
+                    args: [cand.regNum, institution, cand.name, cand.category, cand.symbol || null, cand.portrait || null]
                 });
             }
         }
