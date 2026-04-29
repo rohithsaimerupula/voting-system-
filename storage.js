@@ -761,7 +761,11 @@ const StorageManager = {
                 return false;
             }
             // Sync any other role/status updates silently
-            this.saveSession(latestUser);
+            if (JSON.stringify(latestUser) !== JSON.stringify(user)) {
+                console.log("[OVS Security] Session data updated from server.");
+                this.saveSession(latestUser);
+                window.dispatchEvent(new CustomEvent('ovs_session_updated', { detail: latestUser }));
+            }
             return true;
         } catch (e) {
             if (e.message && e.message.toLowerCase().includes("not found")) {

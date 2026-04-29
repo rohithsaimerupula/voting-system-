@@ -1518,6 +1518,13 @@
           setText('inst-name-sub', saSession.institution || '');
           loadAll();
         }
+
+        // Listen for remote session updates (e.g. from developer approval)
+        window.addEventListener('ovs_session_updated', (e) => {
+           console.log("[OVS] Remote session update detected. Refreshing dashboard...");
+           saSession = e.detail;
+           loadAll(); // Re-fetch all data with new pack context
+        });
       });
 
       async function apiFetch(path, opts = {}) {

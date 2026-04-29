@@ -371,7 +371,7 @@ app.get('/api/users/:id', async (req, res) => {
 app.get('/api/dev/stats', async (req, res) => {
     try {
         const [saRes, instRes, allUsersRes] = await Promise.all([
-            db.execute({ sql: "SELECT regNum, name, institution, email, status, packId FROM users WHERE role = 'superadmin'", args: [] }),
+            db.execute({ sql: "SELECT regNum, name, institution, email, status, packId, packRequest FROM users WHERE role = 'superadmin'", args: [] }),
             db.execute({ sql: "SELECT DISTINCT institution FROM users WHERE role = 'superadmin' AND institution NOT IN ('Unknown', 'Global', '')", args: [] }),
             db.execute({ sql: "SELECT institution, role, COUNT(*) as count FROM users WHERE role != 'developer' GROUP BY institution, role", args: [] })
         ]);
