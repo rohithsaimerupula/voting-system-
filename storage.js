@@ -715,6 +715,36 @@ const StorageManager = {
             console.error("Health Fetch Error:", e);
             throw e;
         }
+    },
+
+    async verifyCurrentSession() {
+        const user = this.getCurrentUser();
+        if (!user) return true;
+        try {
+            const inst = localStorage.getItem('ovs_inst_name');
+            // Check without inst if developer, else with inst
+            const apiPath = (user.role === 'developer' || !inst) ? `/users/${encodeURIComponent(user.regNum)}` : `/users/${encodeURIComponent(user.regNum)}?institution=${encodeURIComponent(inst)}`;
+            const latestUser = await fetchApi(apiPath);
+            
+            // If password has changed remotely, force logout
+            if (latestUser.password !== user.password) {
+                console.warn("[OVS Security] Remote password change detected. Session invalidated.");
+                this.logout();
+                window.location.href = 'index.html'; // Force redirect to gateway
+                return false;
+            }
+            // Sync any other role/status updates silently
+            this.saveSession(latestUser);
+            return true;
+        } catch (e) {
+            if (e.message && e.message.toLowerCase().includes("not found")) {
+                 console.warn("[OVS Security] User account no longer exists. Session invalidated.");
+                 this.logout();
+                 window.location.href = 'index.html';
+                 return false;
+            }
+            return true;
+        }
     }
 };
 
@@ -726,4 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (path.includes('voter_dashboard')) themeClass = 'theme-voter';
     else if (path.includes('admin_dashboard')) themeClass = 'theme-admin';
     document.body.classList.add(themeClass);
+    
+    // Asynchronously verify session integrity globally
+    setTimeout(() => { StorageManager.verifyCurrentSession(); }, 100);
 });

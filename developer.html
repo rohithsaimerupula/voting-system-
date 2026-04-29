@@ -569,8 +569,8 @@
           <input type="email" id="dev-edit-email" placeholder="dev@example.com">
         </div>
         <div class="modal-field">
-          <label>New Password <small style="text-transform:none">(leave blank to keep current)</small></label>
-          <input type="password" id="dev-edit-pass" placeholder="Leave blank to keep">
+          <label>New Password <small style="text-transform:none">(leave blank to keep current, max 12 chars)</small></label>
+          <input type="password" id="dev-edit-pass" placeholder="Leave blank to keep" maxlength="12">
         </div>
         <div id="dev-profile-otp-section" style="display:none;">
           <div class="modal-field">
@@ -795,7 +795,14 @@
 
     function toggleDevPass() {
       const p = document.getElementById('dev-pass');
-      p.type = p.type === 'password' ? 'text' : 'password';
+      const btn = p.nextElementSibling;
+      if (p.type === 'password') {
+        p.type = 'text';
+        if (btn) btn.textContent = '🙈';
+      } else {
+        p.type = 'password';
+        if (btn) btn.textContent = '👁️';
+      }
     }
 
     function devLogout() {
@@ -1484,6 +1491,10 @@
     });
 
     document.getElementById('dev-pass').addEventListener('input', function() {
+        this.value = this.value.replace(/\s/g, '').slice(0, 12);
+    });
+
+    document.getElementById('dev-edit-pass').addEventListener('input', function() {
         this.value = this.value.replace(/\s/g, '').slice(0, 12);
     });
 
