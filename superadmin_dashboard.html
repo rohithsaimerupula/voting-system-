@@ -2560,54 +2560,79 @@
       };
 
       window.buildSaScopeHierarchy = function () {
-        const years = ['1st', '2nd', '3rd', '4th'];
-        let scopeMap = {}; // { year: { branch: [class1, class2] } }
-        allStudents.forEach(s => {
-          if (s.year && s.branch && s.class) {
-            if (!scopeMap[s.year]) scopeMap[s.year] = {};
-            if (!scopeMap[s.year][s.branch]) scopeMap[s.year][s.branch] = new Set();
-            scopeMap[s.year][s.branch].add(s.class);
-          }
-        });
-
         const hierarchyContainer = document.getElementById('sa-scope-hierarchy');
         const emptyMsg = document.getElementById('sa-scope-empty-msg');
-        
+        if (!hierarchyContainer) return;
+
+        // Build map: year -> branch -> Set of classes
+        // Works even with partial data (missing year, missing class, etc.)
+        const UNKNOWN_YEAR   = 'Other';
+        const UNKNOWN_BRANCH = 'Other';
+        const yearOrder = ['1st', '2nd', '3rd', '4th', UNKNOWN_YEAR];
+        let scopeMap = {};
+
+        allStudents.forEach(s => {
+          if (!s.branch && !s.class && !s.year) return; // skip students with absolutely no grouping data
+          const yy = s.year   || UNKNOWN_YEAR;
+          const br = s.branch || UNKNOWN_BRANCH;
+          const cl = s.class  || null;
+
+          if (!scopeMap[yy]) scopeMap[yy] = {};
+          if (!scopeMap[yy][br]) scopeMap[yy][br] = new Set();
+          if (cl) scopeMap[yy][br].add(cl);
+        });
+
         if (Object.keys(scopeMap).length === 0) {
-            if (emptyMsg) emptyMsg.style.display = 'block';
-            return;
+          if (emptyMsg) emptyMsg.style.display = 'block';
+          return;
         }
         if (emptyMsg) emptyMsg.style.display = 'none';
 
         let html = '';
-        years.forEach(yy => {
-          if (scopeMap[yy]) {
-            html += `<div style="margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
-                <div style="font-weight:bold; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.5rem; cursor:pointer;" onclick="toggleSaY('${yy}')">
-                    <span id="sa-icon-${yy}">▼</span> 
-                    <input type="checkbox" class="cb-sa-year cb-sa-all" id="cb-sa-y-${yy}" onclick="event.stopPropagation(); checkSaY('${yy}')" checked> ${yy} Year
-                </div>
-                <div id="sa-hc-${yy}" style="margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; margin-top:0.3rem;">
-                    ${Object.keys(scopeMap[yy]).sort().map(br => `
-                      <div style="margin-bottom:0.3rem;">
-                        <div style="font-size:0.85rem; color:var(--gold); font-weight:600; display:flex; align-items:center; gap:0.4rem;">
-                           <input type="checkbox" class="cb-sa-branch cb-sa-all cb-sa-y-${yy}" data-year="${yy}" data-branch="${br}" id="cb-sa-y-${yy}-b-${br}" onclick="checkSaB('${yy}', '${br}')" checked> ${br}
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:0.8rem; margin-left:1.4rem; margin-top:0.2rem;">
-                          ${Array.from(scopeMap[yy][br]).sort().map(cls => `
-                            <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--muted);text-transform:none;">
-                              <input type="checkbox" class="cb-sa-class cb-sa-all cb-sa-y-${yy} cb-sa-y-${yy}-b-${br}" data-year="${yy}" data-branch="${br}" data-class="${cls}" checked> ${cls}
-                            </label>
-                          `).join('')}
-                        </div>
+        yearOrder.forEach(yy => {
+          if (!scopeMap[yy]) return;
+          const branches = Object.keys(scopeMap[yy]).sort();
+
+          html += `
+            <div style="margin-bottom:1rem; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.07); overflow:hidden;">
+              <!-- Year Header -->
+              <div style="display:flex; align-items:center; gap:0.6rem; padding:0.65rem 0.9rem; background:rgba(255,42,77,0.07); cursor:pointer; user-select:none;" onclick="toggleSaY('${yy}')">
+                <span id="sa-icon-${yy}" style="font-size:0.75rem; opacity:0.6;">▼</span>
+                <input type="checkbox" class="cb-sa-year cb-sa-all" id="cb-sa-y-${yy}" onclick="event.stopPropagation(); checkSaY('${yy}')" checked style="width:15px;height:15px;accent-color:var(--gold);">
+                <span style="font-weight:700; font-size:0.88rem; color:var(--gold);">${yy === 'Other' ? '📁 Unassigned Year' : '📅 ' + yy + ' Year'}</span>
+                <span style="margin-left:auto; font-size:0.72rem; color:var(--muted);">${branches.length} branch${branches.length > 1 ? 'es' : ''}</span>
+              </div>
+
+              <!-- Branches -->
+              <div id="sa-hc-${yy}" style="padding:0.5rem 0.9rem 0.7rem; display:flex; flex-direction:column; gap:0.6rem;">
+                ${branches.map(br => {
+                  const classes = Array.from(scopeMap[yy][br]).sort();
+                  return `
+                  <div style="background:rgba(255,255,255,0.03); border-radius:8px; padding:0.5rem 0.7rem;">
+                    <!-- Branch row -->
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:${classes.length ? '0.5rem' : '0'};">
+                      <input type="checkbox" class="cb-sa-branch cb-sa-all cb-sa-y-${yy}" data-year="${yy}" data-branch="${br}" id="cb-sa-y-${yy}-b-${br}" onclick="checkSaB('${yy}','${br}')" checked style="width:14px;height:14px;accent-color:var(--gold);">
+                      <span style="font-weight:600; font-size:0.85rem; color:var(--text);">🏫 ${br}</span>
+                      ${classes.length ? `<span style="font-size:0.7rem; color:var(--muted); margin-left:auto;">${classes.length} class${classes.length > 1 ? 'es' : ''}</span>` : '<span style="font-size:0.7rem; color:var(--muted); margin-left:auto;">All students</span>'}
+                    </div>
+                    <!-- Individual Classes -->
+                    ${classes.length ? `
+                      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-left:1.6rem;">
+                        ${classes.map(cls => `
+                          <label style="display:flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; background:rgba(255,255,255,0.05); border-radius:6px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; font-size:0.78rem; color:var(--muted); text-transform:none; white-space:nowrap;">
+                            <input type="checkbox" class="cb-sa-class cb-sa-all cb-sa-y-${yy} cb-sa-y-${yy}-b-${br}" data-year="${yy}" data-branch="${br}" data-class="${cls}" checked style="width:13px;height:13px;accent-color:var(--gold);">
+                            ${cls}
+                          </label>
+                        `).join('')}
                       </div>
-                    `).join('')}
-                </div>
+                    ` : ''}
+                  </div>`;
+                }).join('')}
+              </div>
             </div>`;
-          }
         });
+
         hierarchyContainer.innerHTML = html;
-        toggleSaScopeAll(); // Initialize visibility/state
       };
 
       window.toggleSaY = function (yy) {
@@ -2632,17 +2657,19 @@
       window.onScopeModeChange = function () {
         const isAll = document.getElementById('sa-scope-all').checked;
         const picker = document.getElementById('sa-scope-class-picker');
-        const allLabel = document.getElementById('scope-all-label');
+        const allLabel      = document.getElementById('scope-all-label');
         const specificLabel = document.getElementById('scope-specific-label');
 
         if (isAll) {
-          picker.style.display = 'none';
+          picker.style.display      = 'none';
           allLabel.style.borderColor      = 'rgba(255,42,77,0.5)';
           allLabel.style.background       = 'rgba(255,42,77,0.08)';
           specificLabel.style.borderColor = 'rgba(255,255,255,0.1)';
           specificLabel.style.background  = 'rgba(255,255,255,0.04)';
         } else {
-          picker.style.display = 'block';
+          // Build/refresh hierarchy from live student data BEFORE showing picker
+          buildSaScopeHierarchy();
+          picker.style.display      = 'block';
           specificLabel.style.borderColor = 'rgba(255,42,77,0.5)';
           specificLabel.style.background  = 'rgba(255,42,77,0.08)';
           allLabel.style.borderColor      = 'rgba(255,255,255,0.1)';
