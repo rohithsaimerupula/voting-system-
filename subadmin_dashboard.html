@@ -520,15 +520,25 @@ function setHTML(id, html) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Re-read session in case it was just saved by login.html
+  session = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+
   if (session && session.role === 'subadmin') {
-    document.getElementById('auth-overlay').style.display='none';
-    document.getElementById('main-layout').style.display='flex';
-    setText('class-label', `${session.year||''} ${session.class||'-'}`);
-    setText('class-sub', `Managing ${session.year||''} ${session.class} — ${session.branch} — ${session.institution}`);
-    setText('class-students-sub', `Students in ${session.year||''} ${session.class}`);
+    // Valid session — hide overlay and show dashboard
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-layout').style.display = 'flex';
+    setText('class-label', `${session.year || ''} ${session.class || '-'}`);
+    setText('class-sub', `Managing ${session.year || ''} ${session.class} — ${session.branch} — ${session.institution}`);
+    setText('class-students-sub', `Students in ${session.year || ''} ${session.class}`);
     loadAll();
+  } else if (session && session.role && session.role !== 'subadmin') {
+    // Wrong role logged in — send back to the correct portal
+    alert('Access Denied: This portal is for Sub-Admins (Class Admins) only.');
+    window.location.href = 'login.html?admin=true';
+  } else {
+    // No session at all — redirect to main login instead of showing secondary form
+    window.location.href = 'login.html?admin=true';
   }
-  // If no session, auth-overlay is shown by default (display:flex in HTML) — user must log in via the overlay form
 });
 
 async function apiFetch(path, opts = {}) {
