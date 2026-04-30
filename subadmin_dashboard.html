@@ -97,7 +97,15 @@
   </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
-<!-- AUTH -->
+<!-- LOADING SCREEN (shown first, prevents blank page) -->
+<div id="loading-screen" style="position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);">
+  <div style="font-size:2.5rem;margin-bottom:1rem;">👥</div>
+  <div style="color:var(--purple);font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;">Class Admin Portal</div>
+  <div style="width:40px;height:40px;border:3px solid rgba(168,85,247,0.2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<!-- AUTH OVERLAY (only shown if no valid session) -->
 <div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
   <div style="background:rgba(255,42,77,0.08);border:1px solid rgba(255,42,77,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Class Admin Portal</div>
@@ -516,38 +524,41 @@ function setHTML(id, html) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  try {
-    // Re-read session fresh from localStorage
-    session = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+  const loadingScreen = document.getElementById('loading-screen');
+  const authOverlay   = document.getElementById('auth-overlay');
+  const mainLayout    = document.getElementById('main-layout');
 
-    const role = (session && session.role) ? session.role.trim().toLowerCase() : '';
+  function showDashboard(s) {
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (authOverlay)   authOverlay.style.display   = 'none';
+    if (mainLayout)    mainLayout.style.display     = 'flex';
+    try {
+      setText('class-label',       `${s.year || ''} ${s.class || '-'}`);
+      setText('class-sub',         `Managing ${s.year || ''} ${s.class} — ${s.branch} — ${s.institution}`);
+      setText('class-students-sub',`Students in ${s.year || ''} ${s.class}`);
+    } catch(e) {}
+    setTimeout(() => { try { loadAll(); } catch(e) { console.error('loadAll:', e); } }, 50);
+  }
+
+  function showLoginForm() {
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (mainLayout)    mainLayout.style.display     = 'none';
+    if (authOverlay)   { authOverlay.style.display  = 'flex'; }
+  }
+
+  try {
+    session = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+    const role = session && session.role ? session.role.trim().toLowerCase() : '';
+    console.log('[SubAdmin] session role:', role, '| regNum:', session && session.regNum);
 
     if (role === 'subadmin') {
-      // ✅ Valid session — show dashboard immediately
-      document.getElementById('auth-overlay').style.display = 'none';
-      document.getElementById('main-layout').style.display = 'flex';
-      try {
-        setText('class-label', `${session.year || ''} ${session.class || '-'}`);
-        setText('class-sub', `Managing ${session.year || ''} ${session.class} — ${session.branch} — ${session.institution}`);
-        setText('class-students-sub', `Students in ${session.year || ''} ${session.class}`);
-      } catch(e) { console.warn('Label update failed:', e); }
-      // Load data separately so any API error doesn't block the UI
-      setTimeout(() => { try { loadAll(); } catch(e) { console.error('loadAll error:', e); } }, 100);
-
-    } else if (role && role !== 'subadmin') {
-      // Wrong role
-      alert('Access Denied: This portal is for Class Admins (Sub-Admins) only.');
-      window.location.href = 'login.html?admin=true';
-
+      showDashboard(session);
     } else {
-      // No session — go to login
-      window.location.href = 'login.html?admin=true';
+      showLoginForm();
     }
   } catch(e) {
-    // Last resort: show the login form instead of a blank page
-    console.error('DOMContentLoaded error:', e);
-    const overlay = document.getElementById('auth-overlay');
-    if (overlay) overlay.style.display = 'flex';
+    console.error('[SubAdmin] Auth error:', e);
+    showLoginForm();
   }
 });
 
