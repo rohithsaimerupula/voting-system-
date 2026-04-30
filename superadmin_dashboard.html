@@ -614,13 +614,13 @@
       <div class="sidebar-brand">SOVEREIGN CONTROL</div>
       <div class="sidebar-role" id="sa-inst-label" style="color: var(--gold); font-weight: 700;">Global Super-Portal
       </div>
-      <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span> Overview</div>
-      <div class="nav-item" onclick="showPage('admins')"><span class="nav-icon">🧑‍💼</span> Manage Admins</div>
-      <div class="nav-item" onclick="showPage('subadmins')"><span class="nav-icon">👥</span> Sub-Admins</div>
-      <div class="nav-item" onclick="showPage('students')"><span class="nav-icon">🎓</span> All Students</div>
-      <div class="nav-item" onclick="showPage('voting')"><span class="nav-icon">🗳️</span> Voting Control</div>
-      <div class="nav-item" onclick="showPage('health')"><span class="nav-icon">🛡️</span> System Health</div>
-      <div class="nav-item" onclick="showPage('audit')"><span class="nav-icon">📜</span> Audit Log</div>
+      <div class="nav-item active" onclick="showPage('overview', event)"><span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item" onclick="showPage('admins', event)"><span class="nav-icon">🧑‍💼</span> Manage Admins</div>
+      <div class="nav-item" onclick="showPage('subadmins', event)"><span class="nav-icon">👥</span> Sub-Admins</div>
+      <div class="nav-item" onclick="showPage('students', event)"><span class="nav-icon">🎓</span> All Students</div>
+      <div class="nav-item" onclick="showPage('voting', event)"><span class="nav-icon">🗳️</span> Voting Control</div>
+      <div class="nav-item" onclick="showPage('health', event)"><span class="nav-icon">🛡️</span> System Health</div>
+      <div class="nav-item" onclick="showPage('audit', event)"><span class="nav-icon">📜</span> Audit Log</div>
       <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
         <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)"><span class="nav-icon">🔄</span> Refresh Data</div>
         <div class="nav-item" onclick="saLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
@@ -1649,11 +1649,22 @@
         }
       }
 
-      function showPage(id) {
+      function showPage(id, ev) {
+        const targetPage = document.getElementById('page-' + id);
+        if (!targetPage) return console.error("Page not found: " + id);
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('page-' + id).classList.add('active');
-        event.currentTarget.classList.add('active');
+        
+        targetPage.classList.add('active');
+        if (ev && ev.currentTarget) {
+          ev.currentTarget.classList.add('active');
+        } else if (id === 'overview') {
+          // Fallback for initial load
+          const overviewNav = document.querySelector('.nav-item[onclick*="overview"]');
+          if (overviewNav) overviewNav.classList.add('active');
+        }
+
         if (id === 'students') renderStudents(allStudents);
         if (id === 'voting') loadVoting();
         if (id === 'audit') loadAudit();
