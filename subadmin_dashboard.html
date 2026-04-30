@@ -97,17 +97,8 @@
   </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
-<!-- LOADING SCREEN (shown first, prevents blank page) -->
-<div id="loading-screen" style="position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);">
-  <div style="font-size:2.5rem;margin-bottom:1rem;">👥</div>
-  <div style="color:var(--purple);font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;">Class Admin Portal</div>
-  <div style="width:40px;height:40px;border:3px solid rgba(168,85,247,0.2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-  <div id="load-debug" style="margin-top:1.5rem;font-size:0.75rem;color:var(--muted);text-align:center;max-width:300px;"></div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-</div>
-
-<!-- AUTH OVERLAY (only shown if no valid session) -->
-<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
+<!-- AUTH OVERLAY -->
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
   <div style="background:rgba(255,42,77,0.08);border:1px solid rgba(255,42,77,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Class Admin Portal</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
@@ -515,7 +506,6 @@
 <script>
 const API = (location.hostname==='localhost'?'http://localhost:3001':'')+'/api';
 let session = JSON.parse(localStorage.getItem('ovs_currentUser')||'null');
-console.log('[SubAdmin] Session on load:', session ? `role=${session.role}, regNum=${session.regNum}` : 'null');
 let classStudents = [];
 let studentMap = {};
 let myElection = null;
@@ -524,7 +514,7 @@ let regChartInstance = null;
 let voteChartInstance = null;
 let partChartInstance = null;
 
-// Safe DOM Utilities to prevent "Cannot set properties of null"
+// Safe DOM Utilities
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
@@ -533,49 +523,6 @@ function setHTML(id, html) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = html;
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  const loadingScreen = document.getElementById('loading-screen');
-  const authOverlay   = document.getElementById('auth-overlay');
-  const mainLayout    = document.getElementById('main-layout');
-  const loadDebug     = document.getElementById('load-debug');
-
-  function showDashboard(s) {
-    if (loadingScreen) loadingScreen.style.display = 'none';
-    if (authOverlay)   authOverlay.style.display   = 'none';
-    if (mainLayout)    mainLayout.style.display     = 'flex';
-    try {
-      setText('class-label',       `${s.year || ''} ${s.class || '-'}`);
-      setText('class-sub',         `Managing ${s.year || ''} ${s.class} — ${s.branch} — ${s.institution}`);
-      setText('class-students-sub',`Students in ${s.year || ''} ${s.class}`);
-    } catch(e) {}
-    setTimeout(() => { try { loadAll(); } catch(e) { console.error('loadAll:', e); } }, 50);
-  }
-
-  function showLoginForm(debugMsg) {
-    if (loadDebug) loadDebug.textContent = debugMsg || '';
-    if (loadingScreen) loadingScreen.style.display = 'none';
-    if (mainLayout)    mainLayout.style.display     = 'none';
-    if (authOverlay)   authOverlay.style.display    = 'flex';
-  }
-
-  try {
-    session = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
-    const role = session && session.role ? session.role.trim().toLowerCase() : '';
-
-    if (loadDebug) loadDebug.textContent = `Checking... role="${role}" id="${session && session.regNum || 'none'}"`;
-
-    if (role === 'subadmin') {
-      showDashboard(session);
-    } else {
-      showLoginForm(`Session: role="${role || 'none'}" — Please log in.`);
-    }
-  } catch(e) {
-    console.error('[SubAdmin] Auth error:', e);
-    showLoginForm('Auth error: ' + e.message);
-  }
-});
-
 function toggleAuthPass() {
   const inp = document.getElementById('auth-pass');
   const eye = document.getElementById('auth-pass-eye');
@@ -583,6 +530,31 @@ function toggleAuthPass() {
   inp.type = inp.type === 'password' ? 'text' : 'password';
   if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
 }
+
+// ── Auth check runs immediately (localStorage is synchronous) ──
+(function initAuth() {
+  try {
+    const s    = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+    const role = s && s.role ? s.role.trim().toLowerCase() : '';
+    if (role === 'subadmin') {
+      session = s;
+      // Hide login overlay right away — dashboard shown after DOM ready
+      const overlay = document.getElementById('auth-overlay');
+      if (overlay) overlay.style.display = 'none';
+      const layout  = document.getElementById('main-layout');
+      if (layout)  layout.style.display  = 'flex';
+      document.addEventListener('DOMContentLoaded', function() {
+        setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
+        setText('class-sub',          'Managing ' + (s.year||'') + ' ' + s.class + ' — ' + s.branch + ' — ' + s.institution);
+        setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + s.class);
+        try { loadAll(); } catch(e) { console.error('loadAll:', e); }
+      });
+    }
+    // If not subadmin: auth-overlay stays display:flex (login form shown)
+  } catch(e) {
+    console.error('[SubAdmin] initAuth error:', e);
+  }
+})();
 
 async function apiFetch(path, opts = {}) {
     // Standardize to use the new fetchApi which includes security headers
