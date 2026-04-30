@@ -97,28 +97,7 @@
   </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
-<!-- AUTH OVERLAY -->
-<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
-  <div style="background:rgba(255,42,77,0.08);border:1px solid rgba(255,42,77,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
-    <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Class Admin Portal</div>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
-    <div style="text-align:left;margin-bottom:1rem;">
-      <label>Sub-Admin ID</label>
-      <input type="text" id="auth-id" placeholder="e.g. SADMICSE5" style="width:100%;">
-    </div>
-    <div style="text-align:left;margin-bottom:1.5rem;">
-      <label>Password</label>
-      <div style="position:relative;">
-        <input type="password" id="auth-pass" placeholder="6-char password" style="width:100%;padding-right:44px;">
-        <button type="button" onclick="toggleAuthPass()" id="auth-pass-eye"
-          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0;line-height:1;">👁️</button>
-      </div>
-    </div>
-    <button id="sa-login-btn" class="btn btn-purple" style="width:100%" onclick="saLogin()">Login</button>
-    <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
-  </div>
-</div>
-
+<!-- NO EMBEDDED LOGIN: Auth is handled by login.html -->
 <div class="layout" id="main-layout" style="display:none">
   <div class="sidebar">
     <div class="brand">👥 OVS</div>
@@ -538,18 +517,19 @@ function doAuthCheck() {
     const role = s && s.role ? s.role.trim().toLowerCase() : '';
     if (role === 'subadmin') {
       session = s;
-      const overlay = document.getElementById('auth-overlay');
       const layout  = document.getElementById('main-layout');
-      if (overlay) overlay.style.display = 'none';
       if (layout)  layout.style.display  = 'flex';
       setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
       setText('class-sub',          'Managing ' + (s.year||'') + ' ' + (s.class||'') + ' — ' + (s.branch||'') + ' — ' + (s.institution||''));
       setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + (s.class||''));
       try { loadAll(); } catch(e) { console.error('loadAll:', e); }
+    } else {
+      // If not subadmin, redirect to main login
+      window.location.href = 'login.html?admin=true';
     }
-    // If not subadmin — auth-overlay stays display:flex (login form visible)
   } catch(e) {
     console.error('[SubAdmin] doAuthCheck error:', e);
+    window.location.href = 'login.html?admin=true';
   }
 }
 // Run immediately if DOM ready, otherwise wait for it
@@ -565,27 +545,6 @@ async function apiFetch(path, opts = {}) {
 }
 function toast(msg,ok=true){const t=document.getElementById('toast');if(!t)return;t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
-async function saLogin(){
-  const id=document.getElementById('auth-id').value.trim();
-  const pass=document.getElementById('auth-pass').value;
-  const err=document.getElementById('auth-err');
-  const btn = document.getElementById('sa-login-btn');
-  setText('auth-err','');
-  if(!id||!pass){setText('auth-err','Please enter both ID and Password.');return;}
-  if(btn){btn.disabled=true;btn.textContent='Authenticating...';}
-  try{
-    const user=await StorageManager.login(id,pass);
-    if(!user)throw new Error('Invalid credentials');
-    if(user.role!=='subadmin'){StorageManager.logout();throw new Error('Not a Class Admin account.');}
-    session=user;
-    document.getElementById('auth-overlay').style.display='none';
-    document.getElementById('main-layout').style.display='flex';
-    setText('class-label', `${user.year||''} ${user.class||'-'}`);
-    setText('class-sub', `Managing ${user.year||''} ${user.class} — ${user.branch} — ${user.institution}`);
-    setText('class-students-sub', `Students in ${user.year||''} ${user.class}`);
-    loadAll();
-  }catch(e){setText('auth-err', e.message);if(btn){btn.disabled=false;btn.textContent='Login';}}
-}
 function saLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
 
 function showPage(id,navEl){
