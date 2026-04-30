@@ -98,7 +98,7 @@
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
 <!-- NO EMBEDDED LOGIN: Auth is handled by login.html -->
-<div class="layout" id="main-layout" style="display:none">
+<div class="layout" id="main-layout">
   <div class="sidebar">
     <div class="brand">👥 OVS</div>
     <div class="role-tag" id="class-label">Class Admin</div>
@@ -517,8 +517,6 @@ function doAuthCheck() {
     const role = s && s.role ? s.role.trim().toLowerCase() : '';
     if (role === 'subadmin') {
       session = s;
-      const layout  = document.getElementById('main-layout');
-      if (layout)  layout.style.display  = 'flex';
       setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
       setText('class-sub',          'Managing ' + (s.year||'') + ' ' + (s.class||'') + ' — ' + (s.branch||'') + ' — ' + (s.institution||''));
       setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + (s.class||''));
