@@ -107,7 +107,14 @@
     <div style="font-size:2rem;font-weight:900;color:var(--cyan);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Branch Admin Portal</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Branch Level Management</p>
     <div style="text-align:left;margin-bottom:1rem;"><label>Admin ID</label><input type="text" id="auth-id" placeholder="ADMCSE01"></div>
-    <div style="text-align:left;margin-bottom:1.5rem;"><label>Password</label><input type="password" id="auth-pass"></div>
+    <div style="text-align:left;margin-bottom:1.5rem;">
+      <label>Password</label>
+      <div style="position:relative;">
+        <input type="password" id="auth-pass" style="width:100%;padding-right:44px;">
+        <button type="button" onclick="toggleAuthPass()" id="auth-pass-eye"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0;line-height:1;">👁️</button>
+      </div>
+    </div>
     <button class="btn btn-cyan" style="width:100%" onclick="adminLogin()">Login</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
   </div>
@@ -381,6 +388,14 @@ function setText(id, val) {
 function setHTML(id, html) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
+}
+
+function toggleAuthPass() {
+  const inp = document.getElementById('auth-pass');
+  const eye = document.getElementById('auth-pass-eye');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{

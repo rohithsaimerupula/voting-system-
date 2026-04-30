@@ -641,6 +641,19 @@
             document.getElementById('error-msg')?.classList.remove('hidden');
         }
 
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const btn = document.querySelector('.pass-eye-btn');
+            if (!pwd) return;
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                if(btn) btn.textContent = '🕑';
+            } else {
+                pwd.type = 'password';
+                if(btn) btn.textContent = '👁️';
+            }
+        }
+
         // BFCache fix: Reset button state if user navigates back to this page
         window.addEventListener('pageshow', function (event) {
             const submitBtn = document.getElementById('login-btn');
