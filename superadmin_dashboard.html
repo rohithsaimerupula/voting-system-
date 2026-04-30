@@ -937,7 +937,7 @@
 
           <!-- Election Scheduler -->
           <div class="card" id="election-schedule-card">
-            <h3 id="schedule-card-title">⏱️ Election Schedule</h3>
+            <h3 id="schedule-card-title">⏱️ Voting Schedule (Rv)</h3>
 
             <!-- Countdown View (Hidden by default) -->
             <div id="v-countdown-container"
@@ -1186,11 +1186,12 @@
           </thead>
           <tbody id="audit-table"></tbody>
         </table>
-      </div>
-    </div>
+    </div> <!-- End Audit Page -->
 
-  </div>
-  <div class="toast" id="toast"></div>
+  </div> <!-- End Main Content -->
+</div> <!-- End Main Layout -->
+
+<div class="toast" id="toast"></div>
 
   <!-- EDIT MODAL (Admin & Subadmin) -->
   <div class="modal-overlay" id="edit-modal">
@@ -1320,12 +1321,7 @@
           countdown.style.display = 'none';
           cancelBtn.style.display = 'block';
           setText('v-start-btn', currentElectionConfig ? '💾 Save Changes' : '🚀 Create & Start Election');
-          setText('schedule-card-title', currentElectionConfig ? '⚙️ Modify Active Election' : '⏱️ Election Schedule');
-        } else {
-          scheduler.style.display = 'none';
-          countdown.style.display = 'block';
-          cancelBtn.style.display = 'none';
-          setText('schedule-card-title', '⏳ Election Live Countdown');
+          setText('schedule-card-title', '⏳ Voting Live Countdown (Rv)');
         }
       }
 
@@ -1341,11 +1337,11 @@
           countdown.style.display = 'none';
           cancelBtn.style.display = 'block';
           setText('r-start-btn', '💾 Update Schedule');
-          setText('r-schedule-card-title', '⚙️ Modify Reg Schedule');
+          setText('r-schedule-card-title', '⚙️ Modify Reg Schedule (Rr)');
         } else {
           scheduler.style.display = 'none';
           countdown.style.display = 'block';
-          setText('r-schedule-card-title', '⏳ Registration Live Countdown');
+          setText('r-schedule-card-title', '⏳ Registration Live Countdown (Rr)');
         }
       }
 
@@ -1667,8 +1663,14 @@
 
         if (id === 'students') renderStudents(allStudents);
         if (id === 'voting') loadVoting();
-        if (id === 'audit') loadAudit();
-        if (id === 'health') loadSystemHealth();
+        if (id === 'audit') {
+            console.log("Loading Audit Log...");
+            loadAudit();
+        }
+        if (id === 'health') {
+            console.log("Loading System Health...");
+            loadSystemHealth();
+        }
       }
 
       async function refreshAll() {
