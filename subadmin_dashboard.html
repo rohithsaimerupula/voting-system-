@@ -484,7 +484,12 @@
 
 <script>
 const API = (location.hostname==='localhost'?'http://localhost:3001':'')+'/api';
-let session = JSON.parse(localStorage.getItem('ovs_currentUser')||'null');
+let session = null;
+try {
+  const stored = localStorage.getItem('ovs_currentUser');
+  if (stored && stored !== 'undefined') session = JSON.parse(stored);
+} catch(e) { console.error('Session parse error:', e); }
+
 let classStudents = [];
 let studentMap = {};
 let myElection = null;
