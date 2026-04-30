@@ -92,18 +92,13 @@
 <body>
   <script src="storage.js"></script>
   <script>
-      // Safety: Logout if institution is deleted
-      StorageManager.validateInstitution().then(isValid => {
-          if (!isValid) {
-              alert('Access Denied. Your institution is no longer active.');
-              window.location.href = 'index.html';
-          }
-      });
+    // Sub-admin staff users bypass the institution gateway — no validateInstitution needed
+    // Session integrity is handled by DOMContentLoaded below
   </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
 <!-- AUTH -->
-<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(255,42,77,0.08) 0%,var(--bg) 70%)">
   <div style="background:rgba(255,42,77,0.08);border:1px solid rgba(255,42,77,0.3);border-radius:20px;padding:3rem;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:2rem;font-weight:900;color:var(--purple);margin-bottom:0.25rem;font-family:'Playfair Display',serif;">Class Admin Portal</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:2rem;">Class Administration Login</p>
