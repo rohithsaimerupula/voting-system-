@@ -932,175 +932,153 @@
         </div>
 
         <!-- Controls Grid -->
-        <div
-          style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem; margin-bottom:1.5rem;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem; margin-bottom:1.5rem;">
 
-          <!-- Election Scheduler -->
+          <!-- ═══ MAIN SCHEDULE / CREATE CARD ═══ -->
           <div class="card" id="election-schedule-card">
-            <h3 id="schedule-card-title">⏱️ Voting Schedule (Rv)</h3>
+            <h3 id="schedule-card-title">⏱️ Create Election</h3>
 
-            <!-- Countdown View (Hidden by default) -->
-            <div id="v-countdown-container"
-              style="display:none; text-align:center; padding:1rem 0; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:1rem;">
-              <div
-                style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">
-                ⏳ Time Remaining</div>
-              <div style="display:flex; justify-content:center; gap:1.2rem;">
-                <div>
-                  <div id="cd-days" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00
+            <!-- ── STATE B: COUNTDOWN VIEW (shown when election is active) ── -->
+            <div id="v-countdown-container" style="display:none;">
+              <!-- Election Name Pill -->
+              <div id="v-election-name-pill"
+                style="text-align:center; background:rgba(255,42,77,0.1); border:1px solid rgba(255,42,77,0.25); border-radius:10px; padding:0.6rem 1rem; margin-bottom:1rem; font-weight:700; font-size:1rem; color:var(--gold);">
+                🗳️ Election
+              </div>
+
+              <!-- Countdown digits -->
+              <div style="text-align:center; padding:1rem 0; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:1rem;">
+                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">⏳ Time Remaining</div>
+                <div style="display:flex; justify-content:center; gap:1.2rem;">
+                  <div>
+                    <div id="cd-days" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div>
+                    <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Days</div>
                   </div>
-                  <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Days</div>
-                </div>
-                <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
-                <div>
-                  <div id="cd-hours" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00
+                  <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+                  <div>
+                    <div id="cd-hours" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div>
+                    <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Hours</div>
                   </div>
-                  <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Hours</div>
-                </div>
-                <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
-                <div>
-                  <div id="cd-mins" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00
+                  <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+                  <div>
+                    <div id="cd-mins" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div>
+                    <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Mins</div>
                   </div>
-                  <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Mins</div>
-                </div>
-                <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
-                <div>
-                  <div id="cd-secs" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00
+                  <div style="font-size:1.5rem; opacity:0.3; margin-top:-0.2rem;">:</div>
+                  <div>
+                    <div id="cd-secs" style="font-size:1.8rem; font-weight:900; color:var(--gold); line-height:1;">00</div>
+                    <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Secs</div>
                   </div>
-                  <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem;">Secs</div>
                 </div>
               </div>
-              <button class="btn-sm"
-                style="margin-top:1.2rem; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"
-                onclick="toggleScheduleMode(true)">⚙️ Modify Schedule</button>
+
+              <!-- Action Buttons: Modify + End side-by-side -->
+              <div style="display:flex; gap:0.75rem;">
+                <button class="btn-sm" style="flex:1; padding:0.55rem 0; background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid rgba(255,255,255,0.12); border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                  onclick="toggleScheduleMode(true)">⚙️ Modify Schedule</button>
+                <button class="btn-sm" style="flex:1; padding:0.55rem 0; background:rgba(255,42,77,0.15); color:var(--red); border:1px solid rgba(255,42,77,0.3); border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                  onclick="stopElection()">⏹ End Election</button>
+              </div>
             </div>
 
-            <!-- Scheduler Inputs -->
+            <!-- ── STATE A / B-EDIT: CREATION & MODIFY FORM ── -->
             <div id="v-scheduler-inner" style="display:flex; flex-direction:column; gap:1rem;">
+
+              <!-- Always-visible fields -->
               <div class="form-field">
                 <label>Election Name <small style="color:var(--muted)">(e.g., Student Council 2026)</small></label>
                 <input type="text" id="v-name" placeholder="Enter Election Name">
               </div>
               <div class="form-field">
-                <label>Start Date & Time</label>
+                <label>Start Date &amp; Time</label>
                 <input type="datetime-local" id="v-start">
               </div>
               <div class="form-field">
-                <label>End Date & Time</label>
+                <label>End Date &amp; Time</label>
                 <input type="datetime-local" id="v-end">
               </div>
 
-              <h4 style="margin: 1rem 0 0.5rem; color:var(--text); font-size: 0.95rem;">🎛️ Select Voting Access Scope
-              </h4>
-              <div
-                style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:1rem;">
-                <label
-                  style="display:flex; align-items:center; gap:0.5rem; font-weight:bold; color:var(--gold); margin-bottom:1rem; font-size:0.9rem; text-transform:none;">
-                  <input type="checkbox" id="sa-scope-all" onchange="toggleSaScopeAll()" checked> Select All Students
-                  (Entire Institution)
-                </label>
-                <div id="sa-scope-hierarchy" style="max-height:300px; overflow-y:auto; padding:1rem; background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid rgba(255,255,255,0.08); margin-top:0.5rem;">
-                   <div id="sa-scope-empty-msg" style="color:var(--muted); font-size:0.85rem; text-align:center; padding:1.5rem;">
+              <!-- ── SCOPE SELECTOR (hidden during Modify Schedule edit) ── -->
+              <div id="v-scope-section">
+                <h4 style="margin: 0.5rem 0; color:var(--text); font-size: 0.95rem;">🎛️ Select Voting Scope</h4>
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+                  <label style="display:flex; align-items:center; gap:0.5rem; font-weight:bold; color:var(--gold); margin-bottom:1rem; font-size:0.9rem; text-transform:none;">
+                    <input type="checkbox" id="sa-scope-all" onchange="toggleSaScopeAll()" checked> Select All Students (Entire Institution)
+                  </label>
+                  <div id="sa-scope-hierarchy" style="max-height:300px; overflow-y:auto; padding:1rem; background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+                    <div id="sa-scope-empty-msg" style="color:var(--muted); font-size:0.85rem; text-align:center; padding:1.5rem;">
                       <div style="font-size:1.5rem; margin-bottom:0.5rem;">📂</div>
-                      No student cohorts detected. <br>
+                      No student cohorts detected.<br>
                       <small style="opacity:0.7;">Upload students with Year/Branch/Class to enable granular scoping.</small>
-                   </div>
+                    </div>
+                  </div>
+                  <!-- Inline scope validation error -->
+                  <div id="v-scope-error" style="display:none; margin-top:0.6rem; color:var(--red); font-size:0.82rem; font-weight:600;">
+                    ⚠️ Select at least one class, or check "All Students".
+                  </div>
                 </div>
               </div>
 
-              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:1.2rem; margin-bottom:1.5rem;">
+              <!-- ── CATEGORIES & CANDIDATES (hidden during Modify Schedule edit) ── -->
+              <div id="v-categories-section" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:1.2rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                  <h4 style="margin:0; font-size:1rem; color:var(--purple);">📂 Categories & Candidates</h4>
-                  <button class="btn-sm" style="background:var(--purple); border:none; color:white;" onclick="addCreationCategory()">+ Add Category</button>
+                  <h4 style="margin:0; font-size:1rem; color:var(--gold);">📂 Categories &amp; Candidates</h4>
+                  <button class="btn-sm" style="background:var(--gold); border:none; color:white;" onclick="addCreationCategory()">+ Add Category</button>
                 </div>
                 <div id="creation-categories-container" style="display:flex; flex-direction:column; gap:1.2rem;">
-                  <!-- Category items will be added here -->
+                  <!-- Category items rendered by JS -->
                 </div>
                 <div style="margin-top:1rem; font-size:0.75rem; color:var(--muted);">
-                  ℹ️ Minimum 1 category with 2 candidates each is required to start.
+                  ℹ️ Min. 1 category required. Each category needs at least 2 candidates.
                 </div>
               </div>
 
+              <!-- Action Buttons -->
               <div style="display:flex; gap:0.5rem;">
-                <button class="btn btn-green" style="flex:2" id="v-start-btn" onclick="startNewElection()">🚀 Create & Start Election</button>
+                <button class="btn btn-green" style="flex:2" id="v-start-btn" onclick="startNewElection()">🚀 Create &amp; Start Election</button>
                 <button class="btn-sm" id="v-cancel-edit"
-                  style="flex:1; display:none; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--border);"
-                  onclick="toggleScheduleMode(false)">Cancel</button>
+                  style="flex:1; display:none; background:rgba(255,255,255,0.05); color:white; border:1px solid var(--border); border-radius:8px; padding:0.5rem;"
+                  onclick="toggleScheduleMode(false)">✕ Cancel</button>
               </div>
             </div>
           </div>
 
-          <!-- Live Participation Analytics (Super Admin Control) -->
-          <div class="card" id="election-live-stats"
-            style="background: linear-gradient(135deg, rgba(34,197,94,0.05), transparent); border-color: rgba(34,197,94,0.2);">
+          <!-- Live Participation Analytics -->
+          <div class="card" id="election-live-stats" style="display:none; background: linear-gradient(135deg, rgba(34,197,94,0.05), transparent); border-color: rgba(34,197,94,0.2);">
             <h3>📊 Live Participation Analytics</h3>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem;">Real-time participation data for YOUR active election.</p>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem;">Real-time participation data for your active election.</p>
             <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:1rem;">
-              <div
-                style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div
-                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">
-                  Total Voters</div>
+              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Total Voters</div>
                 <div id="v-total" style="font-size:1.5rem; font-weight:900; color:white;">0</div>
               </div>
-              <div
-                style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div
-                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">
-                  Can Vote</div>
+              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Can Vote</div>
                 <div id="v-canvote" style="font-size:1.5rem; font-weight:900; color:var(--green);">0</div>
               </div>
-              <div
-                style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div
-                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">
-                  Votes Cast</div>
+              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Votes Cast</div>
                 <div id="v-voted" style="font-size:1.5rem; font-weight:900; color:var(--gold);">0</div>
               </div>
-              <div
-                style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div
-                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">
-                  Turnout %</div>
+              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Turnout %</div>
                 <div id="v-pct" style="font-size:1.5rem; font-weight:900; color:var(--cyan);">0%</div>
               </div>
             </div>
-
-            <div
-              style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:0.75rem; flex-wrap:wrap;">
-              <button class="btn btn-red" style="flex:1" onclick="stopElection()">⏹ End Election</button>
-            </div>
           </div>
-          
-          <!-- Election Structure (Categories) -->
+
+          <!-- Election Structure -->
           <div class="card" id="integrated-structure-card" style="display:none; border-color: rgba(168,85,247,0.2);">
-            <h3 style="color:var(--purple);">🏛️ Election Structure</h3>
+            <h3 style="color:var(--gold);">🏛️ Election Structure</h3>
             <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem;">Categories included in this election:</p>
             <div id="integrated-categories-list" style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                <!-- Filled by JS -->
+              <!-- Filled by JS -->
             </div>
           </div>
+        </div>
 
-        <!-- Election Categories -->
-        <div class="card" id="categories-manager-card">
-          <h3>📂 Election Categories</h3>
-          <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem; line-height:1.4;">
-            Define the categories (e.g. Boys CR, President). Candidates will choose one, and voters will vote for one
-            per category.
-          </p>
-          <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-            <input type="text" id="new-category-input" placeholder="e.g. Girls CR" style="flex:1;">
-            <button class="btn btn-purple" onclick="addElectionCategory()">+ Add</button>
-          </div>
-          <div id="categories-list"
-            style="display:flex; flex-direction:column; gap:0.5rem; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
-            <!-- Rendered list of categories -->
-          </div>
-          <button class="btn-sm"
-            style="margin-top:1rem; width:100%; border:1px solid var(--purple); color:var(--purple); background:rgba(168,85,247,0.1);"
-            onclick="saveCategories()">💾 Save Categories</button>
-        <!-- Results Chart -->
-        <div class="card">
+        <!-- Results Chart (shown only when election is active) -->
+        <div class="card" id="results-chart-card" style="display:none;">
           <h3>🏆 Live Vote Results</h3>
           <button class="btn btn-gold" onclick="loadVoting()"
             style="margin-bottom:1.5rem; padding:0.5rem 1.4rem; font-size:0.9rem;">🔄 Refresh Results</button>
@@ -1109,8 +1087,8 @@
           </div>
           <div id="candidate-tally" style="margin-top:1.5rem;"></div>
         </div>
+
       </div>
-    </div>
 
     <!-- SYSTEM HEALTH -->
     <div class="page" id="page-health">
@@ -1300,32 +1278,36 @@
       }
 
       function toggleScheduleMode(isEditing) {
-        const scheduler = document.getElementById('v-scheduler-inner');
-        const countdown = document.getElementById('v-countdown-container');
-        const cancelBtn = document.getElementById('v-cancel-edit');
-        const startBtn = document.getElementById('v-start-btn');
-        const title = document.getElementById('schedule-card-title');
+        const scheduler    = document.getElementById('v-scheduler-inner');
+        const countdown    = document.getElementById('v-countdown-container');
+        const cancelBtn    = document.getElementById('v-cancel-edit');
+        const scopeSection = document.getElementById('v-scope-section');
+        const catSection   = document.getElementById('v-categories-section');
 
         if (isEditing) {
-          // Pre-fill fields if editing current election
+          // Pre-fill name/time from current election
           if (currentElectionConfig) {
-            document.getElementById('v-name').value = currentElectionConfig.name || '';
+            document.getElementById('v-name').value  = currentElectionConfig.name || '';
             document.getElementById('v-start').value = currentElectionConfig.startTime ? currentElectionConfig.startTime.slice(0, 16) : '';
-            document.getElementById('v-end').value = currentElectionConfig.endTime ? currentElectionConfig.endTime.slice(0, 16) : '';
-            
-            // Re-render categories for the existing election if needed
-            if (currentElectionConfig.scope && currentElectionConfig.scope.categories) {
-              const cats = currentElectionConfig.scope.categories;
-              // This is a bit complex since categories need candidates too
-              // For now, we'll just let the user know they are modifying the time/name
-            }
+            document.getElementById('v-end').value   = currentElectionConfig.endTime ? currentElectionConfig.endTime.slice(0, 16) : '';
           }
-
           scheduler.style.display = 'flex';
           countdown.style.display = 'none';
           cancelBtn.style.display = 'block';
-          setText('v-start-btn', currentElectionConfig ? '💾 Save Changes' : '🚀 Create & Start Election');
-          setText('schedule-card-title', '⏳ Voting Live Countdown (Rv)');
+          // Hide scope & categories during mid-election edit (only name/time editable)
+          if (scopeSection) scopeSection.style.display = 'none';
+          if (catSection)   catSection.style.display   = 'none';
+          setText('v-start-btn', '💾 Save Changes');
+          setText('schedule-card-title', '⚙️ Modify Schedule');
+        } else {
+          // Cancel — go back to countdown view
+          scheduler.style.display = 'none';
+          countdown.style.display = 'block';
+          cancelBtn.style.display = 'none';
+          // Restore scope & categories visibility for next fresh creation
+          if (scopeSection) scopeSection.style.display = '';
+          if (catSection)   catSection.style.display   = '';
+          setText('schedule-card-title', '⏳ ' + (currentElectionConfig ? currentElectionConfig.name : 'Election'));
         }
       }
 
@@ -2228,71 +2210,76 @@
       };
 
       async function startNewElection() {
-        const name = document.getElementById('v-name').value.trim();
+        const name  = document.getElementById('v-name').value.trim();
         const start = document.getElementById('v-start').value;
-        const end = document.getElementById('v-end').value;
-        
-        if (!name) return toast("Election name required", false);
-        if (!start || !end) return toast("Start and end times required", false);
+        const end   = document.getElementById('v-end').value;
 
-        // If we have an active election, update it instead of creating a new one
+        if (!name)          return toast('Election name required', false);
+        if (!start || !end) return toast('Start and end times required', false);
+
+        // ── MODIFY SCHEDULE MODE (editing existing election) ──
         if (currentElectionConfig) {
           try {
-            toast("Updating election...");
+            toast('Updating election...');
             await apiFetch(`/elections/${currentElectionConfig.id}`, {
               method: 'PATCH',
-              body: JSON.stringify({
-                name,
-                startTime: start,
-                endTime: end
-              })
+              body: JSON.stringify({ name, startTime: start, endTime: end })
             });
-            toast("✅ Election schedule updated!");
+            toast('✅ Election schedule updated!');
             toggleScheduleMode(false);
             loadVoting();
             return;
           } catch (e) { return toast(e.message, false); }
         }
 
+        // ── CREATE MODE: validate scope ──
+        const isAll = document.getElementById('sa-scope-all').checked;
+        const scopeErrEl = document.getElementById('v-scope-error');
+        const selectedClasses = Array.from(document.querySelectorAll('.cb-sa-class:checked')).map(cb => cb.dataset.class);
+
+        if (!isAll && selectedClasses.length === 0) {
+          if (scopeErrEl) scopeErrEl.style.display = 'block';
+          return toast('⚠️ Select at least one class or All Students', false);
+        }
+        if (scopeErrEl) scopeErrEl.style.display = 'none';
+
+        // ── CREATE MODE: validate categories (min 1, min 2 candidates each) ──
+        if (!creationCategories || creationCategories.length < 1)
+          return toast('Add at least 1 category', false);
+
         const categories = [];
         const candidates = [];
         for (const cat of creationCategories) {
-          if (!cat.name.trim()) return toast("All categories must have a name", false);
-          if (cat.candidates.length < 2) return toast(`Category "${cat.name}" needs at least 2 candidates`, false);
+          if (!cat.name.trim()) return toast('All categories must have a name', false);
+          if (cat.candidates.length < 2) return toast(`"${cat.name}" needs at least 2 candidates`, false);
           categories.push(cat.name.trim());
           for (const cand of cat.candidates) {
-            if (!cand.name.trim() || !cand.regNum.trim()) return toast(`Please fill all candidate details in "${cat.name}"`, false);
+            if (!cand.name.trim() || !cand.regNum.trim())
+              return toast(`Fill all candidate details in "${cat.name}"`, false);
             candidates.push({ ...cand, category: cat.name.trim() });
           }
         }
 
-        // Get Scope Data
-        const isAll = document.getElementById('sa-scope-all').checked;
-        let scope = { all: true };
-        if (!isAll) {
-          const selectedClasses = Array.from(document.querySelectorAll('.cb-sa-class:checked')).map(cb => cb.dataset.class);
-          if (selectedClasses.length === 0) return toast("Select at least one class or 'All Students'", false);
-          scope = { all: false, classes: selectedClasses };
-        }
+        const scope = isAll ? { all: true } : { all: false, classes: selectedClasses };
 
         try {
-          toast("Starting election...");
+          toast('Starting election...');
           await apiFetch('/elections', {
             method: 'POST',
             body: JSON.stringify({
-              institution: saSession.institution,
+              institution:   saSession.institution,
               name,
-              type: 'institutional',
-              createdBy: saSession.regNum,
+              type:          'institutional',
+              createdBy:     saSession.regNum,
               createdByRole: saSession.role,
-              startTime: start,
-              endTime: end,
+              startTime:     start,
+              endTime:       end,
               categories,
               candidates,
               scope
             })
           });
-          toast("🚀 Election started successfully!");
+          toast('🚀 Election started successfully!');
           loadVoting();
           loadAll();
         } catch (e) { toast(e.message, false); }
@@ -2302,46 +2289,59 @@
         try {
           const elections = await apiFetch(`/elections?institution=${encodeURIComponent(saSession.institution)}&createdBy=${saSession.regNum}`);
           const activeElection = elections.find(e => e.isCompleted == 0);
-          
+
           currentElectionConfig = activeElection;
 
-          const banner = document.getElementById('election-banner');
-          const schInner = document.getElementById('v-scheduler-inner');
-          const countContainer = document.getElementById('v-countdown-container');
-          const liveStats = document.getElementById('election-live-stats');
-          const structCard = document.getElementById('integrated-structure-card');
+          const banner        = document.getElementById('election-banner');
+          const schInner      = document.getElementById('v-scheduler-inner');
+          const countContainer= document.getElementById('v-countdown-container');
+          const liveStats     = document.getElementById('election-live-stats');
+          const structCard    = document.getElementById('integrated-structure-card');
+          const resultsCard   = document.getElementById('results-chart-card');
+          const scopeSection  = document.getElementById('v-scope-section');
+          const catSection    = document.getElementById('v-categories-section');
 
           if (activeElection) {
-            banner.style.background = 'rgba(34,197,94,0.1)';
+            // ── STATE B: Election is ACTIVE ──
+            banner.style.background  = 'rgba(34,197,94,0.1)';
             banner.style.borderColor = 'rgba(34,197,94,0.4)';
-            banner.style.color = 'var(--green)';
+            banner.style.color       = 'var(--green)';
             setHTML('election-banner', `🟢 <span><strong>${activeElection.name}</strong> is <strong>ACTIVE</strong></span>`);
-            
-            schInner.style.display = 'none';
+
+            schInner.style.display       = 'none';
             countContainer.style.display = 'block';
-            liveStats.style.display = 'block';
-            structCard.style.display = 'block';
+            liveStats.style.display      = 'block';
+            structCard.style.display     = 'block';
+            if (resultsCard) resultsCard.style.display = 'block';
+
+            // Update election name pill
+            setText('v-election-name-pill', '🗳️ ' + activeElection.name);
             setText('schedule-card-title', '⏳ ' + activeElection.name);
-            
+
+            // Restore scope/category sections so they appear correctly if form is reopened fresh
+            if (scopeSection) scopeSection.style.display = '';
+            if (catSection)   catSection.style.display   = '';
+
             if (activeElection.endTime) startCountdown(activeElection.endTime);
-            
-            // Render Structure
+
+            // Render structure
             const structList = document.getElementById('integrated-categories-list');
             const scope = activeElection.scope || {};
-            const cats = scope.categories || [];
-            structList.innerHTML = cats.map(c => `<div style="padding:0.5rem; background:rgba(255,255,255,0.05); border-radius:8px;"><strong>${c}</strong></div>`).join('');
+            let cats = [];
+            try { cats = typeof scope === 'string' ? JSON.parse(scope).categories || [] : scope.categories || []; } catch(e) {}
+            if (structList) structList.innerHTML = cats.map(c => `<div style="padding:0.5rem; background:rgba(255,255,255,0.05); border-radius:8px;"><strong>${c}</strong></div>`).join('');
 
-            // Load Analytics for THIS election
+            // Live analytics
             const stats = await apiFetch(`/elections/${activeElection.id}/analytics`);
-            setText('v-total', stats.total);
+            setText('v-total',   stats.total);
             setText('v-canvote', stats.allowed);
-            setText('v-voted', stats.voted);
-            setText('v-pct', stats.turnoutPct + '%');
+            setText('v-voted',   stats.voted);
+            setText('v-pct',     stats.turnoutPct + '%');
 
-            // Bar Chart & Tally for this election
-            const results = await apiFetch(`/elections/${activeElection.id}/results`);
-            const labels = results.map(r => r.name);
-            const votes = results.map(r => r.votes);
+            // Results chart
+            const results    = await apiFetch(`/elections/${activeElection.id}/results`);
+            const labels     = results.map(r => r.name);
+            const votes      = results.map(r => r.votes);
             const totalVotes = votes.reduce((a, b) => a + b, 0);
 
             if (chartInstance) chartInstance.destroy();
@@ -2355,8 +2355,7 @@
                   data: votes,
                   backgroundColor: labels.map((_, i) => i % 2 === 0 ? 'rgba(255, 42, 77, 0.8)' : 'rgba(255, 255, 255, 0.1)'),
                   borderColor: labels.map((_, i) => i % 2 === 0 ? '#ff2a4d' : '#333333'),
-                  borderWidth: 2,
-                  borderRadius: 8
+                  borderWidth: 2, borderRadius: 8
                 }]
               },
               options: {
@@ -2369,8 +2368,7 @@
               }
             });
 
-            // Tally
-            const tallyEl = document.getElementById('candidate-tally');
+            // Candidate tally
             setHTML('candidate-tally', `<table>
               <thead><tr><th>#</th><th>Candidate</th><th>Votes</th><th>Share %</th></tr></thead>
               <tbody>
@@ -2382,7 +2380,7 @@
               </tbody>
             </table>`);
 
-            // Winner Banner
+            // Winner banner
             const winnerBanner = document.getElementById('winner-banner');
             if (activeElection.isCompleted && totalVotes > 0) {
               winnerBanner.style.display = 'block';
@@ -2393,16 +2391,22 @@
             }
 
           } else {
-            banner.style.background = 'var(--surface)';
+            // ── STATE A: No active election — show creation form ──
+            banner.style.background  = 'var(--surface)';
             banner.style.borderColor = 'var(--border)';
-            banner.style.color = 'var(--muted)';
+            banner.style.color       = 'var(--muted)';
             setHTML('election-banner', '⚪ <span>No active election found. Create one below to start.</span>');
-            
-            schInner.style.display = 'flex';
+
+            schInner.style.display       = 'flex';
             countContainer.style.display = 'none';
-            liveStats.style.display = 'none';
-            structCard.style.display = 'none';
-            setText('schedule-card-title', '⏱️ Election Schedule');
+            liveStats.style.display      = 'none';
+            structCard.style.display     = 'none';
+            if (resultsCard) resultsCard.style.display = 'none';
+            if (scopeSection) scopeSection.style.display = '';
+            if (catSection)   catSection.style.display   = '';
+
+            setText('schedule-card-title', '⏱️ Create Election');
+            setText('v-start-btn', '🚀 Create & Start Election');
             renderCreationCategories();
           }
         } catch (e) { toast(e.message, false); }
