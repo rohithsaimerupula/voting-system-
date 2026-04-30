@@ -114,7 +114,7 @@
           style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0;line-height:1;">👁️</button>
       </div>
     </div>
-    <button class="btn btn-purple" style="width:100%" onclick="saLogin()">Login</button>
+    <button id="sa-login-btn" class="btn btn-purple" style="width:100%" onclick="saLogin()">Login</button>
     <div id="auth-err" style="color:var(--red);margin-top:1rem;font-size:0.9rem;min-height:1.2rem;"></div>
   </div>
 </div>
@@ -531,30 +531,33 @@ function toggleAuthPass() {
   if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
 }
 
-// ── Auth check runs immediately (localStorage is synchronous) ──
-(function initAuth() {
+// ── Auth check — runs after DOM is ready ──
+function doAuthCheck() {
   try {
     const s    = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
     const role = s && s.role ? s.role.trim().toLowerCase() : '';
     if (role === 'subadmin') {
       session = s;
-      // Hide login overlay right away — dashboard shown after DOM ready
       const overlay = document.getElementById('auth-overlay');
-      if (overlay) overlay.style.display = 'none';
       const layout  = document.getElementById('main-layout');
+      if (overlay) overlay.style.display = 'none';
       if (layout)  layout.style.display  = 'flex';
-      document.addEventListener('DOMContentLoaded', function() {
-        setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
-        setText('class-sub',          'Managing ' + (s.year||'') + ' ' + s.class + ' — ' + s.branch + ' — ' + s.institution);
-        setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + s.class);
-        try { loadAll(); } catch(e) { console.error('loadAll:', e); }
-      });
+      setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
+      setText('class-sub',          'Managing ' + (s.year||'') + ' ' + (s.class||'') + ' — ' + (s.branch||'') + ' — ' + (s.institution||''));
+      setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + (s.class||''));
+      try { loadAll(); } catch(e) { console.error('loadAll:', e); }
     }
-    // If not subadmin: auth-overlay stays display:flex (login form shown)
+    // If not subadmin — auth-overlay stays display:flex (login form visible)
   } catch(e) {
-    console.error('[SubAdmin] initAuth error:', e);
+    console.error('[SubAdmin] doAuthCheck error:', e);
   }
-})();
+}
+// Run immediately if DOM ready, otherwise wait for it
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', doAuthCheck);
+} else {
+  doAuthCheck();
+}
 
 async function apiFetch(path, opts = {}) {
     // Standardize to use the new fetchApi which includes security headers
@@ -566,10 +569,10 @@ async function saLogin(){
   const id=document.getElementById('auth-id').value.trim();
   const pass=document.getElementById('auth-pass').value;
   const err=document.getElementById('auth-err');
-  const btn=document.querySelector('#auth-overlay button');
+  const btn = document.getElementById('sa-login-btn');
   setText('auth-err','');
   if(!id||!pass){setText('auth-err','Please enter both ID and Password.');return;}
-  btn.disabled=true;btn.innerText='Authenticating...';
+  if(btn){btn.disabled=true;btn.textContent='Authenticating...';}
   try{
     const user=await StorageManager.login(id,pass);
     if(!user)throw new Error('Invalid credentials');
@@ -581,7 +584,7 @@ async function saLogin(){
     setText('class-sub', `Managing ${user.year||''} ${user.class} — ${user.branch} — ${user.institution}`);
     setText('class-students-sub', `Students in ${user.year||''} ${user.class}`);
     loadAll();
-  }catch(e){setText('auth-err', e.message);btn.disabled=false;btn.innerText='Login';}
+  }catch(e){setText('auth-err', e.message);if(btn){btn.disabled=false;btn.textContent='Login';}}
 }
 function saLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
 
