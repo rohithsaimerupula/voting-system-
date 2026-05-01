@@ -740,8 +740,8 @@ app.post('/api/elections', authGuard, async (req, res) => {
         
         // Step 1: Enforce "One Active Election per Creator" policy
         const activeCheck = await db.execute({
-            sql: "SELECT id FROM elections WHERE createdBy = ? AND institution = ? AND isCompleted = 0",
-            args: [createdBy, institution]
+            sql: "SELECT id FROM elections WHERE createdBy = ? AND institution = ? AND (isCompleted = 0 OR isCompleted IS NULL) AND type = ?",
+            args: [createdBy, institution, type]
         });
         if (activeCheck.rows.length > 0) {
             return res.status(400).json({ error: "You already have an active or pending election. You must complete or delete it before starting a new one." });
