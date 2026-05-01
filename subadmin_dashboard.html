@@ -1,94 +1,533 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Class Admin Dashboard — OVS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:wght@500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <script>
-      (function() {
-          document.documentElement.setAttribute('data-theme', 'dark');
-          localStorage.setItem('ovs_theme', 'dark');
-      })();
+    (function () {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('ovs_theme', 'dark');
+    })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    :root {
-      --bg:#050505; --surface:#111111; --border:rgba(168,85,247,0.3);
-      --purple:#a855f7; --cyan:#06b6d4; --green:#22c55e; --red:#ef4444; --gold:#f59e0b;
-      --text:#f8fafc; --muted:#cbd5e1;
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
-    input,select{width:100%;padding:0.8rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-size:0.95rem;font-family:'Outfit',sans-serif;outline:none;transition:border 0.3s;}
-    input:focus,select:focus{border-color:var(--purple);}
-    select option{background:#1e293b;}
-    label{display:block;color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em;}
-    .btn{padding:0.75rem 1.5rem;border-radius:10px;border:none;cursor:pointer;font-size:0.95rem;font-weight:600;font-family:'Outfit',sans-serif;transition:all 0.3s;}
-    .btn-purple{background:linear-gradient(135deg,var(--purple),#7c3aed);color:white;}
-    .btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:white;}
-    .btn-red{background:linear-gradient(135deg,var(--red),#dc2626);color:white;}
-    .btn:hover{transform:translateY(-2px);opacity:0.9;}
-    .btn-sm{padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif;font-weight:600;}
-    .btn-d{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
-    .btn-g{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);}
-    .btn-e{background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);}
-    .layout{display:flex;min-height:100vh;}
-    .sidebar{width:240px;background:rgba(255,42,77,0.05);border-right:1px solid rgba(255,42,77,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
-    .brand{font-size:1.4rem;font-weight:900;color:var(--purple);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
-    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;}
-    .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.15rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
-    .nav-icon{display:flex;align-items:center;justify-content:center;width:24px;flex-shrink:0;font-size:1.1rem;}
-    .nav-item:hover,.nav-item.active{background:rgba(255,42,77,0.1);color:var(--purple);font-weight:600;}
-    .nav-group-label{font-size:0.68rem;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:0.1em;padding:0.8rem 1rem 0.3rem;margin-top:0.5rem;}
-    .nav-sub-item{padding:0.55rem 1rem 0.55rem 2rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.1rem;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);}
-    .nav-sub-item:hover,.nav-sub-item.active{background:rgba(255,42,77,0.08);color:var(--purple);}
-    .sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
-    .main{margin-left:240px;flex:1;padding:2rem;}
-    .page{display:none;}.page.active{display:block;}
-    .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Playfair Display', serif;}
-    .page-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:2rem;}
-    .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem;text-align:center;}
-    .stat .num{font-size:2rem;font-weight:900;}.stat .lbl{color:var(--muted);font-size:0.78rem;margin-top:0.2rem;}
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;}
-    .card h3{font-size:1rem;font-weight:700;margin-bottom:1.2rem;}
-    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;}
-    .form-field{display:flex;flex-direction:column;gap:0.3rem;}
-    table{width:100%;border-collapse:collapse;}
-    th{text-align:left;padding:0.7rem 0.8rem;color:var(--muted);font-size:0.75rem;text-transform:uppercase;border-bottom:1px solid var(--border);}
-    td{padding:0.7rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.88rem;vertical-align:middle;}
-    tr:hover td{background:rgba(255,255,255,0.02);}
-    .badge{padding:0.2rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:600;}
-    .ba{background:rgba(34,197,94,0.15);color:#22c55e;}
-    .bp{background:rgba(245,158,11,0.15);color:var(--gold);}
-    .br{background:rgba(239,68,68,0.15);color:var(--red);}
-    .empty{text-align:center;color:var(--muted);padding:2rem;}
-    .toast{position:fixed;bottom:2rem;right:2rem;background:#1e293b;border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.5rem;font-size:0.9rem;transform:translateY(100px);opacity:0;transition:all 0.4s;z-index:999;}
-    .toast.show{transform:translateY(0);opacity:1;}
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;}
-    .modal-overlay.open{display:flex;}
-    .modal{background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:500px;position:relative;max-height:85vh;overflow-y:auto;}
-    .modal h3{font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;}
-    .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;}
+
+    :root {
+      --bg: #050505;
+      --surface: #111111;
+      --border: rgba(168, 85, 247, 0.3);
+      --purple: #a855f7;
+      --cyan: #06b6d4;
+      --green: #22c55e;
+      --red: #ef4444;
+      --gold: #f59e0b;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 0.95rem;
+      font-family: 'Outfit', sans-serif;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--purple);
+    }
+
+    select option {
+      background: #1e293b;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.3s;
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, var(--purple), #7c3aed);
+      color: white;
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, var(--green), #16a34a);
+      color: white;
+    }
+
+    .btn-red {
+      background: linear-gradient(135deg, var(--red), #dc2626);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+
+    .btn-sm {
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+    }
+
+    .btn-d {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-g {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .btn-e {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--purple);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 240px;
+      background: rgba(255, 42, 77, 0.05);
+      border-right: 1px solid rgba(255, 42, 77, 0.15);
+      padding: 1.5rem 1rem;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--purple);
+      margin-bottom: 0.2rem;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .role-tag {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-item {
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 0.15rem;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--muted);
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+
+    .nav-item:hover,
+    .nav-item.active {
+      background: rgba(255, 42, 77, 0.1);
+      color: var(--purple);
+      font-weight: 600;
+    }
+
+    .nav-group-label {
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.25);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.8rem 1rem 0.3rem;
+      margin-top: 0.5rem;
+    }
+
+    .nav-sub-item {
+      padding: 0.55rem 1rem 0.55rem 2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 0.1rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--muted);
+    }
+
+    .nav-sub-item:hover,
+    .nav-sub-item.active {
+      background: rgba(255, 42, 77, 0.08);
+      color: var(--purple);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      padding: 2rem;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .page-sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .stat .num {
+      font-size: 2rem;
+      font-weight: 900;
+    }
+
+    .stat .lbl {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 0.2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.7rem 0.8rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.7rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 0.88rem;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .ba {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    .bp {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold);
+    }
+
+    .br {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1e293b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1.5rem;
+      font-size: 0.9rem;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.4s;
+      z-index: 999;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+      position: relative;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
     /* Election Code Display */
-    .election-code-box{background:linear-gradient(135deg,rgba(255,42,77,0.15),rgba(255,42,77,0.05));border:2px solid rgba(255,42,77,0.5);border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;}
-    .election-code-box .code{font-size:2.5rem;font-weight:900;letter-spacing:0.3em;color:#fff;font-family:monospace;}
-    .election-code-box .code-label{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;}
+    .election-code-box {
+      background: linear-gradient(135deg, rgba(255, 42, 77, 0.15), rgba(255, 42, 77, 0.05));
+      border: 2px solid rgba(255, 42, 77, 0.5);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .election-code-box .code {
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 0.3em;
+      color: #fff;
+      font-family: monospace;
+    }
+
+    .election-code-box .code-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
     /* Action Dropdown */
-    .action-select{padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;font-family:'Outfit',sans-serif;cursor:pointer;min-width:130px;}
-    .action-select:focus{border-color:var(--purple);outline:none;}
+    .action-select {
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 0.8rem;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      min-width: 130px;
+    }
+
+    .action-select:focus {
+      border-color: var(--purple);
+      outline: none;
+    }
+
     /* Analytics */
-    .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:1.5rem;}
-    .turnout-bar{background:rgba(255,255,255,0.05);border-radius:50px;height:8px;margin-top:0.5rem;overflow:hidden;}
-    .turnout-fill{height:100%;background:linear-gradient(90deg,#ff2a4d,#ff7a4d);border-radius:50px;transition:width 0.8s ease;}
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .turnout-bar {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50px;
+      height: 8px;
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+
+    .turnout-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff2a4d, #ff7a4d);
+      border-radius: 50px;
+      transition: width 0.8s ease;
+    }
+
     /* Status pills */
-    .pill-active{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
-    .pill-pending{background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
-    .pill-completed{background:rgba(100,116,139,0.15);color:#64748b;border:1px solid rgba(100,116,139,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
+    .pill-active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .pill-pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .pill-completed {
+      background: rgba(100, 116, 139, 0.15);
+      color: #64748b;
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
   </style>
 </head>
+
 <body>
   <script src="storage.js"></script>
   <script>
@@ -97,659 +536,860 @@
   </script>
   <div id="tsparticles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;"></div>
 
-<!-- NO EMBEDDED LOGIN: Auth is handled by login.html -->
-<div class="layout" id="main-layout">
-  <div class="sidebar">
-    <div class="brand">👥 OVS</div>
-    <div class="role-tag" id="class-label">Class Admin</div>
-    <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span class="nav-icon">📊</span> Overview</div>
-    <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My Class</div>
-    <div class="nav-item" id="nav-registrations" onclick="showPage('registrations',this)"><span class="nav-icon">📝</span> Manage Registrations</div>
-    <div class="nav-group-label">🗳️ Voting</div>
-    <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏛️</span> My Election</div>
-    <div class="nav-sub-item" id="nav-voting-branch" onclick="showPage('voting-branch',this)"><span class="nav-icon">🏢</span> Branch Head Election</div>
-    <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span class="nav-icon">🎓</span> College Head Election</div>
-    <div class="sidebar-footer">
-      <div class="nav-item" onclick="refreshAll()" style="color:var(--purple)"><span class="nav-icon">🔄</span> Refresh Data</div>
-      <div class="nav-item" onclick="saLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
+  <!-- NO EMBEDDED LOGIN: Auth is handled by login.html -->
+  <div class="layout" id="main-layout">
+    <div class="sidebar">
+      <div class="brand">👥 OVS</div>
+      <div class="role-tag" id="class-label">Class Admin</div>
+      <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span
+          class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My
+        Class</div>
+      <div class="nav-item" id="nav-registrations" onclick="showPage('registrations',this)"><span
+          class="nav-icon">📝</span> Manage Registrations</div>
+      <div class="nav-group-label">🗳️ Voting</div>
+      <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span
+          class="nav-icon">🏛️</span> My Election</div>
+      <div class="nav-sub-item" id="nav-voting-branch" onclick="showPage('voting-branch',this)"><span
+          class="nav-icon">🏢</span> Branch Head Election</div>
+      <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span
+          class="nav-icon">🎓</span> College Head Election</div>
+      <div class="sidebar-footer">
+        <div class="nav-item" onclick="refreshAll()" style="color:var(--purple)"><span class="nav-icon">🔄</span>
+          Refresh Data</div>
+        <div class="nav-item" onclick="saLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="main">
+    <div class="main">
 
-    <!-- OVERVIEW -->
-    <div class="page active" id="page-overview">
-      <div class="page-title">📊 Class Overview</div>
-      <div class="page-sub" id="class-sub">Your assigned class</div>
-      <div class="stats-grid">
-        <div class="stat" style="border-bottom: 4px solid var(--purple);">
-          <div class="num" id="s-students" style="color:var(--purple)">-</div>
-          <div class="lbl">Students</div>
-        </div>
-        <div class="stat" style="border-bottom: 4px solid #22c55e;">
-          <div class="num" id="s-canvote" style="color:#22c55e">-</div>
-          <div class="lbl">Can Vote</div>
-        </div>
-        <div class="stat" style="border-bottom: 4px solid var(--gold);">
-          <div class="num" id="s-voted" style="color:var(--gold)">-</div>
-          <div class="lbl">Voted</div>
-        </div>
-        <div class="stat" style="border-bottom: 4px solid var(--muted);">
-          <div class="num" id="s-not-granted" style="color:var(--muted)">-</div>
-          <div class="lbl">Not Granted</div>
-        </div>
-        <div class="stat" style="border-bottom: 4px solid var(--gold);">
+      <!-- OVERVIEW -->
+      <div class="page active" id="page-overview">
+        <div class="page-title">📊 Class Overview</div>
+        <div class="page-sub" id="class-sub">Your assigned class</div>
+        <div class="stats-grid">
+          <div class="stat" style="border-bottom: 4px solid var(--purple);">
+            <div class="num" id="s-students" style="color:var(--purple)">-</div>
+            <div class="lbl">Students</div>
+          </div>
+          <div class="stat" style="border-bottom: 4px solid #22c55e;">
+            <div class="num" id="s-canvote" style="color:#22c55e">-</div>
+            <div class="lbl">Can Vote</div>
+          </div>
+          <div class="stat" style="border-bottom: 4px solid var(--gold);">
+            <div class="num" id="s-voted" style="color:var(--gold)">-</div>
+            <div class="lbl">Voted</div>
+          </div>
+          <div class="stat" style="border-bottom: 4px solid var(--muted);">
+            <div class="num" id="s-not-granted" style="color:var(--muted)">-</div>
+            <div class="lbl">Not Granted</div>
+          </div>
+          <div class="stat" style="border-bottom: 4px solid var(--gold);">
             <div class="num" id="s-pending" style="color:var(--gold)">-</div>
             <div class="lbl">Pending Reg</div>
+          </div>
         </div>
-      </div>
 
-      <!-- Quick Summary Header Requested by User -->
-      <div id="overview-summary-bar" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.1rem; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--purple); font-weight:900;" id="sum-total">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Students</span></div>
+        <!-- Quick Summary Header Requested by User -->
+        <div id="overview-summary-bar"
+          style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.1rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--purple); font-weight:900;"
+              id="sum-total">0</span> <span
+              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Students</span>
+          </div>
           <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:#22c55e; font-weight:900;" id="sum-can">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Can Vote</span></div>
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:#22c55e; font-weight:900;"
+              id="sum-can">0</span> <span
+              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Can
+              Vote</span></div>
           <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;" id="sum-voted">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span></div>
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;"
+              id="sum-voted">0</span> <span
+              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span>
+          </div>
           <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;" id="sum-not">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not Granted</span></div>
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;"
+              id="sum-not">0</span> <span
+              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not
+              Granted</span></div>
           <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;" id="sum-pending">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Pending</span></div>
-      </div>
-
-      <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
-        <!-- Funnel 1: Registration (Base) -->
-        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(255,42,77,0.05), transparent);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-            <h3 style="margin:0;">📋 1. Registration</h3>
-            <div id="reg-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Total: -</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-              <canvas id="regChart"></canvas>
-            </div>
-            <div id="reg-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-              <div class="text-muted">Loading...</div>
-            </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;"
+              id="sum-pending">0</span> <span
+              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Pending</span>
           </div>
         </div>
 
-        <!-- Funnel 2: Access (Subset of Accepted) -->
-        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(34,197,94,0.05), transparent);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-            <h3 style="margin:0;">🗳️ 2. Voting Access</h3>
-            <div id="vote-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Accepted: -</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-              <canvas id="voteChart"></canvas>
+        <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
+          <!-- Funnel 1: Registration (Base) -->
+          <div class="card"
+            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(255,42,77,0.05), transparent);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+              <h3 style="margin:0;">📋 1. Registration</h3>
+              <div id="reg-total-pill" class="pill-active"
+                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Total:
+                -</div>
             </div>
-            <div id="vote-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-              <div class="text-muted">Waiting for Accepted...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Funnel 3: Participation (Subset of Allowed) -->
-        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(245,158,11,0.05), transparent);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-            <h3 style="margin:0;">🏁 3. Participation</h3>
-            <div id="part-total-pill" class="pill-active" style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Allowed: -</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-              <canvas id="participationChart"></canvas>
-            </div>
-            <div id="part-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-              <div class="text-muted">Waiting for Allowed...</div>
+            <div style="display:flex; align-items:center; gap:1.5rem;">
+              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
+                <canvas id="regChart"></canvas>
+              </div>
+              <div id="reg-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
+                <div class="text-muted">Loading...</div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- MANAGE REGISTRATIONS -->
-    <div class="page" id="page-registrations">
-      <div class="page-title">📝 Manage Registrations</div>
-      <div class="page-sub">Control the registration window for your class and manage student approvals.</div>
-
-      <!-- Start Registration Card -->
-      <div class="card" id="start-registration-card">
-        <h3>▶️ Start Class Registration</h3>
-        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Set a timeframe for students in your class to register. This will generate a unique registration link and code for your class.</p>
-        <div class="form-grid" style="margin-bottom:1.5rem;">
-          <div class="form-field"><label>Registration Start</label><input type="datetime-local" id="class-reg-start-time"></div>
-          <div class="form-field"><label>Registration End</label><input type="datetime-local" id="class-reg-end-time"></div>
-        </div>
-        <button class="btn btn-purple" style="width:100%;" onclick="startClassRegistrationWindow()">🚀 Generate Link & Open Registration</button>
-      </div>
-
-      <!-- Active Registration Card -->
-      <div id="active-registration-card" style="display:none;">
-        <div class="election-code-box">
-          <div class="code-label">🔑 Class Registration Code</div>
-          <!-- Status Badge -->
-          <div id="class-reg-status-badge" style="display:inline-block; margin:0.6rem auto 1rem; padding:0.3rem 1rem; border-radius:99px; font-size:0.82rem; font-weight:700; border:1px solid rgba(34,197,94,0.3); background:rgba(34,197,94,0.08); color:#22c55e;">🟢 Registration Open</div>
-          <div class="code" id="class-reg-code">------</div>
-          <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--cyan); word-break:break-all;" id="class-reg-link"></div>
-          <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
-            <button class="btn-sm btn-e" onclick="copyClassRegLink()">🔗 Copy Link</button>
-            <button class="btn-sm btn-e" onclick="copyClassRegCode()">📋 Copy Code</button>
-          </div>
-          <div style="margin-top:1.2rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
-            <button id="class-reg-stop-btn" class="btn-sm btn-d" onclick="stopClassRegistrationWindow()">⏹ Stop Registration</button>
-            <button id="class-reg-reopen-btn" class="btn-sm" onclick="reopenClassRegistrationWindow()" style="display:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e;">▶️ Re-open Registration</button>
-          </div>
-          <div style="margin-top:0.8rem;display:flex;justify-content:center;">
-            <button class="btn-sm" onclick="deleteClassRegistrationWindow()" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);color:rgba(239,68,68,0.7);font-size:0.75rem;">🗑️ Delete & Start Fresh</button>
-          </div>
-        </div>
-
-        <div id="standalone-reg-countdown-card" class="card" style="background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2); margin-top:1.5rem;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Registration Window — Ends In</div>
-              <div id="standalone-reg-cd-display" style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
+          <!-- Funnel 2: Access (Subset of Accepted) -->
+          <div class="card"
+            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(34,197,94,0.05), transparent);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+              <h3 style="margin:0;">🗳️ 2. Voting Access</h3>
+              <div id="vote-total-pill" class="pill-active"
+                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">
+                Accepted: -</div>
             </div>
-            <button class="btn-sm" onclick="promptModifyRegistrationSchedule()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text);">⏱️ Modify Time</button>
+            <div style="display:flex; align-items:center; gap:1.5rem;">
+              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
+                <canvas id="voteChart"></canvas>
+              </div>
+              <div id="vote-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
+                <div class="text-muted">Waiting for Accepted...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Funnel 3: Participation (Subset of Allowed) -->
+          <div class="card"
+            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(245,158,11,0.05), transparent);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+              <h3 style="margin:0;">🏁 3. Participation</h3>
+              <div id="part-total-pill" class="pill-active"
+                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">
+                Allowed: -</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:1.5rem;">
+              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
+                <canvas id="participationChart"></canvas>
+              </div>
+              <div id="part-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
+                <div class="text-muted">Waiting for Allowed...</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Registration Management (Pending Students) -->
-      <div class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
-        <div style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; color:#ff2a4d;">⏳ Pending Registrations</h3>
-          <span style="font-size:0.8rem; color:var(--muted);">Accept or reject requests</span>
+      <!-- MANAGE REGISTRATIONS -->
+      <div class="page" id="page-registrations">
+        <div class="page-title">📝 Manage Registrations</div>
+        <div class="page-sub">Control the registration window for your class and manage student approvals.</div>
+
+        <!-- Start Registration Card -->
+        <div class="card" id="start-registration-card">
+          <h3>▶️ Start Class Registration</h3>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Set a timeframe for students in your
+            class to register. This will generate a unique registration link and code for your class.</p>
+          <div class="form-grid" style="margin-bottom:1.5rem;">
+            <div class="form-field"><label>Registration Start</label><input type="datetime-local"
+                id="class-reg-start-time"></div>
+            <div class="form-field"><label>Registration End</label><input type="datetime-local" id="class-reg-end-time">
+            </div>
+          </div>
+          <button class="btn btn-purple" style="width:100%;" onclick="startClassRegistrationWindow()">🚀 Generate Link &
+            Open Registration</button>
         </div>
-        <div style="overflow-x:auto;">
-          <table><thead><tr><th style="width:50px;">ID</th><th style="width:50px;">Face</th><th style="width:20%;">Reg No</th><th>Name</th><th style="width:15%;">Role</th><th style="width:22%;">Actions</th></tr></thead>
-          <tbody id="reg-pending-student-table"></tbody></table>
+
+        <!-- Active Registration Card -->
+        <div id="active-registration-card" style="display:none;">
+          <div class="election-code-box">
+            <div class="code-label">🔑 Class Registration Code</div>
+            <!-- Status Badge -->
+            <div id="class-reg-status-badge"
+              style="display:inline-block; margin:0.6rem auto 1rem; padding:0.3rem 1rem; border-radius:99px; font-size:0.82rem; font-weight:700; border:1px solid rgba(34,197,94,0.3); background:rgba(34,197,94,0.08); color:#22c55e;">
+              🟢 Registration Open</div>
+            <div class="code" id="class-reg-code">------</div>
+            <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--cyan); word-break:break-all;"
+              id="class-reg-link"></div>
+            <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+              <button class="btn-sm btn-e" onclick="copyClassRegLink()">🔗 Copy Link</button>
+              <button class="btn-sm btn-e" onclick="copyClassRegCode()">📋 Copy Code</button>
+            </div>
+            <div style="margin-top:1.2rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+              <button id="class-reg-stop-btn" class="btn-sm btn-d" onclick="stopClassRegistrationWindow()">⏹ Stop
+                Registration</button>
+              <button id="class-reg-reopen-btn" class="btn-sm" onclick="reopenClassRegistrationWindow()"
+                style="display:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e;">▶️
+                Re-open Registration</button>
+            </div>
+            <div style="margin-top:0.8rem;display:flex;justify-content:center;">
+              <button class="btn-sm" onclick="deleteClassRegistrationWindow()"
+                style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);color:rgba(239,68,68,0.7);font-size:0.75rem;">🗑️
+                Delete & Start Fresh</button>
+            </div>
+          </div>
+
+          <div id="standalone-reg-countdown-card" class="card"
+            style="background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2); margin-top:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div
+                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;"
+                  id="standalone-reg-cd-label">
+                  ⏱️ Registration Window — Ends In</div>
+                <div id="standalone-reg-cd-display"
+                  style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
+              </div>
+              <button class="btn-sm" onclick="promptModifyRegistrationSchedule()"
+                style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text);">⏱️
+                Modify Time</button>
+            </div>
+          </div>
         </div>
-      </div>
 
-    </div>
-
-    <!-- MY CLASS STUDENTS -->
-    <div class="page" id="page-students">
-      <div class="page-title">🎓 My Class Students</div>
-      <div class="page-sub" id="class-students-sub">Students you are responsible for</div>
-
-      <!-- Tab Bar -->
-      <div style="display:flex; gap:0; margin-bottom:1.5rem; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-        <button id="tab-pending" onclick="switchStudentTab('pending')" style="flex:1; padding:0.8rem 1rem; background:rgba(255,42,77,0.15); color:#ff2a4d; border:none; border-right:1px solid var(--border); font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s;">
-          ⏳ Pending Registrations <span id="pending-count" style="background:rgba(255,42,77,0.2); padding:2px 8px; border-radius:99px; font-size:0.75rem; margin-left:0.4rem;">0</span>
-        </button>
-        <button id="tab-approved" onclick="switchStudentTab('approved')" style="flex:1; padding:0.8rem 1rem; background:transparent; color:var(--muted); border:none; font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
-          ✅ Approved Students <span id="approved-count" style="background:rgba(34,197,94,0.1); padding:2px 8px; border-radius:99px; font-size:0.75rem; margin-left:0.4rem;">0</span>
-        </button>
-      </div>
-
-      <!-- Search -->
-      <div style="margin-bottom:1rem;">
-        <input id="student-search" style="width:100%;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;" placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
-      </div>
-
-      <!-- Pending Tab -->
-      <div id="tab-content-pending">
-        <div class="card" style="padding:0; overflow:hidden;">
-          <div style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
+        <!-- Registration Management (Pending Students) -->
+        <div class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
+          <div
+            style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; color:#ff2a4d;">⏳ Pending Registrations</h3>
-            <span style="font-size:0.8rem; color:var(--muted);">Accept or reject each request</span>
+            <span style="font-size:0.8rem; color:var(--muted);">Accept or reject requests</span>
           </div>
           <div style="overflow-x:auto;">
-            <table><thead><tr><th style="width:50px;">ID</th><th style="width:50px;">Face</th><th style="width:20%;">Reg No</th><th>Name</th><th style="width:15%;">Role</th><th style="width:22%;">Actions</th></tr></thead>
-            <tbody id="pending-student-table"></tbody></table>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:50px;">ID</th>
+                  <th style="width:50px;">Face</th>
+                  <th style="width:20%;">Reg No</th>
+                  <th>Name</th>
+                  <th style="width:15%;">Role</th>
+                  <th style="width:22%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reg-pending-student-table"></tbody>
+            </table>
           </div>
         </div>
+
       </div>
 
-      <!-- Approved Tab -->
-      <div id="tab-content-approved" style="display:none;">
-        <div class="card" style="padding:0; overflow:hidden;">
-          <div style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.15); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; color:#22c55e;">✅ Approved Students</h3>
-            <span style="font-size:0.8rem; color:var(--muted);">Edit details or remove students</span>
-          </div>
-          <div style="overflow-x:auto;">
-            <table><thead><tr><th style="width:50px;">ID</th><th style="width:50px;">Face</th><th style="width:20%;">Reg No</th><th>Name</th><th style="width:15%;">Role</th><th style="width:22%;">Actions</th></tr></thead>
-            <tbody id="approved-student-table"></tbody></table>
-          </div>
+      <!-- MY CLASS STUDENTS -->
+      <div class="page" id="page-students">
+        <div class="page-title">🎓 My Class Students</div>
+        <div class="page-sub" id="class-students-sub">Students you are responsible for</div>
+
+        <!-- Tab Bar -->
+        <div
+          style="display:flex; gap:0; margin-bottom:1.5rem; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+          <button id="tab-pending" onclick="switchStudentTab('pending')"
+            style="flex:1; padding:0.8rem 1rem; background:rgba(255,42,77,0.15); color:#ff2a4d; border:none; border-right:1px solid var(--border); font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s;">
+            ⏳ Pending Registrations <span id="pending-count"
+              style="background:rgba(255,42,77,0.2); padding:2px 8px; border-radius:99px; font-size:0.75rem; margin-left:0.4rem;">0</span>
+          </button>
+          <button id="tab-approved" onclick="switchStudentTab('approved')"
+            style="flex:1; padding:0.8rem 1rem; background:transparent; color:var(--muted); border:none; font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
+            ✅ Approved Students <span id="approved-count"
+              style="background:rgba(34,197,94,0.1); padding:2px 8px; border-radius:99px; font-size:0.75rem; margin-left:0.4rem;">0</span>
+          </button>
         </div>
-      </div>
-    </div>
 
-    <!-- MY ELECTION -->
-    <div class="page" id="page-voting-my">
-      <div class="page-title">🏛️ My Election</div>
-      <div class="page-sub">Create and manage class-level elections</div>
-
-      <!-- Create Election Card -->
-      <div class="card" id="create-election-card">
-        <h3>➕ Create Class Election</h3>
-        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Create a class-level election with categories and candidates. A dynamic code will be generated automatically.</p>
-        <div class="form-grid" style="margin-bottom:1.5rem;">
-          <div class="form-field" style="grid-column:1/-1;"><label>Election Name</label><input type="text" id="my-elec-name" placeholder="e.g. CR Elections 2026"></div>
-
-          <div class="form-field"><label>Election Start</label><input type="datetime-local" id="my-elec-start"></div>
-          <div class="form-field"><label>Election End</label><input type="datetime-local" id="my-elec-end"></div>
-          <div class="form-field">
-            <label>Result Visibility</label>
-            <select id="my-elec-visibility">
-              <option value="all">Entire College</option>
-              <option value="branch">Branch Only</option>
-              <option value="class">Class Only</option>
-              <option value="voters_only">Only Eligible Voters</option>
-            </select>
-          </div>
+        <!-- Search -->
+        <div style="margin-bottom:1rem;">
+          <input id="student-search"
+            style="width:100%;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
+            placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
         </div>
-        <!-- Category Builder -->
-        <div style="border-top:1px solid var(--border);padding-top:1.5rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-            <h3 style="margin:0;font-size:1rem;">📂 Categories &amp; Candidates</h3>
-            <button class="btn-sm" onclick="addCategory()" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:0.4rem 0.9rem;border-radius:8px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.85rem;font-weight:600;">+ Add Category</button>
-          </div>
-          <div id="category-builder" style="display:flex;flex-direction:column;gap:1.2rem;">
-            <div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;">
-              <p style="color:var(--muted);font-size:0.85rem;margin:0;">No categories yet. Click <strong style="color:#c084fc;">+ Add Category</strong> above (e.g. Boys CR, Girls CR).</p>
+
+        <!-- Pending Tab -->
+        <div id="tab-content-pending">
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div
+              style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; color:#ff2a4d;">⏳ Pending Registrations</h3>
+              <span style="font-size:0.8rem; color:var(--muted);">Accept or reject each request</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:50px;">ID</th>
+                    <th style="width:50px;">Face</th>
+                    <th style="width:20%;">Reg No</th>
+                    <th>Name</th>
+                    <th style="width:15%;">Role</th>
+                    <th style="width:22%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-student-table"></tbody>
+              </table>
             </div>
           </div>
-          <div style="margin-top:1rem;padding:0.8rem 1rem;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:8px;font-size:0.82rem;color:#f59e0b;">
-            ⚠️ Minimum 1 category with 2+ candidates required to create the election.
+        </div>
+
+        <!-- Approved Tab -->
+        <div id="tab-content-approved" style="display:none;">
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div
+              style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.15); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; color:#22c55e;">✅ Approved Students</h3>
+              <span style="font-size:0.8rem; color:var(--muted);">Edit details or remove students</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:50px;">ID</th>
+                    <th style="width:50px;">Face</th>
+                    <th style="width:20%;">Reg No</th>
+                    <th>Name</th>
+                    <th style="width:15%;">Role</th>
+                    <th style="width:22%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="approved-student-table"></tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <button class="btn btn-purple" style="margin-top:1.5rem;width:100%;" onclick="createMyElection()">🚀 Create Election &amp; Generate Code</button>
       </div>
 
-      <!-- Active Election Card -->
-      <div id="my-election-active" style="display:none;">
-        <div class="election-code-box">
-          <div class="code-label">🔑 Class Access Code</div>
-          <div class="code" id="my-elec-code">------</div>
-          <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--cyan); word-break:break-all;" id="my-elec-link"></div>
-          <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
-            <button class="btn-sm btn-e" onclick="copyElectionLink()">🔗 Copy Link</button>
-            <button class="btn-sm btn-e" onclick="copyElectionCode()">📋 Copy Code</button>
-          </div>
-          <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+      <!-- MY ELECTION -->
+      <div class="page" id="page-voting-my">
+        <div class="page-title">🏛️ My Election</div>
+        <div class="page-sub">Create and manage class-level elections</div>
 
-            <button class="btn-sm btn-g" onclick="startMyElection()" id="my-elec-start-btn">▶ Start Election</button>
-            <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End Election</button>
-            <button class="btn-sm" style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);" onclick="deleteMyElection()">🗑️ Delete</button>
-          </div>
-        </div>
+        <!-- Create Election Card -->
+        <div class="card" id="create-election-card">
+          <h3>➕ Create Class Election</h3>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Create a class-level election with
+            categories and candidates. A dynamic code will be generated automatically.</p>
+          <div class="form-grid" style="margin-bottom:1.5rem;">
+            <div class="form-field" style="grid-column:1/-1;"><label>Election Name</label><input type="text"
+                id="my-elec-name" placeholder="e.g. CR Elections 2026"></div>
 
-
-
-        <!-- Timer Card (Class Election) -->
-        <div id="class-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(168,85,247,0.08),transparent); border:1px solid rgba(168,85,247,0.2); margin-top:1.5rem;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Class Election Running — Ends In</div>
-              <div id="class-cd-display" style="font-size:2.2rem; font-weight:900; color:#c084fc; font-family:monospace;">--:--:--</div>
+            <div class="form-field"><label>Election Start</label><input type="datetime-local" id="my-elec-start"></div>
+            <div class="form-field"><label>Election End</label><input type="datetime-local" id="my-elec-end"></div>
+            <div class="form-field">
+              <label>Result Visibility</label>
+              <select id="my-elec-visibility">
+                <option value="all">Entire College</option>
+                <option value="branch">Branch Only</option>
+                <option value="class">Class Only</option>
+                <option value="voters_only">Only Eligible Voters</option>
+              </select>
             </div>
-            <button class="btn-sm" onclick="promptModifySchedule()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text);">⏱️ Modify Schedule</button>
           </div>
-        </div>
-        
-        <div class="card" style="margin-top:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border);">
-          <h3 style="margin-bottom:1rem;">🛰️ Election Control Hub</h3>
-          <div id="my-elec-info" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; font-size:0.9rem; color:var(--text-muted);">
-            Loading election parameters...
+          <!-- Category Builder -->
+          <div style="border-top:1px solid var(--border);padding-top:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+              <h3 style="margin:0;font-size:1rem;">📂 Categories &amp; Candidates</h3>
+              <button class="btn-sm" onclick="addCategory()"
+                style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:0.4rem 0.9rem;border-radius:8px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.85rem;font-weight:600;">+
+                Add Category</button>
+            </div>
+            <div id="category-builder" style="display:flex;flex-direction:column;gap:1.2rem;">
+              <div
+                style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;">
+                <p style="color:var(--muted);font-size:0.85rem;margin:0;">No categories yet. Click <strong
+                    style="color:#c084fc;">+ Add Category</strong> above (e.g. Boys CR, Girls CR).</p>
+              </div>
+            </div>
+            <div
+              style="margin-top:1rem;padding:0.8rem 1rem;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:8px;font-size:0.82rem;color:#f59e0b;">
+              ⚠️ Minimum 1 category with 2+ candidates required to create the election.
+            </div>
           </div>
-        </div>
-
-        <!-- Class Students Election Access (Added) -->
-        <div id="my-elec-students-card" class="card" style="padding:0; overflow:hidden; margin-top:1.5rem; margin-bottom:1.5rem;">
-          <div style="padding:1rem 1.5rem; background:rgba(168,85,247,0.05); border-bottom:1px solid rgba(168,85,247,0.1); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0;">🎓 Class Students — Election Access</h3>
-            <button class="btn-sm btn-g" onclick="grantAllMyElec()">✅ Grant All</button>
-          </div>
-          <div style="overflow-x:auto;">
-            <table><thead><tr><th style="width:22%;">Reg No</th><th>Name</th><th style="width:20%;">Vote Status</th><th style="width:17%;">Action</th></tr></thead>
-            <tbody id="my-elec-student-table"></tbody></table>
-          </div>
-        </div>
-
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
-          <div class="stat"><div class="num" id="my-v-total" style="color:var(--purple)">-</div><div class="lbl">Total Eligible</div></div>
-          <div class="stat"><div class="num" id="my-v-allowed" style="color:#22c55e">-</div><div class="lbl">Can Vote</div></div>
-          <div class="stat"><div class="num" id="my-v-voted" style="color:var(--gold)">-</div><div class="lbl">Votes Cast</div></div>
-          <div class="stat"><div class="num" id="my-v-pct" style="color:var(--red)">-</div><div class="lbl">Turnout %</div></div>
+          <button class="btn btn-purple" style="margin-top:1.5rem;width:100%;" onclick="createMyElection()">🚀 Create
+            Election &amp; Generate Code</button>
         </div>
 
-        <div class="analytics-grid">
-          <div class="card" style="margin-bottom:0;">
-            <h3>📊 Vote Distribution</h3>
-            <div style="position:relative;height:220px;"><canvas id="my-vote-chart"></canvas></div>
-            <div id="my-vote-legend" style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;"></div>
-          </div>
-        </div>
+        <!-- Active Election Card -->
+        <div id="my-election-active" style="display:none;">
+          <div class="election-code-box">
+            <div class="code-label">🔑 Class Access Code</div>
+            <div class="code" id="my-elec-code">------</div>
+            <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--cyan); word-break:break-all;"
+              id="my-elec-link"></div>
+            <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+              <button class="btn-sm btn-e" onclick="copyElectionLink()">🔗 Copy Link</button>
+              <button class="btn-sm btn-e" onclick="copyElectionCode()">📋 Copy Code</button>
+            </div>
+            <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
 
-        <!-- 🏆 Live Election Results -->
-        <div class="card" id="my-elec-results-card" style="margin-top:1.5rem; display:none;">
+              <button class="btn-sm btn-g" onclick="startMyElection()" id="my-elec-start-btn">▶ Start Election</button>
+              <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End
+                Election</button>
+              <button class="btn-sm"
+                style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);"
+                onclick="deleteMyElection()">🗑️ Delete</button>
+            </div>
+          </div>
+
+
+
+          <!-- Timer Card (Class Election) -->
+          <div id="class-countdown-card" class="card"
+            style="display:none; background:linear-gradient(135deg,rgba(168,85,247,0.08),transparent); border:1px solid rgba(168,85,247,0.2); margin-top:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div
+                  style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">
+                  ⏱️ Class Election Running — Ends In</div>
+                <div id="class-cd-display"
+                  style="font-size:2.2rem; font-weight:900; color:#c084fc; font-family:monospace;">--:--:--</div>
+              </div>
+              <button class="btn-sm" onclick="promptModifySchedule()"
+                style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text);">⏱️
+                Modify Schedule</button>
+            </div>
+          </div>
+
+          <div class="card"
+            style="margin-top:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border);">
+            <h3 style="margin-bottom:1rem;">🛰️ Election Control Hub</h3>
+            <div id="my-elec-info"
+              style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; font-size:0.9rem; color:var(--text-muted);">
+              Loading election parameters...
+            </div>
+          </div>
+
+          <!-- Class Students Election Access (Added) -->
+          <div id="my-elec-students-card" class="card"
+            style="padding:0; overflow:hidden; margin-top:1.5rem; margin-bottom:1.5rem;">
+            <div
+              style="padding:1rem 1.5rem; background:rgba(168,85,247,0.05); border-bottom:1px solid rgba(168,85,247,0.1); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0;">🎓 Class Students — Election Access</h3>
+              <button class="btn-sm btn-g" onclick="grantAllMyElec()">✅ Grant All</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:22%;">Reg No</th>
+                    <th>Name</th>
+                    <th style="width:20%;">Vote Status</th>
+                    <th style="width:17%;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="my-elec-student-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+
+          <div
+            style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
+            <div class="stat">
+              <div class="num" id="my-v-total" style="color:var(--purple)">-</div>
+              <div class="lbl">Total Eligible</div>
+            </div>
+            <div class="stat">
+              <div class="num" id="my-v-allowed" style="color:#22c55e">-</div>
+              <div class="lbl">Can Vote</div>
+            </div>
+            <div class="stat">
+              <div class="num" id="my-v-voted" style="color:var(--gold)">-</div>
+              <div class="lbl">Votes Cast</div>
+            </div>
+            <div class="stat">
+              <div class="num" id="my-v-pct" style="color:var(--red)">-</div>
+              <div class="lbl">Turnout %</div>
+            </div>
+          </div>
+
+          <div class="analytics-grid">
+            <div class="card" style="margin-bottom:0;">
+              <h3>📊 Vote Distribution</h3>
+              <div style="position:relative;height:220px;"><canvas id="my-vote-chart"></canvas></div>
+              <div id="my-vote-legend"
+                style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 🏆 Live Election Results -->
+          <div class="card" id="my-elec-results-card" style="margin-top:1.5rem; display:none;">
             <h3>🏆 Live Election Results</h3>
             <div id="my-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
-                <p class="text-muted">Calculating leads...</p>
+              <p class="text-muted">Calculating leads...</p>
             </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BRANCH HEAD ELECTION -->
-    <div class="page" id="page-voting-branch">
-      <div class="page-title">🏢 Branch Head Election</div>
-      <div class="page-sub">Grant or revoke voting access for your class students in the branch election</div>
-      <div style="display:flex; flex-direction:column; gap:1.5rem;">
-
-        <!-- Election Info -->
-        <div id="branch-elec-info" class="card" style="color:var(--muted);">Loading branch election data...</div>
-
-        <!-- Not In Scope Warning -->
-        <div id="branch-not-in-scope" class="card" style="display:none; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); text-align:center; padding:2rem;">
-          <div style="font-size:2rem; margin-bottom:0.5rem;">🚫</div>
-          <h3 style="color:#f59e0b; margin-bottom:0.5rem;">Your class is not included in this election</h3>
-          <p style="color:var(--muted); font-size:0.85rem;">The Branch Admin has not included your class in this election's scope. Your students are not eligible to vote.</p>
-        </div>
-
-        <!-- Live Countdown Timer (shown when election active + in scope) -->
-        <div id="branch-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(34,197,94,0.08),transparent); border:1px solid rgba(34,197,94,0.2);">
-          <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Branch Election Running — Ends In</div>
-          <div id="branch-cd-display" style="font-size:2.2rem; font-weight:900; color:#22c55e; font-family:monospace;">--:--:--</div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Branch Admin. You can only grant or revoke vote access for your class students below.</p>
-        </div>
-
-        <!-- Student Access Table (accepted only) -->
-        <div id="branch-students-card" class="card" style="padding:0; overflow:hidden;">
-          <div style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.1); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0;">🎓 Class Students — Branch Election Access</h3>
-            <button class="btn-sm btn-g" onclick="grantAllBranch()">✅ Grant All</button>
-          </div>
-          <div style="overflow-x:auto;">
-            <table><thead><tr><th style="width:22%;">Reg No</th><th>Name</th><th style="width:20%;">Vote Status</th><th style="width:17%;">Action</th></tr></thead>
-            <tbody id="branch-student-table"></tbody></table>
-          </div>
-        </div>
-
-        <!-- Analytics -->
-        <div class="card">
-          <h3>📊 Branch Election Analytics (My Class)</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
-            <div class="stat"><div class="num" id="br-total" style="color:var(--purple)">-</div><div class="lbl">Accepted Students</div></div>
-            <div class="stat"><div class="num" id="br-allowed" style="color:#22c55e">-</div><div class="lbl">Allowed</div></div>
-            <div class="stat"><div class="num" id="br-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- COLLEGE HEAD ELECTION -->
-    <div class="page" id="page-voting-college">
-      <div class="page-title">🎓 College Head Election</div>
-      <div class="page-sub">Grant or revoke voting access for your class students in the college election</div>
-      <div style="display:flex; flex-direction:column; gap:1.5rem;">
+      <!-- BRANCH HEAD ELECTION -->
+      <div class="page" id="page-voting-branch">
+        <div class="page-title">🏢 Branch Head Election</div>
+        <div class="page-sub">Grant or revoke voting access for your class students in the branch election</div>
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
-        <!-- Election Info -->
-        <div id="college-elec-info" class="card" style="color:var(--muted);">Loading college election data...</div>
+          <!-- Election Info -->
+          <div id="branch-elec-info" class="card" style="color:var(--muted);">Loading branch election data...</div>
 
-        <!-- Not In Scope Warning -->
-        <div id="college-not-in-scope" class="card" style="display:none; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); text-align:center; padding:2rem;">
-          <div style="font-size:2rem; margin-bottom:0.5rem;">🚫</div>
-          <h3 style="color:#f59e0b; margin-bottom:0.5rem;">Your class is not included in this election</h3>
-          <p style="color:var(--muted); font-size:0.85rem;">The Super Admin has not included your class in this election's scope.</p>
-        </div>
-
-        <!-- Live Countdown Timer -->
-        <div id="college-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2);">
-          <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ College Election Running — Ends In</div>
-          <div id="college-cd-display" style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Super Admin. You can only grant or revoke vote access for your class students below.</p>
-        </div>
-
-        <!-- Student Access Table (accepted only) -->
-        <div id="college-students-card" class="card" style="padding:0; overflow:hidden;">
-          <div style="padding:1rem 1.5rem; background:rgba(6,182,212,0.05); border-bottom:1px solid rgba(6,182,212,0.1); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0;">🎓 Class Students — College Election Access</h3>
-            <button class="btn-sm btn-g" onclick="grantAllCollege()">✅ Grant All</button>
+          <!-- Not In Scope Warning -->
+          <div id="branch-not-in-scope" class="card"
+            style="display:none; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); text-align:center; padding:2rem;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">🚫</div>
+            <h3 style="color:#f59e0b; margin-bottom:0.5rem;">Your class is not included in this election</h3>
+            <p style="color:var(--muted); font-size:0.85rem;">The Branch Admin has not included your class in this
+              election's scope. Your students are not eligible to vote.</p>
           </div>
-          <div style="overflow-x:auto;">
-            <table><thead><tr><th style="width:22%;">Reg No</th><th>Name</th><th style="width:20%;">Vote Status</th><th style="width:17%;">Action</th></tr></thead>
-            <tbody id="college-student-table"></tbody></table>
-          </div>
-        </div>
 
-        <!-- Analytics -->
-        <div class="card">
-          <h3>📊 College Election Analytics (My Class)</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
-            <div class="stat"><div class="num" id="col-total" style="color:var(--purple)">-</div><div class="lbl">Accepted Students</div></div>
-            <div class="stat"><div class="num" id="col-allowed" style="color:#22c55e">-</div><div class="lbl">Allowed</div></div>
-            <div class="stat"><div class="num" id="col-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
+          <!-- Live Countdown Timer (shown when election active + in scope) -->
+          <div id="branch-countdown-card" class="card"
+            style="display:none; background:linear-gradient(135deg,rgba(34,197,94,0.08),transparent); border:1px solid rgba(34,197,94,0.2);">
+            <div
+              style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">
+              ⏱️ Branch Election Running — Ends In</div>
+            <div id="branch-cd-display"
+              style="font-size:2.2rem; font-weight:900; color:#22c55e; font-family:monospace;">--:--:--</div>
+            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Branch Admin. You can only
+              grant or revoke vote access for your class students below.</p>
+          </div>
+
+          <!-- Student Access Table (accepted only) -->
+          <div id="branch-students-card" class="card" style="padding:0; overflow:hidden;">
+            <div
+              style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.1); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0;">🎓 Class Students — Branch Election Access</h3>
+              <button class="btn-sm btn-g" onclick="grantAllBranch()">✅ Grant All</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:22%;">Reg No</th>
+                    <th>Name</th>
+                    <th style="width:20%;">Vote Status</th>
+                    <th style="width:17%;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="branch-student-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="card">
+            <h3>📊 Branch Election Analytics (My Class)</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
+              <div class="stat">
+                <div class="num" id="br-total" style="color:var(--purple)">-</div>
+                <div class="lbl">Accepted Students</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="br-allowed" style="color:#22c55e">-</div>
+                <div class="lbl">Allowed</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="br-voted" style="color:var(--gold)">-</div>
+                <div class="lbl">Voted</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
+      <!-- COLLEGE HEAD ELECTION -->
+      <div class="page" id="page-voting-college">
+        <div class="page-title">🎓 College Head Election</div>
+        <div class="page-sub">Grant or revoke voting access for your class students in the college election</div>
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+          <!-- Election Info -->
+          <div id="college-elec-info" class="card" style="color:var(--muted);">Loading college election data...</div>
+
+          <!-- Not In Scope Warning -->
+          <div id="college-not-in-scope" class="card"
+            style="display:none; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); text-align:center; padding:2rem;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">🚫</div>
+            <h3 style="color:#f59e0b; margin-bottom:0.5rem;">Your class is not included in this election</h3>
+            <p style="color:var(--muted); font-size:0.85rem;">The Super Admin has not included your class in this
+              election's scope.</p>
+          </div>
+
+          <!-- Live Countdown Timer -->
+          <div id="college-countdown-card" class="card"
+            style="display:none; background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2);">
+            <div
+              style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">
+              ⏱️ College Election Running — Ends In</div>
+            <div id="college-cd-display"
+              style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
+            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Super Admin. You can only
+              grant or revoke vote access for your class students below.</p>
+          </div>
+
+          <!-- Student Access Table (accepted only) -->
+          <div id="college-students-card" class="card" style="padding:0; overflow:hidden;">
+            <div
+              style="padding:1rem 1.5rem; background:rgba(6,182,212,0.05); border-bottom:1px solid rgba(6,182,212,0.1); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0;">🎓 Class Students — College Election Access</h3>
+              <button class="btn-sm btn-g" onclick="grantAllCollege()">✅ Grant All</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:22%;">Reg No</th>
+                    <th>Name</th>
+                    <th style="width:20%;">Vote Status</th>
+                    <th style="width:17%;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="college-student-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="card">
+            <h3>📊 College Election Analytics (My Class)</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
+              <div class="stat">
+                <div class="num" id="col-total" style="color:var(--purple)">-</div>
+                <div class="lbl">Accepted Students</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="col-allowed" style="color:#22c55e">-</div>
+                <div class="lbl">Allowed</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="col-voted" style="color:var(--gold)">-</div>
+                <div class="lbl">Voted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
 
-<!-- EDIT STUDENT MODAL -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeEdit()">✕</button>
-    <h3>✏️ Edit Student Details</h3>
-    <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--purple);"></strong></p>
-    <input type="hidden" id="edit-regnum">
-    <div class="form-grid" style="margin-bottom:1rem;">
-      <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
-    </div>
-    <div class="form-grid" style="margin-bottom:1rem;">
-      <div class="form-field"><label>Year</label>
-        <select id="edit-year"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+  <!-- EDIT STUDENT MODAL -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+      <h3>✏️ Edit Student Details</h3>
+      <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">ID: <strong id="edit-regnum-display"
+          style="color:var(--purple);"></strong></p>
+      <input type="hidden" id="edit-regnum">
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
+        <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
       </div>
-      <div class="form-field"><label>Section (1-9)</label><input type="text" id="edit-section" maxlength="1"></div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-field"><label>Year</label>
+          <select id="edit-year">
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+            <option value="4th Year">4th Year</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Section (1-9)</label><input type="text" id="edit-section" maxlength="1"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:1.5rem;">
+        <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
+        <input type="password" id="edit-pass" placeholder="Enter new password to change">
+      </div>
+      <button class="btn btn-purple" style="width:100%" onclick="saveEdit()">Save Changes</button>
     </div>
-    <div class="form-field" style="margin-bottom:1.5rem;">
-      <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
-      <input type="password" id="edit-pass" placeholder="Enter new password to change">
-    </div>
-    <button class="btn btn-purple" style="width:100%" onclick="saveEdit()">Save Changes</button>
   </div>
-</div>
 
-<!-- PORTRAIT PREVIEW -->
-<div id="portrait-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;background:rgba(0,0,0,0.9);flex-direction:column;align-items:center;justify-content:center;">
-  <img id="portrait-preview" src="" style="max-height:80vh;max-width:90%;border-radius:8px;border:2px solid white;">
-  <button class="btn btn-purple" style="margin-top:1rem;" onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
-</div>
+  <!-- PORTRAIT PREVIEW -->
+  <div id="portrait-modal"
+    style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;background:rgba(0,0,0,0.9);flex-direction:column;align-items:center;justify-content:center;">
+    <img id="portrait-preview" src="" style="max-height:80vh;max-width:90%;border-radius:8px;border:2px solid white;">
+    <button class="btn btn-purple" style="margin-top:1rem;"
+      onclick="document.getElementById('portrait-modal').style.display='none'">Close Preview</button>
+  </div>
 
-<div class="toast" id="toast"></div>
+  <div class="toast" id="toast"></div>
 
-<script>
-const API = (location.hostname==='localhost'?'http://localhost:3001':'')+'/api';
-let session = null;
-try {
-  const stored = localStorage.getItem('ovs_currentUser');
-  if (stored && stored !== 'undefined') session = JSON.parse(stored);
-} catch(e) { console.error('Session parse error:', e); }
+  <script>
+    const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
+    let session = null;
+    try {
+      const stored = localStorage.getItem('ovs_currentUser');
+      if (stored && stored !== 'undefined') session = JSON.parse(stored);
+    } catch (e) { console.error('Session parse error:', e); }
 
-let classStudents = [];
-let studentMap = {};
-let myElection = null;
-let myElecChartInstance = null;
-let regChartInstance = null;
-let voteChartInstance = null;
-let partChartInstance = null;
+    let classStudents = [];
+    let studentMap = {};
+    let myElection = null;
+    let myElecChartInstance = null;
+    let regChartInstance = null;
+    let voteChartInstance = null;
+    let partChartInstance = null;
 
-// Safe DOM Utilities
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-function setHTML(id, html) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
-}
-function toggleAuthPass() {
-  const inp = document.getElementById('auth-pass');
-  const eye = document.getElementById('auth-pass-eye');
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
-}
-
-// ── Auth check — runs after DOM is ready ──
-function doAuthCheck() {
-  try {
-    const s    = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
-    const role = s && s.role ? s.role.trim().toLowerCase() : '';
-    if (role === 'subadmin') {
-      session = s;
-      setText('class-label',        (s.year||'') + ' ' + (s.class||'-'));
-      setText('class-sub',          'Managing ' + (s.year||'') + ' ' + (s.class||'') + ' — ' + (s.branch||'') + ' — ' + (s.institution||''));
-      setText('class-students-sub', 'Students in ' + (s.year||'') + ' ' + (s.class||''));
-      try { loadAll(); } catch(e) { console.error('loadAll:', e); }
-    } else {
-      // If not subadmin, redirect to main login
-      window.location.href = 'login.html?admin=true';
+    // Safe DOM Utilities
+    function setText(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
     }
-  } catch(e) {
-    console.error('[SubAdmin] doAuthCheck error:', e);
-    window.location.href = 'login.html?admin=true';
-  }
-}
-// Run immediately if DOM ready, otherwise wait for it
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', doAuthCheck);
-} else {
-  doAuthCheck();
-}
+    function setHTML(id, html) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    }
+    function toggleAuthPass() {
+      const inp = document.getElementById('auth-pass');
+      const eye = document.getElementById('auth-pass-eye');
+      if (!inp) return;
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
+    }
 
-async function apiFetch(path, opts = {}) {
-    // Standardize to use the new fetchApi which includes security headers
-    return await fetchApi(path, opts);
-}
-function toast(msg,ok=true){const t=document.getElementById('toast');if(!t)return;t.textContent=(ok?'✅ ':'❌ ')+msg;t.style.borderColor=ok?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
-
-function saLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
-
-function showPage(id,navEl){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  if(navEl) navEl.classList.add('active');
-  if(id==='voting-my') loadMyElection();
-  if(id==='voting-branch') loadBranchElectionPage();
-  if(id==='voting-college') loadCollegeElectionPage();
-  if(id==='registrations') loadClassRegistration();
-}
-
-async function refreshAll(){toast('🔄 Refreshing...');await loadAll();toast('Data refreshed!');}
-
-async function loadAll(){
-  try{
-    await loadClassRegistration();
-    const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year||'1st')}`);
-    classStudents=students;
-    studentMap={};students.forEach(s=>{studentMap[s.regNum]=s;});
-    const active=students.filter(s=>s.status==='active').length;
-    const allowed=students.filter(s=>s.canVote==1).length;
-    const voted=students.filter(s=>s.hasVoted==1).length;
-    
-    setText('s-students', students.length);
-    setText('s-canvote', allowed);
-    setText('s-voted', voted);
-    setText('s-not-granted', students.length - allowed);
-    setText('s-pending', students.length - active);
-
-    // Update Summary Bar
-    setText('sum-total', students.length);
-    setText('sum-can', allowed);
-    setText('sum-voted', voted);
-    setText('sum-not', students.length - allowed);
-    setText('sum-pending', students.length - active);
-
-    renderStudents(students);
-    updateCharts(students.length,active,allowed,voted);
-  }catch(e){toast(e.message,false);}
-}
-
-function updateCharts(total,accepted,allowed,voted){
-  const opts={
-    responsive:true,
-    maintainAspectRatio:false,
-    plugins:{
-      legend:{display:false},
-      tooltip:{
-        backgroundColor:'rgba(15,23,42,0.9)',
-        titleFont:{family:'Outfit',size:13},
-        bodyFont:{family:'Outfit',size:12},
-        padding:12,
-        borderRadius:8,
-        borderColor:'rgba(255,255,255,0.1)',
-        borderWidth:1
+    // ── Auth check — runs after DOM is ready ──
+    function doAuthCheck() {
+      try {
+        const s = JSON.parse(localStorage.getItem('ovs_currentUser') || 'null');
+        const role = s && s.role ? s.role.trim().toLowerCase() : '';
+        if (role === 'subadmin') {
+          session = s;
+          setText('class-label', (s.year || '') + ' ' + (s.class || '-'));
+          setText('class-sub', 'Managing ' + (s.year || '') + ' ' + (s.class || '') + ' — ' + (s.branch || '') + ' — ' + (s.institution || ''));
+          setText('class-students-sub', 'Students in ' + (s.year || '') + ' ' + (s.class || ''));
+          try { loadAll(); } catch (e) { console.error('loadAll:', e); }
+        } else {
+          // If not subadmin, redirect to main login
+          window.location.href = 'login.html?admin=true';
+        }
+      } catch (e) {
+        console.error('[SubAdmin] doAuthCheck error:', e);
+        window.location.href = 'login.html?admin=true';
       }
-    },
-    cutout:'65%'
-  };
+    }
+    // Run immediately if DOM ready, otherwise wait for it
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doAuthCheck);
+    } else {
+      doAuthCheck();
+    }
 
-  // Funnel 1: Registration Status (All Students)
-  if(regChartInstance)regChartInstance.destroy();
-  const r1=document.getElementById('regChart').getContext('2d');
-  regChartInstance=new Chart(r1,{
-    type:'doughnut',
-    data:{
-      labels:['Accepted','Pending'],
-      datasets:[{
-        data:[accepted,total-accepted],
-        backgroundColor:['#ff2a4d','rgba(255,255,255,0.05)'],
-        borderColor:['#ff2a4d','rgba(255,255,255,0.1)'],
-        borderWidth:1,
-        hoverOffset:4
-      }]
-    },
-    options:opts
-  });
-  
-  setText('reg-total-pill', `Total: ${total}`);
-  setHTML('reg-legend', `
+    async function apiFetch(path, opts = {}) {
+      // Standardize to use the new fetchApi which includes security headers
+      return await fetchApi(path, opts);
+    }
+    function toast(msg, ok = true) { const t = document.getElementById('toast'); if (!t) return; t.textContent = (ok ? '✅ ' : '❌ ') + msg; t.style.borderColor = ok ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)'; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3500); }
+
+    function saLogout() { session = null; localStorage.removeItem('ovs_currentUser'); window.location.href = 'login.html?admin=true'; }
+
+    function showPage(id, navEl) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + id).classList.add('active');
+      if (navEl) navEl.classList.add('active');
+      if (id === 'voting-my') loadMyElection();
+      if (id === 'voting-branch') loadBranchElectionPage();
+      if (id === 'voting-college') loadCollegeElectionPage();
+      if (id === 'registrations') loadClassRegistration();
+    }
+
+    async function refreshAll() { toast('🔄 Refreshing...'); await loadAll(); toast('Data refreshed!'); }
+
+    async function loadAll() {
+      try {
+        await loadClassRegistration();
+        const students = await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year || '1st')}`);
+        classStudents = students;
+        studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
+        const active = students.filter(s => s.status === 'active').length;
+        const allowed = students.filter(s => s.canVote == 1).length;
+        const voted = students.filter(s => s.hasVoted == 1).length;
+
+        setText('s-students', students.length);
+        setText('s-canvote', allowed);
+        setText('s-voted', voted);
+        setText('s-not-granted', students.length - allowed);
+        setText('s-pending', students.length - active);
+
+        // Update Summary Bar
+        setText('sum-total', students.length);
+        setText('sum-can', allowed);
+        setText('sum-voted', voted);
+        setText('sum-not', students.length - allowed);
+        setText('sum-pending', students.length - active);
+
+        renderStudents(students);
+        updateCharts(students.length, active, allowed, voted);
+      } catch (e) { toast(e.message, false); }
+    }
+
+    function updateCharts(total, accepted, allowed, voted) {
+      const opts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15,23,42,0.9)',
+            titleFont: { family: 'Outfit', size: 13 },
+            bodyFont: { family: 'Outfit', size: 12 },
+            padding: 12,
+            borderRadius: 8,
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1
+          }
+        },
+        cutout: '65%'
+      };
+
+      // Funnel 1: Registration Status (All Students)
+      if (regChartInstance) regChartInstance.destroy();
+      const r1 = document.getElementById('regChart').getContext('2d');
+      regChartInstance = new Chart(r1, {
+        type: 'doughnut',
+        data: {
+          labels: ['Accepted', 'Pending'],
+          datasets: [{
+            data: [accepted, total - accepted],
+            backgroundColor: ['#ff2a4d', 'rgba(255,255,255,0.05)'],
+            borderColor: ['#ff2a4d', 'rgba(255,255,255,0.1)'],
+            borderWidth: 1,
+            hoverOffset: 4
+          }]
+        },
+        options: opts
+      });
+
+      setText('reg-total-pill', `Total: ${total}`);
+      setHTML('reg-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">✅ Accepted:</span>
         <strong style="color:white">${accepted}</strong>
     </div>
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
         <span style="color:var(--muted)">⏳ Pending:</span>
-        <strong style="color:white">${total-accepted}</strong>
+        <strong style="color:white">${total - accepted}</strong>
     </div>
     <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--purple); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${total > 0 ? Math.round((accepted/total)*100) : 0}% Verified
+        ${total > 0 ? Math.round((accepted / total) * 100) : 0}% Verified
     </div>
   `);
 
-  // Funnel 2: Voting Access (Subset of Accepted Students Only)
-  // Per user request: Allowed/Not Allowed only shown for registration completed students
-  if(voteChartInstance)voteChartInstance.destroy();
-  const r2=document.getElementById('voteChart').getContext('2d');
-  const deniedAccess = accepted - allowed;
-  voteChartInstance=new Chart(r2,{
-    type:'doughnut',
-    data:{
-      labels:['Allowed','Not Allowed'],
-      datasets:[{
-        data:[allowed,deniedAccess],
-        backgroundColor:['#22c55e','rgba(255,255,255,0.05)'],
-        borderColor:['#22c55e','rgba(255,255,255,0.1)'],
-        borderWidth:1,
-        hoverOffset:4
-      }]
-    },
-    options:opts
-  });
+      // Funnel 2: Voting Access (Subset of Accepted Students Only)
+      // Per user request: Allowed/Not Allowed only shown for registration completed students
+      if (voteChartInstance) voteChartInstance.destroy();
+      const r2 = document.getElementById('voteChart').getContext('2d');
+      const deniedAccess = accepted - allowed;
+      voteChartInstance = new Chart(r2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Allowed', 'Not Allowed'],
+          datasets: [{
+            data: [allowed, deniedAccess],
+            backgroundColor: ['#22c55e', 'rgba(255,255,255,0.05)'],
+            borderColor: ['#22c55e', 'rgba(255,255,255,0.1)'],
+            borderWidth: 1,
+            hoverOffset: 4
+          }]
+        },
+        options: opts
+      });
 
-  setText('vote-total-pill', `Accepted: ${accepted}`);
-  setHTML('vote-legend', `
+      setText('vote-total-pill', `Accepted: ${accepted}`);
+      setHTML('vote-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">🗳️ Allowed:</span>
         <strong style="color:white">${allowed}</strong>
@@ -759,31 +1399,31 @@ function updateCharts(total,accepted,allowed,voted){
         <strong style="color:white">${deniedAccess}</strong>
     </div>
     <div style="margin-top:0.5rem; font-size:0.75rem; color:#22c55e; font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${accepted > 0 ? Math.round((allowed/accepted)*100) : 0}% Eligibility
+        ${accepted > 0 ? Math.round((allowed / accepted) * 100) : 0}% Eligibility
     </div>
   `);
 
-  // Funnel 3: Voting Participation (Subset of Allowed Students Only)
-  if(partChartInstance)partChartInstance.destroy();
-  const r3=document.getElementById('participationChart').getContext('2d');
-  const notVoted = allowed - voted;
-  partChartInstance=new Chart(r3,{
-    type:'doughnut',
-    data:{
-      labels:['Voted','Waiting'],
-      datasets:[{
-        data:[voted,notVoted],
-        backgroundColor:['var(--gold)','rgba(255,255,255,0.05)'],
-        borderColor:['var(--gold)','rgba(255,255,255,0.1)'],
-        borderWidth:1,
-        hoverOffset:4
-      }]
-    },
-    options:opts
-  });
+      // Funnel 3: Voting Participation (Subset of Allowed Students Only)
+      if (partChartInstance) partChartInstance.destroy();
+      const r3 = document.getElementById('participationChart').getContext('2d');
+      const notVoted = allowed - voted;
+      partChartInstance = new Chart(r3, {
+        type: 'doughnut',
+        data: {
+          labels: ['Voted', 'Waiting'],
+          datasets: [{
+            data: [voted, notVoted],
+            backgroundColor: ['var(--gold)', 'rgba(255,255,255,0.05)'],
+            borderColor: ['var(--gold)', 'rgba(255,255,255,0.1)'],
+            borderWidth: 1,
+            hoverOffset: 4
+          }]
+        },
+        options: opts
+      });
 
-  setText('part-total-pill', `Allowed: ${allowed}`);
-  setHTML('part-legend', `
+      setText('part-total-pill', `Allowed: ${allowed}`);
+      setHTML('part-legend', `
     <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:var(--muted)">🏁 Voted:</span>
         <strong style="color:white">${voted}</strong>
@@ -793,492 +1433,517 @@ function updateCharts(total,accepted,allowed,voted){
         <strong style="color:white">${notVoted}</strong>
     </div>
     <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${allowed > 0 ? Math.round((voted/allowed)*100) : 0}% Turned Out
+        ${allowed > 0 ? Math.round((voted / allowed) * 100) : 0}% Turned Out
     </div>
   `);
-}
-
-// ── Student Tab Management ──────────────────────────────────────
-let currentStudentTab = 'pending';
-
-function switchStudentTab(tab) {
-  currentStudentTab = tab;
-  const pendingTab = document.getElementById('tab-content-pending');
-  const approvedTab = document.getElementById('tab-content-approved');
-  const btnPending = document.getElementById('tab-pending');
-  const btnApproved = document.getElementById('tab-approved');
-
-  if (tab === 'pending') {
-    if(pendingTab) pendingTab.style.display = 'block';
-    if(approvedTab) approvedTab.style.display = 'none';
-    if(btnPending) {
-        btnPending.style.background = 'rgba(255,42,77,0.15)';
-        btnPending.style.color = '#ff2a4d';
     }
-    if(btnApproved) {
-        btnApproved.style.background = 'transparent';
-        btnApproved.style.color = 'var(--muted)';
-    }
-  } else {
-    if(pendingTab) pendingTab.style.display = 'none';
-    if(approvedTab) approvedTab.style.display = 'block';
-    if(btnPending) {
-        btnPending.style.background = 'transparent';
-        btnPending.style.color = 'var(--muted)';
-    }
-    if(btnApproved) {
-        btnApproved.style.background = 'rgba(34,197,94,0.1)';
-        btnApproved.style.color = '#22c55e';
-    }
-  }
-  const q = (document.getElementById('student-search')||{}).value || '';
-  filterStudentsByTab(q);
-}
 
-function filterStudentsByTab(q) {
-  const filtered = classStudents.filter(s => [s.regNum, s.name].join(' ').toLowerCase().includes(q.toLowerCase()));
-  renderPendingStudents(filtered.filter(s => s.status !== 'active'));
-  renderApprovedStudents(filtered.filter(s => s.status === 'active'));
-}
+    // ── Student Tab Management ──────────────────────────────────────
+    let currentStudentTab = 'pending';
 
-function _makeImgCells(s) {
-  let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
-  if (s.portrait && s.portrait.startsWith('data:image')) portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.regNum}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">`;
-  else if (s.portrait && s.portrait.startsWith('data:application/pdf')) portraitHtml = `<div onclick="showPortrait('${s.regNum}','pdf')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;">PDF</div>`;
-  let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
-  if (s.webcamReg) faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.regNum}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--purple);cursor:pointer;">`;
-  return { portraitHtml, faceHtml };
-}
+    function switchStudentTab(tab) {
+      currentStudentTab = tab;
+      const pendingTab = document.getElementById('tab-content-pending');
+      const approvedTab = document.getElementById('tab-content-approved');
+      const btnPending = document.getElementById('tab-pending');
+      const btnApproved = document.getElementById('tab-approved');
 
-function renderPendingStudents(list) {
-  const pending = list.filter(s => s.status !== 'active');
-  setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
-  if (!pending.length) { 
-      setHTML('pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'); 
-      setHTML('reg-pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'); 
-      return; 
-  }
-  const html = pending.map(s => {
-    const { portraitHtml, faceHtml } = _makeImgCells(s);
-    const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
-    return `<tr>
+      if (tab === 'pending') {
+        if (pendingTab) pendingTab.style.display = 'block';
+        if (approvedTab) approvedTab.style.display = 'none';
+        if (btnPending) {
+          btnPending.style.background = 'rgba(255,42,77,0.15)';
+          btnPending.style.color = '#ff2a4d';
+        }
+        if (btnApproved) {
+          btnApproved.style.background = 'transparent';
+          btnApproved.style.color = 'var(--muted)';
+        }
+      } else {
+        if (pendingTab) pendingTab.style.display = 'none';
+        if (approvedTab) approvedTab.style.display = 'block';
+        if (btnPending) {
+          btnPending.style.background = 'transparent';
+          btnPending.style.color = 'var(--muted)';
+        }
+        if (btnApproved) {
+          btnApproved.style.background = 'rgba(34,197,94,0.1)';
+          btnApproved.style.color = '#22c55e';
+        }
+      }
+      const q = (document.getElementById('student-search') || {}).value || '';
+      filterStudentsByTab(q);
+    }
+
+    function filterStudentsByTab(q) {
+      const filtered = classStudents.filter(s => [s.regNum, s.name].join(' ').toLowerCase().includes(q.toLowerCase()));
+      renderPendingStudents(filtered.filter(s => s.status !== 'active'));
+      renderApprovedStudents(filtered.filter(s => s.status === 'active'));
+    }
+
+    function _makeImgCells(s) {
+      let portraitHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">None</div>';
+      if (s.portrait && s.portrait.startsWith('data:image')) portraitHtml = `<img src="${s.portrait}" onclick="showPortrait('${s.regNum}','portrait')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">`;
+      else if (s.portrait && s.portrait.startsWith('data:application/pdf')) portraitHtml = `<div onclick="showPortrait('${s.regNum}','pdf')" style="width:40px;height:40px;background:#ef4444;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;cursor:pointer;font-weight:bold;font-size:0.7rem;">PDF</div>`;
+      let faceHtml = '<div style="width:40px;height:40px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;">N/A</div>';
+      if (s.webcamReg) faceHtml = `<img src="${s.webcamReg}" onclick="showPortrait('${s.regNum}','webcam')" style="width:40px;height:40px;border-radius:4px;object-fit:cover;border:1px solid var(--purple);cursor:pointer;">`;
+      return { portraitHtml, faceHtml };
+    }
+
+    function renderPendingStudents(list) {
+      const pending = list.filter(s => s.status !== 'active');
+      setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
+      if (!pending.length) {
+        setHTML('pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>');
+        setHTML('reg-pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>');
+        return;
+      }
+      const html = pending.map(s => {
+        const { portraitHtml, faceHtml } = _makeImgCells(s);
+        const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
+        return `<tr>
       <td>${portraitHtml}</td><td>${faceHtml}</td>
       <td><strong>${s.regNum}</strong></td>
-      <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email||''}</div></td>
+      <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td>${roleBadge}</td>
       <td style="display:flex;gap:0.4rem;padding:0.6rem;">
         <button onclick="acceptStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;font-weight:700;">✔ Accept</button>
         <button onclick="rejectStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">✕ Reject</button>
       </td>
     </tr>`;
-  }).join('');
-  setHTML('pending-student-table', html);
-  setHTML('reg-pending-student-table', html);
-}
+      }).join('');
+      setHTML('pending-student-table', html);
+      setHTML('reg-pending-student-table', html);
+    }
 
-function renderApprovedStudents(list) {
-  const approved = list.filter(s => s.status === 'active');
-  setText('approved-count', classStudents.filter(s => s.status === 'active').length);
-  if (!approved.length) { 
-      setHTML('approved-student-table', '<tr><td colspan="6" class="empty">No approved students yet</td></tr>'); 
-      return; 
-  }
-  setHTML('approved-student-table', approved.map(s => {
-    const { portraitHtml, faceHtml } = _makeImgCells(s);
-    const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
-    return `<tr>
+    function renderApprovedStudents(list) {
+      const approved = list.filter(s => s.status === 'active');
+      setText('approved-count', classStudents.filter(s => s.status === 'active').length);
+      if (!approved.length) {
+        setHTML('approved-student-table', '<tr><td colspan="6" class="empty">No approved students yet</td></tr>');
+        return;
+      }
+      setHTML('approved-student-table', approved.map(s => {
+        const { portraitHtml, faceHtml } = _makeImgCells(s);
+        const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
+        return `<tr>
       <td>${portraitHtml}</td><td>${faceHtml}</td>
       <td><strong>${s.regNum}</strong></td>
-      <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email||''}</div></td>
+      <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td>${roleBadge}</td>
       <td style="display:flex;gap:0.4rem;padding:0.6rem;">
         <button onclick="openEdit('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(6,182,212,0.4);background:rgba(6,182,212,0.1);color:var(--cyan);cursor:pointer;font-size:0.8rem;font-weight:700;">✏️ Edit</button>
         <button onclick="removeStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">🗑️ Remove</button>
       </td>
     </tr>`;
-  }).join(''));
-}
-
-// Keep renderStudents as a wrapper for backward compatibility
-function renderStudents(list) {
-  renderPendingStudents(list);
-  renderApprovedStudents(list);
-}
-
-async function acceptStudent(id){try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify({status:'active'})});toast(`✅ Accepted ${id}`);loadAll();}catch(e){toast(e.message,false);}}
-async function rejectStudent(id){if(!confirm(`⚠️ Permanently delete registration for ${id}? This cannot be undone.`))return;try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`🗑️ ${id} rejected & deleted`);loadAll();}catch(e){toast(e.message,false);}}
-async function toggleVote(regNum,val){try{await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum,canVote:val,institution:session.institution})});toast(val?'Vote access granted!':'Vote access revoked');loadAll();}catch(e){toast(e.message,false);}}
-async function removeStudent(id){if(!confirm(`Remove ${id}?`))return;try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast(`${id} removed`);loadAll();}catch(e){toast(e.message,false);}}
-
-function filterStudents(q){renderStudents(classStudents.filter(s=>[s.regNum,s.name].join(' ').toLowerCase().includes(q.toLowerCase())));}
-
-function openEdit(id){
-  const s=studentMap[id];if(!s)return;
-  const regInp = document.getElementById('edit-regnum');
-  if(regInp) regInp.value=id;
-  setText('edit-regnum-display', id);
-  const nameEl = document.getElementById('edit-name');
-  const emailEl = document.getElementById('edit-email');
-  const yearEl = document.getElementById('edit-year');
-  const sectionEl = document.getElementById('edit-section');
-  const passEl = document.getElementById('edit-pass');
-  if(nameEl) nameEl.value=s.name||'';
-  if(emailEl) emailEl.value=s.email||'';
-  if(yearEl) yearEl.value=s.year||'1st Year';
-  const sec=s.class&&s.class.includes('-')?s.class.split('-')[1]:'1';
-  if(sectionEl) sectionEl.value=sec;
-  if(passEl) passEl.value='';
-  const modal = document.getElementById('edit-modal');
-  if(modal) modal.classList.add('open');
-}
-function closeEdit(){
-  const modal = document.getElementById('edit-modal');
-  if(modal) modal.classList.remove('open');
-}
-async function saveEdit(){
-  const id=document.getElementById('edit-regnum').value;
-  const name=document.getElementById('edit-name').value.trim();
-  const email=document.getElementById('edit-email').value.trim();
-  const year=document.getElementById('edit-year').value;
-  const section=document.getElementById('edit-section').value.trim();
-  const pass=document.getElementById('edit-pass').value;
-  if(!name)return toast('Name required',false);
-  if(section&&!/^[1-9]$/.test(section))return toast('Section must be 1-9',false);
-  const updates={name,email,year,class:session.branch+'-'+section};
-  if(pass){if(pass.length<6)return toast('Password too short',false);updates.password=await StorageManager.hashPassword(pass);}
-  try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(updates)});toast('Updated!');closeEdit();loadAll();}catch(e){toast(e.message,false);}
-}
-
-function showPortrait(regNum,type){
-  const s=studentMap[regNum];if(!s)return;
-  const src=type==='webcam'?s.webcamReg:s.portrait;
-  if(!src)return;
-  if(src.startsWith('data:application/pdf')){const w=window.open('','_blank');if(w){w.document.body.innerHTML=`<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;}return;}
-  document.getElementById('portrait-preview').src=src;
-  document.getElementById('portrait-modal').style.display='flex';
-}
-
-// ─── CLASS REGISTRATION MANAGEMENT ──────────────────────────────
-let classRegistrationConfig = null;
-let standaloneRegCountdownInterval = null;
-
-async function loadClassRegistration() {
-  try {
-     // Fetch all class_registration elections for this institution (no createdBy filter to be robust)
-     const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class_registration`);
-     // Match by createdBy first, then fall back to class scope match
-     classRegistrationConfig = elections.find(e => e.createdBy === session.regNum) 
-       || elections.find(e => e.scope && e.scope.classes && e.scope.classes.includes(session.class))
-       || null;
-     console.log('[RegMgmt] Found registration config:', classRegistrationConfig ? classRegistrationConfig.id : 'none', '| All records:', elections.length);
-     renderClassRegistration();
-  } catch(e) { console.error('[RegMgmt] loadClassRegistration error:', e); }
-}
-
-function renderClassRegistration() {
-  const startCard = document.getElementById('start-registration-card');
-  const activeCard = document.getElementById('active-registration-card');
-  
-  // Always show active card if a record exists in DB (even if registration is paused/stopped)
-  if(!classRegistrationConfig) {
-    if(startCard) startCard.style.display = 'block';
-    if(activeCard) activeCard.style.display = 'none';
-    return;
-  }
-
-  if(startCard) startCard.style.display = 'none';
-  if(activeCard) activeCard.style.display = 'block';
-
-  const isOpen = classRegistrationConfig.registrationOpen == 1;
-  const code = classRegistrationConfig.electionCode || '------';
-  const link = window.location.origin + '/register.html?classCode=' + (classRegistrationConfig.electionCode||'');
-  window.classRegLink = link;
-
-  setText('class-reg-code', code);
-  setText('class-reg-link', link);
-
-  // Status badge
-  const statusBadge = document.getElementById('class-reg-status-badge');
-  if(statusBadge) {
-    statusBadge.textContent = isOpen ? '🟢 Registration Open' : '🔴 Registration Stopped';
-    statusBadge.style.color = isOpen ? '#22c55e' : '#ff2a4d';
-    statusBadge.style.borderColor = isOpen ? 'rgba(34,197,94,0.3)' : 'rgba(255,42,77,0.3)';
-    statusBadge.style.background = isOpen ? 'rgba(34,197,94,0.08)' : 'rgba(255,42,77,0.08)';
-  }
-
-  // Toggle stop/reopen button
-  const stopBtn = document.getElementById('class-reg-stop-btn');
-  const reopenBtn = document.getElementById('class-reg-reopen-btn');
-  if(stopBtn) stopBtn.style.display = isOpen ? 'inline-block' : 'none';
-  if(reopenBtn) reopenBtn.style.display = isOpen ? 'none' : 'inline-block';
-
-  if (isOpen && classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime) {
-    startStandaloneRegCountdown(classRegistrationConfig.scope.regEndTime);
-    const cdCard = document.getElementById('standalone-reg-countdown-card');
-    if(cdCard) cdCard.style.display = 'block';
-  } else {
-    setText('standalone-reg-cd-display', '00:00:00');
-    if(standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
-    const cdCard = document.getElementById('standalone-reg-countdown-card');
-    if(cdCard) cdCard.style.display = isOpen ? 'block' : 'none';
-  }
-}
-
-async function startClassRegistrationWindow() {
-  const start = document.getElementById('class-reg-start-time').value;
-  const end = document.getElementById('class-reg-end-time').value;
-  if(!start || !end) return toast('Start and End times are required', false);
-
-  const payload = {
-    name: "Class Registration " + session.class,
-    type: "class_registration",
-    createdBy: session.regNum,
-    institution: session.institution,
-    scope: { branch: session.branch, classes: [session.class], regStartTime: new Date(start).toISOString(), regEndTime: new Date(end).toISOString() },
-    registrationOpen: 1,
-    isActive: 0,
-    isCompleted: 0
-  };
-
-  try {
-    await apiFetch('/elections', { method: 'POST', body: JSON.stringify(payload) });
-    toast('Class Registration Window Opened!');
-    await loadClassRegistration();
-  } catch(e) { toast(e.message, false); }
-}
-
-async function stopClassRegistrationWindow() {
-  if(!classRegistrationConfig) return;
-  if(!confirm('Stop the registration window? Students will no longer be able to register.')) return;
-  try {
-    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ registrationOpen: 0 }) });
-    toast('Registration Stopped!');
-    await loadClassRegistration();
-  } catch(e) { toast(e.message, false); }
-}
-
-async function reopenClassRegistrationWindow() {
-  if(!classRegistrationConfig) return;
-  try {
-    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ registrationOpen: 1 }) });
-    toast('Registration Re-opened!');
-    await loadClassRegistration();
-  } catch(e) { toast(e.message, false); }
-}
-
-async function deleteClassRegistrationWindow() {
-  if(!classRegistrationConfig) return;
-  if(!confirm('Permanently delete this registration window? This cannot be undone.')) return;
-  try {
-    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'DELETE' });
-    classRegistrationConfig = null;
-    toast('Registration window deleted. You can now create a new one.');
-    renderClassRegistration();
-  } catch(e) { toast(e.message, false); }
-}
-
-async function promptModifyRegistrationSchedule() {
-  if(!classRegistrationConfig) return;
-  const currentEnd = classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime 
-    ? classRegistrationConfig.scope.regEndTime.slice(0, 16) : '';
-  const newEnd = prompt('Enter new Registration End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
-  if(!newEnd) return;
-  const d = new Date(newEnd);
-  if(isNaN(d.getTime())) return toast('Invalid date format', false);
-  try {
-    // Merge new endTime into scope and send the entire updated scope object
-    const updatedScope = { ...(classRegistrationConfig.scope || {}), regEndTime: d.toISOString() };
-    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ scope: updatedScope })
-    });
-    toast('Registration Schedule Modified!');
-    await loadClassRegistration(); // reload from server to get fresh data and restart countdown
-  } catch(e) { toast(e.message, false); }
-}
-
-function startStandaloneRegCountdown(endTime) {
-  if(standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
-  const disp = document.getElementById('standalone-reg-cd-display');
-  function tick() {
-    const diff = new Date(endTime) - new Date();
-    if(!disp) return;
-    if(diff <= 0) {
-       setText('standalone-reg-cd-display', '00:00:00');
-       clearInterval(standaloneRegCountdownInterval);
-       stopClassRegistrationWindow();
-       return;
+      }).join(''));
     }
-    const d=Math.floor(diff/(1000*60*60*24));
-    const h=Math.floor((diff%(1000*60*60*24))/3600000).toString().padStart(2,'0');
-    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    setText('standalone-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
-  }
-  tick();
-  standaloneRegCountdownInterval = setInterval(tick, 1000);
-}
 
-function copyClassRegLink() {
-  if(!window.classRegLink) return;
-  navigator.clipboard.writeText(window.classRegLink);
-  toast('Registration link copied!');
-}
-function copyClassRegCode() {
-  const code = document.getElementById('class-reg-code').innerText;
-  navigator.clipboard.writeText(code);
-  toast('Code copied!');
-}
+    // Keep renderStudents as a wrapper for backward compatibility
+    function renderStudents(list) {
+      renderPendingStudents(list);
+      renderApprovedStudents(list);
+    }
 
-// ─── MY ELECTION ───────────────────────────────────────────────
-async function loadMyElection(){
-  try{
-    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class&createdBy=${encodeURIComponent(session.regNum)}`);
-    myElection=elections.length>0?elections[0]:null;
-    renderMyElection();
-  }catch(e){toast(e.message,false);}
-}
+    async function acceptStudent(id) { try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) }); toast(`✅ Accepted ${id}`); loadAll(); } catch (e) { toast(e.message, false); } }
+    async function rejectStudent(id) { if (!confirm(`⚠️ Permanently delete registration for ${id}? This cannot be undone.`)) return; try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'DELETE' }); toast(`🗑️ ${id} rejected & deleted`); loadAll(); } catch (e) { toast(e.message, false); } }
+    async function toggleVote(regNum, val) { try { await apiFetch('/voters/can-vote', { method: 'POST', body: JSON.stringify({ regNum, canVote: val, institution: session.institution }) }); toast(val ? 'Vote access granted!' : 'Vote access revoked'); loadAll(); } catch (e) { toast(e.message, false); } }
+    async function removeStudent(id) { if (!confirm(`Remove ${id}?`)) return; try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'DELETE' }); toast(`${id} removed`); loadAll(); } catch (e) { toast(e.message, false); } }
 
-function renderMyElection(){
-  const createCard=document.getElementById('create-election-card');
-  const activeDiv=document.getElementById('my-election-active');
-  if(!myElection){
-    if(createCard) createCard.style.display='block';
-    if(activeDiv) activeDiv.style.display='none';
-    return;
-  }
-  if(createCard) createCard.style.display='none';
-  if(activeDiv) activeDiv.style.display='block';
-  setText('my-elec-code', myElection.electionCode||'------');
-  
-  const link = window.location.origin + '/register.html?classCode=' + (myElection.electionCode||'');
-  setText('my-elec-link', link);
-  window.myElecLink = link;
+    function filterStudents(q) { renderStudents(classStudents.filter(s => [s.regNum, s.name].join(' ').toLowerCase().includes(q.toLowerCase()))); }
 
-  const startBtn=document.getElementById('my-elec-start-btn');
-  const stopBtn=document.getElementById('my-elec-stop-btn');
+    function openEdit(id) {
+      const s = studentMap[id]; if (!s) return;
+      const regInp = document.getElementById('edit-regnum');
+      if (regInp) regInp.value = id;
+      setText('edit-regnum-display', id);
+      const nameEl = document.getElementById('edit-name');
+      const emailEl = document.getElementById('edit-email');
+      const yearEl = document.getElementById('edit-year');
+      const sectionEl = document.getElementById('edit-section');
+      const passEl = document.getElementById('edit-pass');
+      if (nameEl) nameEl.value = s.name || '';
+      if (emailEl) emailEl.value = s.email || '';
+      if (yearEl) yearEl.value = s.year || '1st Year';
+      const sec = s.class && s.class.includes('-') ? s.class.split('-')[1] : '1';
+      if (sectionEl) sectionEl.value = sec;
+      if (passEl) passEl.value = '';
+      const modal = document.getElementById('edit-modal');
+      if (modal) modal.classList.add('open');
+    }
+    function closeEdit() {
+      const modal = document.getElementById('edit-modal');
+      if (modal) modal.classList.remove('open');
+    }
+    async function saveEdit() {
+      const id = document.getElementById('edit-regnum').value;
+      const name = document.getElementById('edit-name').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      const year = document.getElementById('edit-year').value;
+      const section = document.getElementById('edit-section').value.trim();
+      const pass = document.getElementById('edit-pass').value;
+      if (!name) return toast('Name required', false);
+      if (section && !/^[1-9]$/.test(section)) return toast('Section must be 1-9', false);
+      const updates = { name, email, year, class: session.branch + '-' + section };
+      if (pass) { if (pass.length < 6) return toast('Password too short', false); updates.password = await StorageManager.hashPassword(pass); }
+      try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'PATCH', body: JSON.stringify(updates) }); toast('Updated!'); closeEdit(); loadAll(); } catch (e) { toast(e.message, false); }
+    }
 
-  if(myElection.isActive){
-    if(startBtn) startBtn.style.display='none';
-    if(stopBtn) stopBtn.style.display='inline-block';
-  } else {
-    if(startBtn) startBtn.style.display='inline-block';
-    if(stopBtn) stopBtn.style.display='none';
-  }
+    function showPortrait(regNum, type) {
+      const s = studentMap[regNum]; if (!s) return;
+      const src = type === 'webcam' ? s.webcamReg : s.portrait;
+      if (!src) return;
+      if (src.startsWith('data:application/pdf')) { const w = window.open('', '_blank'); if (w) { w.document.body.innerHTML = `<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`; } return; }
+      document.getElementById('portrait-preview').src = src;
+      document.getElementById('portrait-modal').style.display = 'flex';
+    }
+
+    // ─── CLASS REGISTRATION MANAGEMENT ──────────────────────────────
+    let classRegistrationConfig = null;
+    let standaloneRegCountdownInterval = null;
+
+    async function loadClassRegistration() {
+      try {
+        // Fetch all class_registration elections for this institution (no createdBy filter to be robust)
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class_registration`);
+        // Match by createdBy first, then fall back to class scope match
+        classRegistrationConfig = elections.find(e => e.createdBy === session.regNum)
+          || elections.find(e => e.scope && e.scope.classes && e.scope.classes.includes(session.class))
+          || null;
+        console.log('[RegMgmt] Found registration config:', classRegistrationConfig ? classRegistrationConfig.id : 'none', '| All records:', elections.length);
+        renderClassRegistration();
+      } catch (e) { console.error('[RegMgmt] loadClassRegistration error:', e); }
+    }
+
+    function renderClassRegistration() {
+      const startCard = document.getElementById('start-registration-card');
+      const activeCard = document.getElementById('active-registration-card');
+
+      // Always show active card if a record exists in DB (even if registration is paused/stopped)
+      if (!classRegistrationConfig) {
+        if (startCard) startCard.style.display = 'block';
+        if (activeCard) activeCard.style.display = 'none';
+        return;
+      }
+
+      if (startCard) startCard.style.display = 'none';
+      if (activeCard) activeCard.style.display = 'block';
+
+      const isOpen = classRegistrationConfig.registrationOpen == 1;
+      const code = classRegistrationConfig.electionCode || '------';
+      const link = window.location.origin + '/register.html?classCode=' + (classRegistrationConfig.electionCode || '');
+      window.classRegLink = link;
+
+      setText('class-reg-code', code);
+      setText('class-reg-link', link);
+
+      // Status badge
+      const statusBadge = document.getElementById('class-reg-status-badge');
+      if (statusBadge) {
+        statusBadge.textContent = isOpen ? '🟢 Registration Open' : '🔴 Registration Stopped';
+        statusBadge.style.color = isOpen ? '#22c55e' : '#ff2a4d';
+        statusBadge.style.borderColor = isOpen ? 'rgba(34,197,94,0.3)' : 'rgba(255,42,77,0.3)';
+        statusBadge.style.background = isOpen ? 'rgba(34,197,94,0.08)' : 'rgba(255,42,77,0.08)';
+      }
+
+      // Toggle stop/reopen button
+      const stopBtn = document.getElementById('class-reg-stop-btn');
+      const reopenBtn = document.getElementById('class-reg-reopen-btn');
+      if (stopBtn) stopBtn.style.display = isOpen ? 'inline-block' : 'none';
+      if (reopenBtn) reopenBtn.style.display = isOpen ? 'none' : 'inline-block';
+
+      const cdCard = document.getElementById('standalone-reg-countdown-card');
+      const cdLabel = document.getElementById('standalone-reg-cd-label');
+
+      if (classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime) {
+        // Always show the countdown card if we have an endTime
+        if (cdCard) cdCard.style.display = 'block';
+
+        if (isOpen) {
+          // Registration is OPEN — run the live countdown
+          if (cdLabel) cdLabel.textContent = '⏱️ Registration Window — Ends In';
+          startStandaloneRegCountdown(classRegistrationConfig.scope.regEndTime);
+        } else {
+          // Registration is STOPPED — stop the interval but show frozen remaining time
+          if (standaloneRegCountdownInterval) {
+            clearInterval(standaloneRegCountdownInterval);
+            standaloneRegCountdownInterval = null;
+          }
+          if (cdLabel) cdLabel.textContent = '⏸️ Registration Paused — Resumes At';
+          // Calculate and display remaining time (frozen)
+          const diff = new Date(classRegistrationConfig.scope.regEndTime) - new Date();
+          if (diff > 0) {
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000).toString().padStart(2, '0');
+            const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+            const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+            setText('standalone-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+          } else {
+            setText('standalone-reg-cd-display', 'Expired');
+          }
+        }
+      } else {
+        // No regEndTime set — hide the countdown card
+        if (cdCard) cdCard.style.display = 'none';
+        if (standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
+      }
+    }
+
+    async function startClassRegistrationWindow() {
+      const start = document.getElementById('class-reg-start-time').value;
+      const end = document.getElementById('class-reg-end-time').value;
+      if (!start || !end) return toast('Start and End times are required', false);
+
+      const payload = {
+        name: "Class Registration " + session.class,
+        type: "class_registration",
+        createdBy: session.regNum,
+        institution: session.institution,
+        scope: { branch: session.branch, classes: [session.class], regStartTime: new Date(start).toISOString(), regEndTime: new Date(end).toISOString() },
+        registrationOpen: 1,
+        isActive: 0,
+        isCompleted: 0
+      };
+
+      try {
+        await apiFetch('/elections', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Class Registration Window Opened!');
+        await loadClassRegistration();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function stopClassRegistrationWindow() {
+      if (!classRegistrationConfig) return;
+      if (!confirm('Stop the registration window? Students will no longer be able to register.')) return;
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ registrationOpen: 0 }) });
+        toast('Registration Stopped!');
+        await loadClassRegistration();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function reopenClassRegistrationWindow() {
+      if (!classRegistrationConfig) return;
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ registrationOpen: 1 }) });
+        toast('Registration Re-opened!');
+        await loadClassRegistration();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function deleteClassRegistrationWindow() {
+      if (!classRegistrationConfig) return;
+      if (!confirm('Permanently delete this registration window? This cannot be undone.')) return;
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'DELETE' });
+        classRegistrationConfig = null;
+        toast('Registration window deleted. You can now create a new one.');
+        renderClassRegistration();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function promptModifyRegistrationSchedule() {
+      if (!classRegistrationConfig) return;
+      const currentEnd = classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime
+        ? classRegistrationConfig.scope.regEndTime.slice(0, 16) : '';
+      const newEnd = prompt('Enter new Registration End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
+      if (!newEnd) return;
+      const d = new Date(newEnd);
+      if (isNaN(d.getTime())) return toast('Invalid date format', false);
+      try {
+        // Merge new endTime into scope and send the entire updated scope object
+        const updatedScope = { ...(classRegistrationConfig.scope || {}), regEndTime: d.toISOString() };
+        await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ scope: updatedScope })
+        });
+        toast('Registration Schedule Modified!');
+        await loadClassRegistration(); // reload from server to get fresh data and restart countdown
+      } catch (e) { toast(e.message, false); }
+    }
+
+    function startStandaloneRegCountdown(endTime) {
+      if (standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
+      const disp = document.getElementById('standalone-reg-cd-display');
+      function tick() {
+        const diff = new Date(endTime) - new Date();
+        if (!disp) return;
+        if (diff <= 0) {
+          setText('standalone-reg-cd-display', '00:00:00');
+          clearInterval(standaloneRegCountdownInterval);
+          stopClassRegistrationWindow();
+          return;
+        }
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        setText('standalone-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+      }
+      tick();
+      standaloneRegCountdownInterval = setInterval(tick, 1000);
+    }
+
+    function copyClassRegLink() {
+      if (!window.classRegLink) return;
+      navigator.clipboard.writeText(window.classRegLink);
+      toast('Registration link copied!');
+    }
+    function copyClassRegCode() {
+      const code = document.getElementById('class-reg-code').innerText;
+      navigator.clipboard.writeText(code);
+      toast('Code copied!');
+    }
+
+    // ─── MY ELECTION ───────────────────────────────────────────────
+    async function loadMyElection() {
+      try {
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class&createdBy=${encodeURIComponent(session.regNum)}`);
+        myElection = elections.length > 0 ? elections[0] : null;
+        renderMyElection();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    function renderMyElection() {
+      const createCard = document.getElementById('create-election-card');
+      const activeDiv = document.getElementById('my-election-active');
+      if (!myElection) {
+        if (createCard) createCard.style.display = 'block';
+        if (activeDiv) activeDiv.style.display = 'none';
+        return;
+      }
+      if (createCard) createCard.style.display = 'none';
+      if (activeDiv) activeDiv.style.display = 'block';
+      setText('my-elec-code', myElection.electionCode || '------');
+
+      const link = window.location.origin + '/register.html?classCode=' + (myElection.electionCode || '');
+      setText('my-elec-link', link);
+      window.myElecLink = link;
+
+      const startBtn = document.getElementById('my-elec-start-btn');
+      const stopBtn = document.getElementById('my-elec-stop-btn');
+
+      if (myElection.isActive) {
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'inline-block';
+      } else {
+        if (startBtn) startBtn.style.display = 'inline-block';
+        if (stopBtn) stopBtn.style.display = 'none';
+      }
 
 
-  // Info
-  const status=myElection.isActive?'🟢 Running':myElection.isCompleted?'✅ Completed':'⏳ Pending';
-  setHTML('my-elec-info', `
+      // Info
+      const status = myElection.isActive ? '🟢 Running' : myElection.isCompleted ? '✅ Completed' : '⏳ Pending';
+      setHTML('my-elec-info', `
     <div><strong>Name:</strong> ${myElection.name}</div>
     <div><strong>Status:</strong> ${status}</div>
     <div><strong>Scope:</strong> ${session.class} (${session.year})</div>
-    <div><strong>Reg Start:</strong> ${myElection.scope&&myElection.scope.regStartTime?new Date(myElection.scope.regStartTime).toLocaleString():'Not set'}</div>
-    <div><strong>Reg End:</strong> ${myElection.scope&&myElection.scope.regEndTime?new Date(myElection.scope.regEndTime).toLocaleString():'Not set'}</div>
-    <div><strong>Elec Start:</strong> ${myElection.startTime?new Date(myElection.startTime).toLocaleString():'Not set'}</div>
-    <div><strong>Elec End:</strong> ${myElection.endTime?new Date(myElection.endTime).toLocaleString():'Not set'}</div>
-    <div><strong>Registration:</strong> ${myElection.registrationOpen?'🟢 Open':'🔴 Closed'}</div>
+    <div><strong>Reg Start:</strong> ${myElection.scope && myElection.scope.regStartTime ? new Date(myElection.scope.regStartTime).toLocaleString() : 'Not set'}</div>
+    <div><strong>Reg End:</strong> ${myElection.scope && myElection.scope.regEndTime ? new Date(myElection.scope.regEndTime).toLocaleString() : 'Not set'}</div>
+    <div><strong>Elec Start:</strong> ${myElection.startTime ? new Date(myElection.startTime).toLocaleString() : 'Not set'}</div>
+    <div><strong>Elec End:</strong> ${myElection.endTime ? new Date(myElection.endTime).toLocaleString() : 'Not set'}</div>
+    <div><strong>Registration:</strong> ${myElection.registrationOpen ? '🟢 Open' : '🔴 Closed'}</div>
   `);
-  
-  const cdCard = document.getElementById('class-countdown-card');
-  if(cdCard) {
-    if(myElection.isActive && myElection.endTime) {
-      cdCard.style.display = 'block';
-      startClassCountdown(myElection.endTime);
-    } else {
-      cdCard.style.display = 'none';
-      if(window.classCountdownInterval) clearInterval(window.classCountdownInterval);
+
+      const cdCard = document.getElementById('class-countdown-card');
+      if (cdCard) {
+        if (myElection.isActive && myElection.endTime) {
+          cdCard.style.display = 'block';
+          startClassCountdown(myElection.endTime);
+        } else {
+          cdCard.style.display = 'none';
+          if (window.classCountdownInterval) clearInterval(window.classCountdownInterval);
+        }
+      }
+
+      const regCdCard = document.getElementById('class-reg-countdown-card');
+      if (regCdCard) {
+        if (myElection.registrationOpen && myElection.scope && myElection.scope.regEndTime) {
+          regCdCard.style.display = 'block';
+          startRegCountdown(myElection.scope.regEndTime);
+        } else {
+          regCdCard.style.display = 'none';
+          if (window.regCountdownInterval) clearInterval(window.regCountdownInterval);
+        }
+      }
+
+      const acceptedStudents = classStudents.filter(s => s.status === 'active');
+      renderMyElecStudents(acceptedStudents);
+
+      loadMyElectionAnalytics();
     }
-  }
 
-  const regCdCard = document.getElementById('class-reg-countdown-card');
-  if(regCdCard) {
-    if(myElection.registrationOpen && myElection.scope && myElection.scope.regEndTime) {
-      regCdCard.style.display = 'block';
-      startRegCountdown(myElection.scope.regEndTime);
-    } else {
-      regCdCard.style.display = 'none';
-      if(window.regCountdownInterval) clearInterval(window.regCountdownInterval);
+    function startClassCountdown(endTime) {
+      if (window.classCountdownInterval) clearInterval(window.classCountdownInterval);
+      const disp = document.getElementById('class-cd-display');
+      function tick() {
+        const diff = new Date(endTime) - new Date();
+        if (!disp) return;
+        if (diff <= 0) { setText('class-cd-display', '00:00:00'); clearInterval(window.classCountdownInterval); return; }
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        setText('class-cd-display', `${h}:${m}:${s}`);
+      }
+      tick();
+      window.classCountdownInterval = setInterval(tick, 1000);
     }
-  }
 
-  const acceptedStudents = classStudents.filter(s => s.status === 'active');
-  renderMyElecStudents(acceptedStudents);
-  
-  loadMyElectionAnalytics();
-}
-
-function startClassCountdown(endTime){
-  if(window.classCountdownInterval)clearInterval(window.classCountdownInterval);
-  const disp = document.getElementById('class-cd-display');
-  function tick(){
-    const diff = new Date(endTime) - new Date();
-    if(!disp)return;
-    if(diff<=0){setText('class-cd-display', '00:00:00');clearInterval(window.classCountdownInterval);return;}
-    const h=Math.floor(diff/3600000).toString().padStart(2,'0');
-    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    setText('class-cd-display', `${h}:${m}:${s}`);
-  }
-  tick();
-  window.classCountdownInterval = setInterval(tick, 1000);
-}
-
-function startRegCountdown(endTime){
-  if(window.regCountdownInterval)clearInterval(window.regCountdownInterval);
-  const disp = document.getElementById('class-reg-cd-display');
-  function tick(){
-    const diff = new Date(endTime) - new Date();
-    if(!disp)return;
-    if(diff<=0){
-      setText('class-reg-cd-display', '00:00:00');
-      clearInterval(window.regCountdownInterval);
-      stopMyRegistration(true); // auto stop
-      return;
+    function startRegCountdown(endTime) {
+      if (window.regCountdownInterval) clearInterval(window.regCountdownInterval);
+      const disp = document.getElementById('class-reg-cd-display');
+      function tick() {
+        const diff = new Date(endTime) - new Date();
+        if (!disp) return;
+        if (diff <= 0) {
+          setText('class-reg-cd-display', '00:00:00');
+          clearInterval(window.regCountdownInterval);
+          stopMyRegistration(true); // auto stop
+          return;
+        }
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        setText('class-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+      }
+      tick();
+      window.regCountdownInterval = setInterval(tick, 1000);
     }
-    const d=Math.floor(diff/(1000*60*60*24));
-    const h=Math.floor((diff%(1000*60*60*24))/3600000).toString().padStart(2,'0');
-    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    setText('class-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
-  }
-  tick();
-  window.regCountdownInterval = setInterval(tick, 1000);
-}
 
-async function loadMyElectionAnalytics(){
-  if(!myElection)return;
-  try{
-    const stats=await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/analytics`);
-    
-    const acceptedStudents = classStudents.filter(s => s.status === 'active');
-    const allowed = acceptedStudents.filter(s=>s.canVote==1).length;
-    const totalEligible = acceptedStudents.length;
-    
-    setText('my-v-total', totalEligible);
-    setText('my-v-allowed', allowed);
-    setText('my-v-voted', stats.voted);
-    const pct=allowed>0?Math.round((stats.voted/allowed)*100):0;
-    setText('my-v-pct', pct+'%');
-    
-    // Chart
-    const canvas = document.getElementById('my-vote-chart');
-    if(canvas) {
-      const ctx = canvas.getContext('2d');
-      if(window.myElecChartInstance) window.myElecChartInstance.destroy();
-      window.myElecChartInstance=new Chart(ctx,{type:'pie',data:{labels:['Voted','Not Yet'],datasets:[{data:[stats.voted,Math.max(0,allowed-stats.voted)],backgroundColor:['rgba(255,42,77,0.8)','rgba(255,255,255,0.08)'],borderColor:['#ff2a4d','#333'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-    }
-    setHTML('my-vote-legend', `<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0,allowed-stats.voted)}</span>`);
-    
-    // Fetch and Render Results
-    const res = await StorageManager.fetchElectionResults(myElection.id);
-    const resultsList = document.getElementById('my-elec-results-list');
-    const resultsCard = document.getElementById('my-elec-results-card');
-    
-    if (res.success && res.results.length > 0) {
-        if(resultsCard) resultsCard.style.display = 'block';
-        const totalVotes = res.results.reduce((sum, r) => sum + r.votes, 0);
-        setHTML('my-elec-results-list', res.results.map((r, idx) => {
+    async function loadMyElectionAnalytics() {
+      if (!myElection) return;
+      try {
+        const stats = await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/analytics`);
+
+        const acceptedStudents = classStudents.filter(s => s.status === 'active');
+        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
+        const totalEligible = acceptedStudents.length;
+
+        setText('my-v-total', totalEligible);
+        setText('my-v-allowed', allowed);
+        setText('my-v-voted', stats.voted);
+        const pct = allowed > 0 ? Math.round((stats.voted / allowed) * 100) : 0;
+        setText('my-v-pct', pct + '%');
+
+        // Chart
+        const canvas = document.getElementById('my-vote-chart');
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (window.myElecChartInstance) window.myElecChartInstance.destroy();
+          window.myElecChartInstance = new Chart(ctx, { type: 'pie', data: { labels: ['Voted', 'Not Yet'], datasets: [{ data: [stats.voted, Math.max(0, allowed - stats.voted)], backgroundColor: ['rgba(255,42,77,0.8)', 'rgba(255,255,255,0.08)'], borderColor: ['#ff2a4d', '#333'], borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        }
+        setHTML('my-vote-legend', `<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0, allowed - stats.voted)}</span>`);
+
+        // Fetch and Render Results
+        const res = await StorageManager.fetchElectionResults(myElection.id);
+        const resultsList = document.getElementById('my-elec-results-list');
+        const resultsCard = document.getElementById('my-elec-results-card');
+
+        if (res.success && res.results.length > 0) {
+          if (resultsCard) resultsCard.style.display = 'block';
+          const totalVotes = res.results.reduce((sum, r) => sum + r.votes, 0);
+          setHTML('my-elec-results-list', res.results.map((r, idx) => {
             const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
             const isWinner = idx === 0 && r.votes > 0;
             return `
@@ -1298,51 +1963,51 @@ async function loadMyElectionAnalytics(){
                     </div>
                 </div>
             `;
-        }).join(''));
-    } else {
-        if(resultsCard) resultsCard.style.display = 'none';
+          }).join(''));
+        } else {
+          if (resultsCard) resultsCard.style.display = 'none';
+        }
+      } catch (e) { console.error(e); }
     }
-  }catch(e){console.error(e);}
-}
 
-// ── Category Builder ───────────────────────────────────────────
-let myCategories = [];
+    // ── Category Builder ───────────────────────────────────────────
+    let myCategories = [];
 
-function addCategory() {
-  myCategories.push({ name: '', candidates: [] });
-  renderCategoryBuilder();
-}
-function removeCategory(idx) {
-  myCategories.splice(idx, 1);
-  renderCategoryBuilder();
-}
-function addCandidateToCategory(catIdx) {
-  myCategories[catIdx].candidates.push({ name: '', regNum: '', symbol: '⭐' });
-  renderCategoryBuilder();
-}
-function removeCandidate(catIdx, candIdx) {
-  myCategories[catIdx].candidates.splice(candIdx, 1);
-  renderCategoryBuilder();
-}
-function syncCategoryData() {
-  document.querySelectorAll('.cat-name-input').forEach((inp, i) => {
-    if (myCategories[i]) myCategories[i].name = inp.value;
-  });
-  document.querySelectorAll('.cand-row').forEach(row => {
-    const ci = parseInt(row.dataset.cat); const ki = parseInt(row.dataset.cand);
-    if (myCategories[ci] && myCategories[ci].candidates[ki]) {
-      myCategories[ci].candidates[ki].name = row.querySelector('.cand-name').value;
-      myCategories[ci].candidates[ki].regNum = row.querySelector('.cand-regno').value;
-      myCategories[ci].candidates[ki].symbol = row.querySelector('.cand-symbol').value || '⭐';
+    function addCategory() {
+      myCategories.push({ name: '', candidates: [] });
+      renderCategoryBuilder();
     }
-  });
-}
-function renderCategoryBuilder() {
-  if (myCategories.length === 0) {
-    setHTML('category-builder', '<div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;"><p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:#c084fc;">+ Add Category</strong>.</p></div>');
-    return;
-  }
-  setHTML('category-builder', myCategories.map((cat, ci) => `
+    function removeCategory(idx) {
+      myCategories.splice(idx, 1);
+      renderCategoryBuilder();
+    }
+    function addCandidateToCategory(catIdx) {
+      myCategories[catIdx].candidates.push({ name: '', regNum: '', symbol: '⭐' });
+      renderCategoryBuilder();
+    }
+    function removeCandidate(catIdx, candIdx) {
+      myCategories[catIdx].candidates.splice(candIdx, 1);
+      renderCategoryBuilder();
+    }
+    function syncCategoryData() {
+      document.querySelectorAll('.cat-name-input').forEach((inp, i) => {
+        if (myCategories[i]) myCategories[i].name = inp.value;
+      });
+      document.querySelectorAll('.cand-row').forEach(row => {
+        const ci = parseInt(row.dataset.cat); const ki = parseInt(row.dataset.cand);
+        if (myCategories[ci] && myCategories[ci].candidates[ki]) {
+          myCategories[ci].candidates[ki].name = row.querySelector('.cand-name').value;
+          myCategories[ci].candidates[ki].regNum = row.querySelector('.cand-regno').value;
+          myCategories[ci].candidates[ki].symbol = row.querySelector('.cand-symbol').value || '⭐';
+        }
+      });
+    }
+    function renderCategoryBuilder() {
+      if (myCategories.length === 0) {
+        setHTML('category-builder', '<div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;"><p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:#c084fc;">+ Add Category</strong>.</p></div>');
+        return;
+      }
+      setHTML('category-builder', myCategories.map((cat, ci) => `
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(168,85,247,0.2);border-radius:12px;padding:1.2rem;">
       <div style="display:flex;gap:0.8rem;align-items:center;margin-bottom:1rem;">
         <input class="cat-name-input" value="${cat.name}" placeholder="Category name (e.g. Boys' CR)" style="flex:1;padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);color:white;font-family:'Outfit';outline:none;">
@@ -1365,309 +2030,310 @@ function renderCategoryBuilder() {
       </div>
     </div>
   `).join(''));
-}
+    }
 
-async function createMyElection(){
-  syncCategoryData();
-  const name=document.getElementById('my-elec-name').value.trim();
-  const elecStart=document.getElementById('my-elec-start').value;
-  const elecEnd=document.getElementById('my-elec-end').value;
-  const resultVis=document.getElementById('my-elec-visibility') ? document.getElementById('my-elec-visibility').value : 'class';
+    async function createMyElection() {
+      syncCategoryData();
+      const name = document.getElementById('my-elec-name').value.trim();
+      const elecStart = document.getElementById('my-elec-start').value;
+      const elecEnd = document.getElementById('my-elec-end').value;
+      const resultVis = document.getElementById('my-elec-visibility') ? document.getElementById('my-elec-visibility').value : 'class';
 
-  if(!name)return toast('Election name required',false);
-  if(!elecStart||!elecEnd)return toast('Election Start and End time required',false);
+      if (!name) return toast('Election name required', false);
+      if (!elecStart || !elecEnd) return toast('Election Start and End time required', false);
 
-  if(myCategories.length===0)return toast('Add at least 1 category',false);
-  for(const cat of myCategories){
-    if(!cat.name.trim())return toast('All category names must be filled',false);
-    if(cat.candidates.length<2)return toast(`Category "${cat.name}" needs at least 2 candidates`,false);
-    for(const c of cat.candidates){if(!c.name.trim())return toast('All candidate names must be filled',false);}
-  }
-  try{
-    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year,resultVisibility:resultVis},startTime:new Date(elecStart).toISOString(),endTime:new Date(elecEnd).toISOString(),createdBy:session.regNum,createdByRole:'subadmin',categories:myCategories.map(c=>c.name)})});
-    // Post candidates
-    for(const cat of myCategories){
-      for(const cand of cat.candidates){
-        try{await apiFetch('/contestants',{method:'POST',body:JSON.stringify({institution:session.institution,electionId:result.id||result.electionCode,name:cand.name,regNum:cand.regNum||null,symbol:cand.symbol||'⭐',category:cat.name,createdBy:session.regNum})});}catch(ce){console.warn('Candidate post failed',ce);}
+      if (myCategories.length === 0) return toast('Add at least 1 category', false);
+      for (const cat of myCategories) {
+        if (!cat.name.trim()) return toast('All category names must be filled', false);
+        if (cat.candidates.length < 2) return toast(`Category "${cat.name}" needs at least 2 candidates`, false);
+        for (const c of cat.candidates) { if (!c.name.trim()) return toast('All candidate names must be filled', false); }
+      }
+      try {
+        const result = await apiFetch('/elections', { method: 'POST', body: JSON.stringify({ institution: session.institution, name, type: 'class', scope: { class: session.class, branch: session.branch, year: session.year, resultVisibility: resultVis }, startTime: new Date(elecStart).toISOString(), endTime: new Date(elecEnd).toISOString(), createdBy: session.regNum, createdByRole: 'subadmin', categories: myCategories.map(c => c.name) }) });
+        // Post candidates
+        for (const cat of myCategories) {
+          for (const cand of cat.candidates) {
+            try { await apiFetch('/contestants', { method: 'POST', body: JSON.stringify({ institution: session.institution, electionId: result.id || result.electionCode, name: cand.name, regNum: cand.regNum || null, symbol: cand.symbol || '⭐', category: cat.name, createdBy: session.regNum }) }); } catch (ce) { console.warn('Candidate post failed', ce); }
+          }
+        }
+        toast(`Election created! Code: ${result.electionCode}`);
+        myCategories = [];
+        loadMyElection();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function startMyElection() {
+      if (!myElection) return;
+      if (!confirm('Start election? Registration will be locked.')) return;
+      try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ isActive: 1, registrationOpen: 0 }) }); toast('Election started!'); loadMyElection(); } catch (e) { toast(e.message, false); }
+    }
+    async function stopMyElection() {
+      if (!myElection || !confirm('End this election?')) return;
+      try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ isActive: 0, isCompleted: 1 }) }); toast('Election ended!'); loadMyElection(); } catch (e) { toast(e.message, false); }
+    }
+    async function deleteMyElection() {
+      if (!myElection || !confirm('Delete this election permanently?')) return;
+      try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'DELETE' }); toast('Election deleted'); myElection = null; renderMyElection(); } catch (e) { toast(e.message, false); }
+    }
+    function copyElectionCode() {
+      if (!myElection) return;
+      navigator.clipboard.writeText(myElection.electionCode || '').then(() => toast('Election code copied!')).catch(() => toast('Copy failed', false));
+    }
+    function copyElectionLink() {
+      if (!window.myElecLink) return;
+      navigator.clipboard.writeText(window.myElecLink).then(() => toast('Registration link copied!')).catch(() => toast('Copy failed', false));
+    }
+
+
+    async function promptModifySchedule() {
+      if (!myElection) return;
+      const currentEnd = myElection.endTime ? myElection.endTime.slice(0, 16) : '';
+      const newEnd = prompt('Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
+      if (!newEnd) return;
+      const d = new Date(newEnd);
+      if (isNaN(d.getTime())) return toast('Invalid date format', false);
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ endTime: d.toISOString() }) });
+        toast('Schedule modified successfully!');
+        await loadMyElection(); // await so countdown restarts with the new endTime
+      } catch (e) {
+        toast(e.message, false);
       }
     }
-    toast(`Election created! Code: ${result.electionCode}`);
-    myCategories=[];
-    loadMyElection();
-  }catch(e){toast(e.message,false);}
-}
 
-async function startMyElection(){
-  if(!myElection)return;
-  if(!confirm('Start election? Registration will be locked.'))return;
-  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:1,registrationOpen:0})});toast('Election started!');loadMyElection();}catch(e){toast(e.message,false);}
-}
-async function stopMyElection(){
-  if(!myElection||!confirm('End this election?'))return;
-  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:0,isCompleted:1})});toast('Election ended!');loadMyElection();}catch(e){toast(e.message,false);}
-}
-async function deleteMyElection(){
-  if(!myElection||!confirm('Delete this election permanently?'))return;
-  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'DELETE'});toast('Election deleted');myElection=null;renderMyElection();}catch(e){toast(e.message,false);}
-}
-function copyElectionCode(){
-  if(!myElection)return;
-  navigator.clipboard.writeText(myElection.electionCode||'').then(()=>toast('Election code copied!')).catch(()=>toast('Copy failed',false));
-}
-function copyElectionLink(){
-  if(!window.myElecLink)return;
-  navigator.clipboard.writeText(window.myElecLink).then(()=>toast('Registration link copied!')).catch(()=>toast('Copy failed',false));
-}
+    // ─── BRANCH HEAD ELECTION PAGE ────────────────────────────────
+    let branchCountdownInterval = null;
 
+    async function loadBranchElectionPage() {
+      try {
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch`);
+        const branchElec = elections.find(e => e.scope && e.scope.branch === session.branch) || elections[0] || null;
+        const infoDiv = document.getElementById('branch-elec-info');
+        const notInScope = document.getElementById('branch-not-in-scope');
+        const cdCard = document.getElementById('branch-countdown-card');
+        const studentsCard = document.getElementById('branch-students-card');
 
-async function promptModifySchedule() {
-  if(!myElection)return;
-  const currentEnd = myElection.endTime ? myElection.endTime.slice(0, 16) : '';
-  const newEnd = prompt('Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
-  if(!newEnd)return;
-  const d = new Date(newEnd);
-  if(isNaN(d.getTime())) return toast('Invalid date format', false);
-  try {
-    await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, {method:'PATCH', body:JSON.stringify({endTime: d.toISOString()})});
-    toast('Schedule modified successfully!');
-    await loadMyElection(); // await so countdown restarts with the new endTime
-  } catch(e) {
-    toast(e.message, false);
-  }
-}
+        // Hide all conditional cards first
+        if (notInScope) notInScope.style.display = 'none';
+        if (cdCard) cdCard.style.display = 'none';
+        if (studentsCard) studentsCard.style.display = 'block';
+        if (branchCountdownInterval) clearInterval(branchCountdownInterval);
 
-// ─── BRANCH HEAD ELECTION PAGE ────────────────────────────────
-let branchCountdownInterval = null;
+        if (branchElec) {
+          // Check if this class is in scope
+          const scopeClasses = branchElec.scope && branchElec.scope.classes;
+          const inScope = !scopeClasses || scopeClasses.includes(session.class);
 
-async function loadBranchElectionPage(){
-  try{
-    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch`);
-    const branchElec=elections.find(e=>e.scope&&e.scope.branch===session.branch)||elections[0]||null;
-    const infoDiv=document.getElementById('branch-elec-info');
-    const notInScope=document.getElementById('branch-not-in-scope');
-    const cdCard=document.getElementById('branch-countdown-card');
-    const studentsCard=document.getElementById('branch-students-card');
-
-    // Hide all conditional cards first
-    if(notInScope)notInScope.style.display='none';
-    if(cdCard)cdCard.style.display='none';
-    if(studentsCard)studentsCard.style.display='block';
-    if(branchCountdownInterval)clearInterval(branchCountdownInterval);
-
-    if(branchElec){
-      // Check if this class is in scope
-      const scopeClasses = branchElec.scope && branchElec.scope.classes;
-      const inScope = !scopeClasses || scopeClasses.includes(session.class);
-
-      setHTML('branch-elec-info', `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+          setHTML('branch-elec-info', `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
         <div><h3 style="margin:0;">🏢 ${branchElec.name}</h3>
-        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive?'<span class="pill-active">🟢 Running</span>':branchElec.isCompleted?'<span class="pill-completed">✅ Completed</span>':'<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
+        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive ? '<span class="pill-active">🟢 Running</span>' : branchElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
       </div>`);
 
-      if(!inScope){
-        if(notInScope)notInScope.style.display='block';
-        if(studentsCard)studentsCard.style.display='none';
-        setText('br-total', '–');
-        setText('br-allowed', '–');
-        setText('br-voted', '–');
-        return;
-      }
+          if (!inScope) {
+            if (notInScope) notInScope.style.display = 'block';
+            if (studentsCard) studentsCard.style.display = 'none';
+            setText('br-total', '–');
+            setText('br-allowed', '–');
+            setText('br-voted', '–');
+            return;
+          }
 
-      // Show countdown if active
-      if(branchElec.isActive && branchElec.endTime && cdCard){
-        cdCard.style.display='block';
-        startBranchCountdown(branchElec.endTime);
-      }
-    } else {
-      setHTML('branch-elec-info', '<p style="color:var(--muted);">No branch-level election created yet. Branch Admin has not created one.</p>');
+          // Show countdown if active
+          if (branchElec.isActive && branchElec.endTime && cdCard) {
+            cdCard.style.display = 'block';
+            startBranchCountdown(branchElec.endTime);
+          }
+        } else {
+          setHTML('branch-elec-info', '<p style="color:var(--muted);">No branch-level election created yet. Branch Admin has not created one.</p>');
+        }
+
+        // Only accepted students in the vote access table
+        const acceptedStudents = classStudents.filter(s => s.status === 'active');
+        renderBranchStudents(acceptedStudents);
+        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
+        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
+        setText('br-total', acceptedStudents.length);
+        setText('br-allowed', allowed);
+        setText('br-voted', voted);
+      } catch (e) { toast(e.message, false); }
     }
 
-    // Only accepted students in the vote access table
-    const acceptedStudents = classStudents.filter(s => s.status === 'active');
-    renderBranchStudents(acceptedStudents);
-    const allowed=acceptedStudents.filter(s=>s.canVote==1).length;
-    const voted=acceptedStudents.filter(s=>s.hasVoted==1).length;
-    setText('br-total', acceptedStudents.length);
-    setText('br-allowed', allowed);
-    setText('br-voted', voted);
-  }catch(e){toast(e.message,false);}
-}
+    function startBranchCountdown(endTime) {
+      if (branchCountdownInterval) clearInterval(branchCountdownInterval);
+      const disp = document.getElementById('branch-cd-display');
+      function tick() {
+        const diff = new Date(endTime) - new Date();
+        if (!disp) return;
+        if (diff <= 0) { setText('branch-cd-display', '00:00:00'); clearInterval(branchCountdownInterval); return; }
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        setText('branch-cd-display', `${h}:${m}:${s}`);
+      }
+      tick();
+      branchCountdownInterval = setInterval(tick, 1000);
+    }
 
-function startBranchCountdown(endTime){
-  if(branchCountdownInterval)clearInterval(branchCountdownInterval);
-  const disp = document.getElementById('branch-cd-display');
-  function tick(){
-    const diff = new Date(endTime) - new Date();
-    if(!disp)return;
-    if(diff<=0){setText('branch-cd-display', '00:00:00');clearInterval(branchCountdownInterval);return;}
-    const h=Math.floor(diff/3600000).toString().padStart(2,'0');
-    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    setText('branch-cd-display', `${h}:${m}:${s}`);
-  }
-  tick();
-  branchCountdownInterval = setInterval(tick, 1000);
-}
-
-function renderBranchStudents(list){
-  if(!list.length){
-    setHTML('branch-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
-    return;
-  }
-  setHTML('branch-student-table', list.map(s=>`<tr>
+    function renderBranchStudents(list) {
+      if (!list.length) {
+        setHTML('branch-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+        return;
+      }
+      setHTML('branch-student-table', list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td>
-    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
-    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
+    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
     <td>
-      ${s.canVote==0?
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
+      ${s.canVote == 0 ?
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
   </tr>`).join(''));
-}
+    }
 
-async function toggleVoteThenRefresh(regNum,val,page){
-  await toggleVote(regNum,val);
-  await loadAll();
-  if(page==='branch')loadBranchElectionPage();
-  else loadCollegeElectionPage();
-}
+    async function toggleVoteThenRefresh(regNum, val, page) {
+      await toggleVote(regNum, val);
+      await loadAll();
+      if (page === 'branch') loadBranchElectionPage();
+      else loadCollegeElectionPage();
+    }
 
-async function grantAllBranch(){
-  if(!confirm('Grant branch election voting access to all accepted class students?'))return;
-  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
-  if(!eligible.length)return toast('All accepted students already have access.',false);
-  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length} students!`);loadAll();loadBranchElectionPage();}catch(e){toast(e.message,false);}
-}
+    async function grantAllBranch() {
+      if (!confirm('Grant branch election voting access to all accepted class students?')) return;
+      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
+      if (!eligible.length) return toast('All accepted students already have access.', false);
+      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length} students!`); loadAll(); loadBranchElectionPage(); } catch (e) { toast(e.message, false); }
+    }
 
-// ─── COLLEGE HEAD ELECTION PAGE ───────────────────────────────
-let collegeCountdownInterval = null;
+    // ─── COLLEGE HEAD ELECTION PAGE ───────────────────────────────
+    let collegeCountdownInterval = null;
 
-async function toggleVoteThenRefresh(regNum,val,page){
-  await toggleVote(regNum,val);
-  await loadAll();
-  if(page==='branch')loadBranchElectionPage();
-  else if(page==='college')loadCollegeElectionPage();
-  else if(page==='class')loadMyElection();
-}
+    async function toggleVoteThenRefresh(regNum, val, page) {
+      await toggleVote(regNum, val);
+      await loadAll();
+      if (page === 'branch') loadBranchElectionPage();
+      else if (page === 'college') loadCollegeElectionPage();
+      else if (page === 'class') loadMyElection();
+    }
 
-function renderMyElecStudents(list){
-  if(!list.length){
-    setHTML('my-elec-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
-    return;
-  }
-  setHTML('my-elec-student-table', list.map(s=>`<tr>
+    function renderMyElecStudents(list) {
+      if (!list.length) {
+        setHTML('my-elec-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+        return;
+      }
+      setHTML('my-elec-student-table', list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td>
-    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
-    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
+    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
     <td>
-      ${s.canVote==0?
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
+      ${s.canVote == 0 ?
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
   </tr>`).join(''));
-}
+    }
 
-async function grantAllMyElec(){
-  if(!confirm('Grant class election voting access to all accepted class students?'))return;
-  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
-  if(!eligible.length)return toast('All accepted students already have access.',false);
-  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length} students!`);loadAll();loadMyElection();}catch(e){toast(e.message,false);}
-}
+    async function grantAllMyElec() {
+      if (!confirm('Grant class election voting access to all accepted class students?')) return;
+      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
+      if (!eligible.length) return toast('All accepted students already have access.', false);
+      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length} students!`); loadAll(); loadMyElection(); } catch (e) { toast(e.message, false); }
+    }
 
-async function loadCollegeElectionPage(){
-  try{
-    const elections=await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
-    const collegeElec=elections[0]||null;
-    const infoDiv=document.getElementById('college-elec-info');
-    const notInScope=document.getElementById('college-not-in-scope');
-    const cdCard=document.getElementById('college-countdown-card');
-    const studentsCard=document.getElementById('college-students-card');
+    async function loadCollegeElectionPage() {
+      try {
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
+        const collegeElec = elections[0] || null;
+        const infoDiv = document.getElementById('college-elec-info');
+        const notInScope = document.getElementById('college-not-in-scope');
+        const cdCard = document.getElementById('college-countdown-card');
+        const studentsCard = document.getElementById('college-students-card');
 
-    if(notInScope)notInScope.style.display='none';
-    if(cdCard)cdCard.style.display='none';
-    if(studentsCard)studentsCard.style.display='block';
-    if(collegeCountdownInterval)clearInterval(collegeCountdownInterval);
+        if (notInScope) notInScope.style.display = 'none';
+        if (cdCard) cdCard.style.display = 'none';
+        if (studentsCard) studentsCard.style.display = 'block';
+        if (collegeCountdownInterval) clearInterval(collegeCountdownInterval);
 
-    if(collegeElec){
-      const scopeClasses = collegeElec.scope && collegeElec.scope.classes;
-      const inScope = !scopeClasses || scopeClasses.includes(session.class);
+        if (collegeElec) {
+          const scopeClasses = collegeElec.scope && collegeElec.scope.classes;
+          const inScope = !scopeClasses || scopeClasses.includes(session.class);
 
-      setHTML('college-elec-info', `<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+          setHTML('college-elec-info', `<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
         <div><h3 style="margin:0;">🎓 ${collegeElec.name}</h3>
-        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${collegeElec.isActive?'<span class="pill-active">🟢 Running</span>':collegeElec.isCompleted?'<span class="pill-completed">✅ Completed</span>':'<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${collegeElec.electionCode}</strong></p></div>
+        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${collegeElec.isActive ? '<span class="pill-active">🟢 Running</span>' : collegeElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${collegeElec.electionCode}</strong></p></div>
       </div>`);
 
-      if(!inScope){
-        if(notInScope)notInScope.style.display='block';
-        if(studentsCard)studentsCard.style.display='none';
-        setText('col-total', '–');
-        setText('col-allowed', '–');
-        setText('col-voted', '–');
-        return;
-      }
+          if (!inScope) {
+            if (notInScope) notInScope.style.display = 'block';
+            if (studentsCard) studentsCard.style.display = 'none';
+            setText('col-total', '–');
+            setText('col-allowed', '–');
+            setText('col-voted', '–');
+            return;
+          }
 
-      if(collegeElec.isActive && collegeElec.endTime && cdCard){
-        cdCard.style.display='block';
-        startCollegeCountdown(collegeElec.endTime);
-      }
-    } else {
-      setHTML('college-elec-info', '<p style="color:var(--muted);">No college-level election created yet.</p>');
+          if (collegeElec.isActive && collegeElec.endTime && cdCard) {
+            cdCard.style.display = 'block';
+            startCollegeCountdown(collegeElec.endTime);
+          }
+        } else {
+          setHTML('college-elec-info', '<p style="color:var(--muted);">No college-level election created yet.</p>');
+        }
+
+        const acceptedStudents = classStudents.filter(s => s.status === 'active');
+        renderCollegeStudents(acceptedStudents);
+        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
+        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
+        setText('col-total', acceptedStudents.length);
+        setText('col-allowed', allowed);
+        setText('col-voted', voted);
+      } catch (e) { toast(e.message, false); }
     }
 
-    const acceptedStudents = classStudents.filter(s => s.status === 'active');
-    renderCollegeStudents(acceptedStudents);
-    const allowed=acceptedStudents.filter(s=>s.canVote==1).length;
-    const voted=acceptedStudents.filter(s=>s.hasVoted==1).length;
-    setText('col-total', acceptedStudents.length);
-    setText('col-allowed', allowed);
-    setText('col-voted', voted);
-  }catch(e){toast(e.message,false);}
-}
+    function startCollegeCountdown(endTime) {
+      if (collegeCountdownInterval) clearInterval(collegeCountdownInterval);
+      const disp = document.getElementById('college-cd-display');
+      function tick() {
+        const diff = new Date(endTime) - new Date();
+        if (!disp) return;
+        if (diff <= 0) { setText('college-cd-display', '00:00:00'); clearInterval(collegeCountdownInterval); return; }
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        setText('college-cd-display', `${h}:${m}:${s}`);
+      }
+      tick();
+      collegeCountdownInterval = setInterval(tick, 1000);
+    }
 
-function startCollegeCountdown(endTime){
-  if(collegeCountdownInterval)clearInterval(collegeCountdownInterval);
-  const disp = document.getElementById('college-cd-display');
-  function tick(){
-    const diff = new Date(endTime) - new Date();
-    if(!disp)return;
-    if(diff<=0){setText('college-cd-display', '00:00:00');clearInterval(collegeCountdownInterval);return;}
-    const h=Math.floor(diff/3600000).toString().padStart(2,'0');
-    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-    setText('college-cd-display', `${h}:${m}:${s}`);
-  }
-  tick();
-  collegeCountdownInterval = setInterval(tick, 1000);
-}
-
-function renderCollegeStudents(list){
-  if(!list.length){
-    setHTML('college-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
-    return;
-  }
-  setHTML('college-student-table', list.map(s=>`<tr>
+    function renderCollegeStudents(list) {
+      if (!list.length) {
+        setHTML('college-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+        return;
+      }
+      setHTML('college-student-table', list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td>
-    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email||''}</div></td>
-    <td>${s.canVote==1?'<span class="pill-active">✅ Allowed</span>':'<span class="pill-pending">⏳ Not Allowed</span>'}</td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
+    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
     <td>
-      ${s.canVote==0?
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>`:
-        `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
+      ${s.canVote == 0 ?
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
+          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
     </td>
   </tr>`).join(''));
-}
+    }
 
-async function grantAllCollege(){
-  if(!confirm('Grant college election voting access to all accepted class students?'))return;
-  const eligible=classStudents.filter(s=>s.status==='active'&&s.canVote==0);
-  if(!eligible.length)return toast('All accepted students already have access.',false);
-  try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:eligible.map(s=>s.regNum),canVote:true,institution:session.institution})});toast(`Granted to ${eligible.length}!`);loadAll();loadCollegeElectionPage();}catch(e){toast(e.message,false);}
-}
+    async function grantAllCollege() {
+      if (!confirm('Grant college election voting access to all accepted class students?')) return;
+      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
+      if (!eligible.length) return toast('All accepted students already have access.', false);
+      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length}!`); loadAll(); loadCollegeElectionPage(); } catch (e) { toast(e.message, false); }
+    }
 
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-overlay').style.display!=='none')saLogin();});
+    document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none') saLogin(); });
 
-tsParticles.load("tsparticles",{fpsLimit:60,particles:{number:{value:25,density:{enable:true,value_area:800}},color:{value:["#ffffff","#ff2a4d"]},shape:{type:"circle"},opacity:{value:0.15,random:true},size:{value:2,random:true},links:{enable:true,distance:150,color:"#ffffff",opacity:0.08,width:1},move:{enable:true,speed:0.5,direction:"none",random:false,straight:false,outModes:{default:"out"}}},interactivity:{detectsOn:"canvas",events:{onHover:{enable:true,mode:"grab"},resize:true},modes:{grab:{distance:150,links:{opacity:0.25}}}},retina_detect:true,background:{color:"transparent"}});
-</script>
+    tsParticles.load("tsparticles", { fpsLimit: 60, particles: { number: { value: 25, density: { enable: true, value_area: 800 } }, color: { value: ["#ffffff", "#ff2a4d"] }, shape: { type: "circle" }, opacity: { value: 0.15, random: true }, size: { value: 2, random: true }, links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.08, width: 1 }, move: { enable: true, speed: 0.5, direction: "none", random: false, straight: false, outModes: { default: "out" } } }, interactivity: { detectsOn: "canvas", events: { onHover: { enable: true, mode: "grab" }, resize: true }, modes: { grab: { distance: 150, links: { opacity: 0.25 } } } }, retina_detect: true, background: { color: "transparent" } });
+  </script>
 </body>
+
 </html>
