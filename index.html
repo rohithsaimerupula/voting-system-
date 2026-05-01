@@ -494,10 +494,16 @@
 
             // 2. Check local storage memory
             if (gateUnlocked === 'true' && instName) {
-                // Verify it's still valid on every fresh load to prevent ghost sessions
-                const isValid = await StorageManager.validateInstitution();
-                if (isValid) unlockGateway(instName);
-                else console.warn("[Gateway] Cached institution is no longer valid.");
+                // Optimistically unlock immediately to avoid lag
+                unlockGateway(instName, true);
+                
+                // Verify it's still valid in background
+                StorageManager.validateInstitution().then(isValid => {
+                    if (!isValid) {
+                        console.warn("[Gateway] Cached institution is no longer valid.");
+                        resetGateway();
+                    }
+                });
             }
         }
         checkGatePersistence();
@@ -550,11 +556,17 @@
             }
         }
 
-        function unlockGateway(instName) {
+        function unlockGateway(instName, instant = false) {
             const overlay = document.getElementById('gateway-overlay');
-            overlay.style.opacity = '0';
-            overlay.style.pointerEvents = 'none';
-            setTimeout(() => { overlay.style.display = 'none'; }, 700);
+            if (instant) {
+                overlay.style.transition = 'none';
+                overlay.style.opacity = '0';
+                overlay.style.display = 'none';
+            } else {
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                setTimeout(() => { overlay.style.display = 'none'; }, 700);
+            }
 
             // Update branding
             document.getElementById('brand-name').innerHTML =

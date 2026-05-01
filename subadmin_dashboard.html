@@ -639,7 +639,7 @@ function updateCharts(total,accepted,allowed,voted){
     <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--purple); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
         ${total > 0 ? Math.round((accepted/total)*100) : 0}% Verified
     </div>
-  `;
+  `);
 
   // Funnel 2: Voting Access (Subset of Accepted Students Only)
   // Per user request: Allowed/Not Allowed only shown for registration completed students
@@ -674,7 +674,7 @@ function updateCharts(total,accepted,allowed,voted){
     <div style="margin-top:0.5rem; font-size:0.75rem; color:#22c55e; font-weight:600; text-transform:uppercase; letter-spacing:1px;">
         ${accepted > 0 ? Math.round((allowed/accepted)*100) : 0}% Eligibility
     </div>
-  `;
+  `);
 
   // Funnel 3: Voting Participation (Subset of Allowed Students Only)
   if(partChartInstance)partChartInstance.destroy();
@@ -708,7 +708,7 @@ function updateCharts(total,accepted,allowed,voted){
     <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
         ${allowed > 0 ? Math.round((voted/allowed)*100) : 0}% Turned Out
     </div>
-  `;
+  `);
 }
 
 // ── Student Tab Management ──────────────────────────────────────
@@ -1060,7 +1060,7 @@ function renderCategoryBuilder() {
         <button onclick="syncCategoryData();toast('💾 Category & Candidates saved locally!')" style="padding:0.35rem 1rem;border-radius:6px;border:1px solid rgba(56,189,248,0.3);background:rgba(56,189,248,0.1);color:#38bdf8;cursor:pointer;font-size:0.82rem;font-weight:bold;">💾 Save Category</button>
       </div>
     </div>
-  `).join('');
+  `).join(''));
 }
 
 async function createMyElection(){
@@ -1134,7 +1134,7 @@ async function loadBranchElectionPage(){
       setHTML('branch-elec-info', `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
         <div><h3 style="margin:0;">🏢 ${branchElec.name}</h3>
         <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive?'<span class="pill-active">🟢 Running</span>':branchElec.isCompleted?'<span class="pill-completed">✅ Completed</span>':'<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
-      </div>`;
+      </div>`);
 
       if(!inScope){
         if(notInScope)notInScope.style.display='block';
