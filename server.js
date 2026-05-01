@@ -475,7 +475,32 @@ app.delete('/api/users/orphans', async (req, res) => {
 app.delete('/api/users/:id', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+        const targetId = req.params.id;
+        
+        // Fetch the user to perform cascading deletes
+        const userCheck = await db.execute({ sql: "SELECT role, branch FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
+        if (userCheck.rows.length > 0) {
+            const role = userCheck.rows[0].role;
+            
+            if (role === 'admin') {
+                // Delete all students managed by subadmins of this admin
+                await db.execute({ sql: "DELETE FROM users WHERE managedBy IN (SELECT regNum FROM users WHERE managedBy = ? AND institution = ?) AND institution = ?", args: [targetId, inst, inst] });
+                // Delete all subadmins managed by this admin
+                await db.execute({ sql: "DELETE FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
+            } else if (role === 'subadmin') {
+                // Delete all students managed by this subadmin
+                await db.execute({ sql: "DELETE FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
+            }
+            
+            // Delete all elections created by this user (including registration timers, class elections, etc)
+            await db.execute({ sql: "DELETE FROM elections WHERE createdBy = ? AND institution = ?", args: [targetId, inst] });
+            // Delete all contestants created by this user
+            await db.execute({ sql: "DELETE FROM contestants WHERE createdBy = ? AND institution = ?", args: [targetId, inst] });
+        }
+
+        // Finally delete the user
+        await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
+        
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -759,7 +784,11 @@ app.get('/api/elections', async (req, res) => {
         if (req.query.type) { sql += ' AND type = ?'; args.push(req.query.type); }
         if (req.query.createdBy) { sql += ' AND createdBy = ?'; args.push(req.query.createdBy); }
         const result = await db.execute({ sql, args });
-        res.json(result.rows.map(r => ({ ...r, scope: JSON.parse(r.scope || '{}') })));
+        res.json(result.rows.map(r => {
+            let parsedScope = {};
+            try { parsedScope = JSON.parse(r.scope || '{}'); } catch(e) {}
+            return { ...r, scope: parsedScope };
+        }));
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

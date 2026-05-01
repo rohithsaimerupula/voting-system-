@@ -330,8 +330,7 @@
         <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Create a class-level election with categories and candidates. A dynamic code will be generated automatically.</p>
         <div class="form-grid" style="margin-bottom:1.5rem;">
           <div class="form-field" style="grid-column:1/-1;"><label>Election Name</label><input type="text" id="my-elec-name" placeholder="e.g. CR Elections 2026"></div>
-          <div class="form-field"><label>Registration Start</label><input type="datetime-local" id="my-reg-start"></div>
-          <div class="form-field"><label>Registration End</label><input type="datetime-local" id="my-reg-end"></div>
+
           <div class="form-field"><label>Election Start</label><input type="datetime-local" id="my-elec-start"></div>
           <div class="form-field"><label>Election End</label><input type="datetime-local" id="my-elec-end"></div>
         </div>
@@ -364,23 +363,14 @@
             <button class="btn-sm btn-e" onclick="copyElectionCode()">📋 Copy Code</button>
           </div>
           <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
-            <button class="btn-sm btn-g" onclick="startMyRegistration()" id="my-reg-start-btn">▶ Start Reg</button>
-            <button class="btn-sm btn-d" onclick="stopMyRegistration()" id="my-reg-stop-btn" style="display:none;">⏹ End Reg</button>
+
             <button class="btn-sm btn-g" onclick="startMyElection()" id="my-elec-start-btn">▶ Start Election</button>
             <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End Election</button>
             <button class="btn-sm" style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);" onclick="deleteMyElection()">🗑️ Delete</button>
           </div>
         </div>
 
-        <!-- Registration Timer Card -->
-        <div id="class-reg-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2); margin-top:1.5rem;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Registration Phase — Ends In</div>
-              <div id="class-reg-cd-display" style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Timer Card (Class Election) -->
         <div id="class-countdown-card" class="card" style="display:none; background:linear-gradient(135deg,rgba(168,85,247,0.08),transparent); border:1px solid rgba(168,85,247,0.2); margin-top:1.5rem;">
@@ -1153,8 +1143,6 @@ function renderMyElection(){
 
   const startBtn=document.getElementById('my-elec-start-btn');
   const stopBtn=document.getElementById('my-elec-stop-btn');
-  const regStartBtn=document.getElementById('my-reg-start-btn');
-  const regStopBtn=document.getElementById('my-reg-stop-btn');
 
   if(myElection.isActive){
     if(startBtn) startBtn.style.display='none';
@@ -1376,11 +1364,10 @@ async function createMyElection(){
   const name=document.getElementById('my-elec-name').value.trim();
   const elecStart=document.getElementById('my-elec-start').value;
   const elecEnd=document.getElementById('my-elec-end').value;
-  const regStart=document.getElementById('my-reg-start').value;
-  const regEnd=document.getElementById('my-reg-end').value;
+
   if(!name)return toast('Election name required',false);
   if(!elecStart||!elecEnd)return toast('Election Start and End time required',false);
-  if(!regStart||!regEnd)return toast('Registration Start and End time required',false);
+
   if(myCategories.length===0)return toast('Add at least 1 category',false);
   for(const cat of myCategories){
     if(!cat.name.trim())return toast('All category names must be filled',false);
@@ -1388,7 +1375,7 @@ async function createMyElection(){
     for(const c of cat.candidates){if(!c.name.trim())return toast('All candidate names must be filled',false);}
   }
   try{
-    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year,regStartTime:new Date(regStart).toISOString(),regEndTime:new Date(regEnd).toISOString()},startTime:new Date(elecStart).toISOString(),endTime:new Date(elecEnd).toISOString(),createdBy:session.regNum,createdByRole:'subadmin',categories:myCategories.map(c=>c.name)})});
+    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year},startTime:new Date(elecStart).toISOString(),endTime:new Date(elecEnd).toISOString(),createdBy:session.regNum,createdByRole:'subadmin',categories:myCategories.map(c=>c.name)})});
     // Post candidates
     for(const cat of myCategories){
       for(const cand of cat.candidates){
@@ -1422,15 +1409,7 @@ function copyElectionLink(){
   if(!window.myElecLink)return;
   navigator.clipboard.writeText(window.myElecLink).then(()=>toast('Registration link copied!')).catch(()=>toast('Copy failed',false));
 }
-async function startMyRegistration(){
-  if(!myElection)return;
-  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({registrationOpen:1})});toast('Registration opened!');loadMyElection();}catch(e){toast(e.message,false);}
-}
-async function stopMyRegistration(auto=false){
-  if(!myElection)return;
-  if(!auto && !confirm('Close registration for your class?'))return;
-  try{await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`,{method:'PATCH',body:JSON.stringify({registrationOpen:0})});if(!auto)toast('Registration closed!');loadMyElection();}catch(e){if(!auto)toast(e.message,false);}
-}
+
 
 async function promptModifySchedule() {
   if(!myElection)return;
