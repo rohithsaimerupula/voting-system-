@@ -2289,7 +2289,7 @@
           }
         }
 
-        const scope = isAll ? { all: true } : { all: false, classes: selectedClasses };
+        const scope = isAll ? { all: true, resultVisibility: resultVis } : { all: false, classes: selectedClasses, resultVisibility: resultVis };
 
         try {
           toast('Starting election...');

@@ -594,10 +594,14 @@
                     const statusColor = isActive ? '#22c55e' : isCompleted ? '#ef4444' : '#f59e0b';
                     
                     if (isCompleted) {
+                        // Label the visibility
+                        const vis = e.scope && e.scope.resultVisibility ? e.scope.resultVisibility : 'all';
+                        const visLabel = vis === 'all' ? '🌐 Visible to All' : vis === 'branch' ? '🏛️ Branch Only' : vis === 'class' ? '🎓 Class Only' : '🔒 Eligible Voters Only';
                         resultsHtml += `
                         <div class="glass-panel" style="padding:1.5rem;">
-                            <h3 style="color:var(--neon-cyan); margin-bottom:0.5rem;">${e.name || 'Election'}</h3>
-                            <button class="submit-btn" style="width:100%; padding:0.6rem;" onclick="viewResults('${e.id}')">View Results 📊</button>
+                            <h3 style="color:var(--neon-cyan); margin-bottom:0.3rem;">${e.name || 'Election'}</h3>
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">${visLabel}</div>
+                            <button class="submit-btn" style="width:100%; padding:0.6rem;" onclick="viewResults('${e.id}','${(e.name||'Election').replace(/'/g,"\\'")}')">View Results 📊</button>
                         </div>`;
                     }
 
@@ -687,12 +691,33 @@
             }
         }
 
-        function viewResults(electionId) {
-            // For now, redirect to public results view (which you can implement)
-            // or show a simple alert if it's not fully ready.
-            window.location.href = `gateway.html`; 
-            // In a complete implementation, this would open a results modal.
-            alert("Redirecting to detailed results dashboard...");
+        async function viewResults(electionId, electionName) {
+            try {
+                const results = await fetchApi(`/elections/${encodeURIComponent(electionId)}/results`);
+                if (!results || results.length === 0) {
+                    return alert('No results available yet.');
+                }
+                const modal = document.getElementById('results-modal');
+                const title = document.getElementById('results-modal-title');
+                const body  = document.getElementById('results-modal-body');
+                if (title) title.textContent = '📊 ' + (electionName || 'Election Results');
+                if (body) {
+                    const maxVotes = results[0].votes || 1;
+                    body.innerHTML = results.map((r, i) => `
+                        <div style="margin-bottom:1.2rem;">
+                          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+                            <span style="font-weight:600;color:${i===0?'#facc15':'white'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${r.name}</span>
+                            <span style="color:var(--neon-cyan);font-weight:700;">${r.votes} vote${r.votes!==1?'s':''}</span>
+                          </div>
+                          <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:10px;overflow:hidden;">
+                            <div style="height:100%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-blue));width:${maxVotes>0?Math.round((r.votes/maxVotes)*100):0}%;border-radius:6px;transition:width 0.6s;"></div>
+                          </div>
+                        </div>`).join('');
+                }
+                if (modal) modal.style.display = 'flex';
+            } catch(e) {
+                alert('Failed to load results: ' + e.message);
+            }
         }
 
         function loadProfileForm() {
@@ -1110,5 +1135,15 @@
 
         init();
     </script>
+
+  <!-- 📊 Election Results Modal -->
+  <div id="results-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:#0f0f1a; border:1px solid rgba(6,182,212,0.25); border-radius:16px; padding:2rem; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; position:relative;">
+      <button onclick="document.getElementById('results-modal').style.display='none'" style="position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:0.3rem 0.7rem; cursor:pointer; font-size:1rem;">✕</button>
+      <h2 id="results-modal-title" style="color:var(--neon-cyan); margin-bottom:1.5rem; font-size:1.2rem;">📊 Election Results</h2>
+      <div id="results-modal-body"></div>
+    </div>
+  </div>
+
 </body>
 </html>
