@@ -309,21 +309,37 @@
         </div>
       </div>
     </div>
-      </div>
-    </div>
 
     <!-- COLLEGE HEAD ELECTION -->
     <div class="page" id="page-voting-college">
       <div class="page-title">🎓 College Head Election</div>
-      <div class="page-sub">Approve voting access for your branch students in college-level elections</div>
-      <div class="card" id="col-elec-info" style="color:var(--muted);">Loading college election data...</div>
+      <div class="page-sub">Monitor participation of your branch in institutional-level elections</div>
       
-      <div class="card">
-        <h3>📊 Branch Turnout in College Election</h3>
-        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));">
-          <div class="stat"><div class="num" id="col-br-total" style="color:var(--cyan)">-</div><div class="lbl">Branch Studs</div></div>
-          <div class="stat"><div class="num" id="col-br-allowed" style="color:var(--green)">-</div><div class="lbl">Allowed</div></div>
-          <div class="stat"><div class="num" id="col-br-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
+      <div id="col-elec-info-box">
+        <div class="card" id="col-elec-info" style="color:var(--muted); text-align:center; padding:2rem; background:rgba(6,182,212,0.03); border-style:dashed;">
+          Loading college election data...
+        </div>
+      </div>
+      
+      <div class="card" id="col-stats-card">
+        <h3>📊 Branch Participation in College Election</h3>
+        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1.5rem;">
+          <div class="stat" style="border-top:3px solid var(--cyan);">
+            <div class="num" id="col-br-total" style="color:var(--cyan)">-</div>
+            <div class="lbl">Total Branch Students</div>
+          </div>
+          <div class="stat" style="border-top:3px solid var(--green);">
+            <div class="num" id="col-br-allowed" style="color:var(--green)">-</div>
+            <div class="lbl">Eligibility Granted</div>
+          </div>
+          <div class="stat" style="border-top:3px solid var(--gold);">
+            <div class="num" id="col-br-voted" style="color:var(--gold)">-</div>
+            <div class="lbl">Actually Voted</div>
+          </div>
+          <div class="stat" style="border-top:3px solid var(--purple);">
+            <div class="num" id="col-br-pct" style="color:var(--purple)">0%</div>
+            <div class="lbl">Branch Turnout</div>
+          </div>
         </div>
       </div>
     </div>
@@ -790,14 +806,51 @@ async function loadCollegeElection(){
         const ce = elecs[0]||null;
         const i = document.getElementById('col-elec-info');
         if(ce){
-            setHTML('col-elec-info', `<h3 style="color:var(--text);margin-bottom:0.5rem;">College Election: <span style="color:var(--cyan)">${ce.name}</span></h3>
-            Status: ${ce.isActive?'<span class="pill-active">Running</span>':'<span class="pill-pending">Pending</span>'} | Code: <strong>${ce.electionCode}</strong>`);
+            setHTML('col-elec-info', `
+              <div style="display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;">
+                <div style="text-align:left;">
+                  <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.2rem;">Live Institutional Election</div>
+                  <h3 style="color:var(--text);margin:0; font-size:1.4rem;">${ce.name}</h3>
+                </div>
+                <div style="display:flex; gap:0.8rem; align-items:center;">
+                  ${ce.isActive?'<span class="pill-active">🟢 Running</span>':'<span class="pill-pending">⏳ Pending</span>'}
+                  <div style="background:rgba(255,255,255,0.05); padding:0.4rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); font-family:monospace; font-size:1.1rem;">
+                    <span style="color:var(--muted); font-size:0.7rem; display:block; margin-bottom:0.1rem; text-transform:uppercase;">Code</span>
+                    ${ce.electionCode}
+                  </div>
+                </div>
+              </div>
+            `);
+            const iCard = document.getElementById('col-elec-info');
+            if(iCard) {
+                iCard.style.borderStyle = 'solid';
+                iCard.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.08), transparent)';
+                iCard.style.borderColor = 'rgba(6,182,212,0.3)';
+            }
         } else {
-            setText('col-elec-info', "No college election running.");
+            setHTML('col-elec-info', `
+              <div style="padding:1rem;">
+                <div style="font-size:2rem; margin-bottom:0.5rem;">📭</div>
+                <div style="color:var(--muted);">No institutional-level elections are currently active for ${session.institution}.</div>
+              </div>
+            `);
+            const iCard = document.getElementById('col-elec-info');
+            if(iCard) {
+                iCard.style.borderStyle = 'dashed';
+                iCard.style.background = 'rgba(255,255,255,0.02)';
+                iCard.style.borderColor = 'rgba(255,255,255,0.1)';
+            }
         }
-        setText('col-br-total', branchStudents.length);
-        setText('col-br-allowed', branchStudents.filter(s=>s.canVote==1).length);
-        setText('col-br-voted', branchStudents.filter(s=>s.hasVoted==1).length);
+        
+        const total = branchStudents.length;
+        const allowed = branchStudents.filter(s=>s.canVote==1).length;
+        const voted = branchStudents.filter(s=>s.hasVoted==1).length;
+        const pct = total > 0 ? Math.round((voted / total) * 100) : 0;
+        
+        setText('col-br-total', total);
+        setText('col-br-allowed', allowed);
+        setText('col-br-voted', voted);
+        setText('col-br-pct', pct + '%');
     }catch(e){toast(e.message,false);}
 }
 
