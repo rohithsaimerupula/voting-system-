@@ -131,17 +131,76 @@
     <!-- Cyber Mesh Particles -->
     <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
 
-    <nav>
-        <div class="brand" style="background: linear-gradient(135deg, #fff 0%, var(--neon-cyan) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; letter-spacing: -0.02em;">VANGUARD Portal</div>
-        <div class="nav-links" style="display:flex; align-items:center; gap:1.2rem;">
-            <div style="display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.05); padding:0.4rem 0.8rem; border-radius:99px; border:1px solid rgba(255,255,255,0.1);">
-                <span style="font-size:0.8rem; color:var(--text-muted);">Voter</span>
-                <span id="voter-name" style="color: white; font-weight:600; font-size:0.85rem;">-</span>
+    <div style="display: flex; height: 100vh; overflow: hidden; background: rgba(5,10,20,0.95);">
+        <!-- SIDEBAR -->
+        <div style="width: 280px; background: rgba(12,18,28,0.95); border-right: 1px solid rgba(6,182,212,0.2); padding: 2rem 1.5rem; display: flex; flex-direction: column; z-index: 100;">
+            <div style="margin-bottom: 2.5rem; text-align: center;">
+                <div style="font-family: var(--font-heading); background: linear-gradient(135deg, #fff 0%, var(--neon-cyan) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; font-size: 1.8rem; letter-spacing: -1px;">VANGUARD</div>
+                <div style="font-size: 0.75rem; color: var(--neon-cyan); letter-spacing: 2px; text-transform: uppercase; margin-top: 0.3rem;">Student Portal</div>
             </div>
-            <button class="btn-outline" style="border-color:var(--neon-cyan); color:var(--neon-cyan); padding:0.4rem 1rem; border-radius:8px;" onclick="location.reload()">Refresh 🔄</button>
-            <button class="btn-outline" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.4); color:#ef4444; padding:0.4rem 1rem; border-radius:8px;" onclick="StorageManager.logout(); window.location.href='login.html'">Logout</button>
+            
+            <div style="display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 2rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🎓</div>
+                <div>
+                    <div id="voter-name" style="color: white; font-weight: 700; font-size: 0.95rem; line-height: 1.2;">-</div>
+                    <div style="color: var(--text-muted); font-size: 0.75rem;">Student Profile</div>
+                </div>
+            </div>
+
+            <nav style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                <button class="nav-menu-btn active" onclick="switchTab('dashboard')" id="nav-dashboard" style="display:flex; align-items:center; gap:1rem; padding:1rem; background:transparent; border:none; color:var(--text-muted); cursor:pointer; border-radius:12px; font-weight:600; transition:all 0.3s; text-align:left; width:100%;">
+                    <span style="font-size:1.2rem;">📊</span> Dashboard
+                </button>
+                <button class="nav-menu-btn" onclick="switchTab('voting')" id="nav-voting" style="display:flex; align-items:center; gap:1rem; padding:1rem; background:transparent; border:none; color:var(--text-muted); cursor:pointer; border-radius:12px; font-weight:600; transition:all 0.3s; text-align:left; width:100%;">
+                    <span style="font-size:1.2rem;">🗳️</span> Voting Details
+                </button>
+                <button class="nav-menu-btn" onclick="switchTab('profile')" id="nav-profile" style="display:flex; align-items:center; gap:1rem; padding:1rem; background:transparent; border:none; color:var(--text-muted); cursor:pointer; border-radius:12px; font-weight:600; transition:all 0.3s; text-align:left; width:100%;">
+                    <span style="font-size:1.2rem;">👤</span> Manage Profile
+                </button>
+            </nav>
+
+            <div style="margin-top: auto;">
+                <button onclick="location.reload()" style="display:flex; align-items:center; gap:0.8rem; padding:0.8rem 1rem; width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:10px; cursor:pointer; margin-bottom:0.5rem; font-weight:600;">
+                    <span>🔄</span> Refresh Sync
+                </button>
+                <button onclick="StorageManager.logout(); window.location.href='login.html'" style="display:flex; align-items:center; gap:0.8rem; padding:0.8rem 1rem; width:100%; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:10px; cursor:pointer; font-weight:600;">
+                    <span>🚪</span> Secure Logout
+                </button>
+            </div>
         </div>
-    </nav>
+
+        <!-- MAIN CONTENT -->
+        <div style="flex: 1; overflow-y: auto; position: relative;">
+            <style>
+                .nav-menu-btn.active {
+                    background: rgba(6,182,212,0.15) !important;
+                    color: var(--neon-cyan) !important;
+                    border: 1px solid rgba(6,182,212,0.3) !important;
+                    box-shadow: 0 0 20px rgba(6,182,212,0.1);
+                }
+                .nav-menu-btn:hover:not(.active) {
+                    background: rgba(255,255,255,0.05) !important;
+                    color: white !important;
+                }
+                .dashboard-stat-card {
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                    transition: transform 0.3s, box-shadow 0.3s;
+                }
+                .dashboard-stat-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    border-color: rgba(6,182,212,0.3);
+                }
+                .tab-content { display: none; padding: 2.5rem 3rem; }
+                .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
+            </style>
+
 
     <!-- HARD-CLOSE OVERLAY -->
     <div id="hard-close-overlay" class="hidden" style="position:fixed; inset:0; background:rgba(2,0,15,0.9); backdrop-filter:blur(15px); z-index:99999; display:flex; align-items:center; justify-content:center; text-align:center; padding:2rem;">
@@ -159,10 +218,53 @@
         <p style="color:var(--neon-cyan); letter-spacing:2px; font-weight:bold;">ESTABLISHING UPLINK...</p>
     </div>
 
-    <div class="container animate-fade-in" style="max-width: 1000px;">
+            <!-- TAB 1: OVERVIEW DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content active" style="max-width: 1000px; margin: 0 auto;">
+                <div style="margin-bottom: 2rem;">
+                    <h1 style="font-family: var(--font-heading); font-size: 2.5rem; color: white;">Student Dashboard</h1>
+                    <p style="color: var(--text-muted);">Overview of your voting activity and statistics.</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+                    <div class="dashboard-stat-card">
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #22c55e;">✅</div>
+                        <div>
+                            <div id="stat-voted" style="font-size: 2rem; font-weight: 800; color: white; line-height: 1;">0</div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Voted Elections</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-stat-card">
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #f59e0b;">⏳</div>
+                        <div>
+                            <div id="stat-pending" style="font-size: 2rem; font-weight: 800; color: white; line-height: 1;">0</div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Pending Polls</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-stat-card">
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #8b5cf6;">🗳️</div>
+                        <div>
+                            <div id="stat-total" style="font-size: 2rem; font-weight: 800; color: white; line-height: 1;">0</div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Total Elections</div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- LOBBY SECTION -->
-        <div id="lobby-section" style="display:none; margin-top:2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--gold-primary); font-family: var(--font-heading);">Recent Activity</h3>
+                <div id="recent-activity-list" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- TAB 2: VOTING DETAILS -->
+            <div id="tab-voting" class="tab-content" style="max-width: 1100px; margin: 0 auto;">
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                    <button class="btn-outline active" onclick="switchSubTab('to-vote')" id="subtab-to-vote" style="border-color:var(--neon-cyan); color:var(--neon-cyan);">To Vote</button>
+                    <button class="btn-outline" onclick="switchSubTab('voted')" id="subtab-voted">Voted History</button>
+                    <button class="btn-outline" onclick="switchSubTab('results')" id="subtab-results">Election Results</button>
+                </div>
+
+                <!-- LOBBY SECTION (To Vote) -->
+                <div id="lobby-section">
             <div style="text-align:center; padding:2rem; margin-bottom:1rem;">
                 <h1 style="font-family: var(--font-heading); color:white; font-size:2.5rem; text-shadow: 0 0 15px rgba(6,182,212,0.5);">Active Elections</h1>
                 <p style="color:var(--text-muted);">Select an election below to cast your secure ballot.</p>
@@ -238,9 +340,85 @@
                     Download Receipt 📄
                 </button>
             </div>
-        </div>
+            </div>
+            
+            <!-- TAB 3: MANAGE PROFILE -->
+            <div id="tab-profile" class="tab-content" style="max-width: 700px; margin: 0 auto;">
+                <div class="glass-panel" style="padding: 2.5rem; position: relative;">
+                    <h2 style="font-family: var(--font-heading); font-size: 2rem; margin-bottom: 2rem;">Manage Profile</h2>
+                    
+                    <form id="profile-update-form">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="prof-name" required maxlength="50" style="background:rgba(0,0,0,0.3);">
+                        </div>
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label>Year</label>
+                                <select id="prof-year" style="background:rgba(0,0,0,0.3);">
+                                    <option value="1st">1st Year</option>
+                                    <option value="2nd">2nd Year</option>
+                                    <option value="3rd">3rd Year</option>
+                                    <option value="4th">4th Year</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Branch</label>
+                                <select id="prof-branch" style="background:rgba(0,0,0,0.3);">
+                                    <option>CSE</option><option>ECE</option><option>EEE</option><option>CSC</option>
+                                    <option>MECH</option><option>IT</option><option>ECM</option><option>AIDS</option>
+                                    <option>CSM</option><option>CIVIL</option><option>CAI</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Section</label>
+                                <input type="text" id="prof-section" required maxlength="1" style="background:rgba(0,0,0,0.3);">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="prof-email" required style="background:rgba(0,0,0,0.3);">
+                        </div>
+                        
+                        <div class="form-group" id="prof-password-group">
+                            <label>New Password</label>
+                            <input type="password" id="prof-new-pass" placeholder="Leave blank to keep current" style="background:rgba(0,0,0,0.3);">
+                            <small class="text-muted">6-10 chars · 3+ letters · 1+ special char · 1+ number.</small>
+                        </div>
 
-    </div>
+                        <div id="prof-candidate-fields" class="hidden">
+                            <div class="form-group">
+                                <label>Election Symbol (Emoji)</label>
+                                <input type="text" id="prof-symbol" style="background:rgba(0,0,0,0.3);">
+                            </div>
+                            <div class="form-group">
+                                <label>Manifesto / Slogan</label>
+                                <textarea id="prof-manifesto" maxlength="150" rows="3" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" id="prof-save-btn" class="submit-btn" style="flex:2;">Save Changes</button>
+                        </div>
+                    </form>
+
+                    <!-- OTP Verification Section -->
+                    <div id="prof-otp-section" class="hidden mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                        <h3 class="text-center" style="color: var(--gold-primary); margin-bottom: 1rem;">Security Check</h3>
+                        <p id="prof-otp-hint" class="text-muted text-center" style="margin-bottom: 1rem;"></p>
+                        <div class="form-group">
+                            <input type="text" id="prof-otp-input" placeholder="0 0 0 0 0 0" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; background:rgba(0,0,0,0.3);">
+                        </div>
+                        <button type="button" onclick="confirmProfileUpdate()" class="submit-btn" id="prof-confirm-btn">Confirm OTP</button>
+                        <p id="prof-otp-error" class="text-danger text-center mt-2 hidden"></p>
+                    </div>
+
+                    <div id="prof-status-msg" class="hidden mt-3 text-center" style="padding: 1rem; border-radius: 8px;"></div>
+                </div>
+            </div>
+
+        </div> <!-- End Main Content -->
+    </div> <!-- End Flex Container -->
 
     <!-- Candidate Details Modal -->
     <div id="candidate-modal" class="modal">
@@ -395,57 +573,222 @@
                 lobbyElections = elections || [];
 
                 if (lobbyElections.length === 0) {
-                    setHTML('elections-lobby-grid', `
-                        <div class="glass-panel" style="padding:3rem; text-align:center; grid-column:1/-1;">
-                            <div style="font-size:3rem; margin-bottom:1rem;">🗳️</div>
-                            <h3 style="color:var(--text-muted);">No Elections Available</h3>
-                            <p class="text-muted" style="margin-top:0.5rem;">There are no active elections for your profile right now.</p>
-                        </div>`);
+                    setHTML('elections-lobby-grid', '<p class="text-muted text-center" style="grid-column:1/-1;">No elections available to vote.</p>');
+                    setHTML('voted-history-grid', '<p class="text-muted text-center" style="grid-column:1/-1;">No voting history found.</p>');
+                    setHTML('results-grid', '<p class="text-muted text-center" style="grid-column:1/-1;">No results published yet.</p>');
+                    updateDashboardStats();
                     return;
                 }
 
-                setHTML('elections-lobby-grid', lobbyElections.map(e => {
+                let toVoteHtml = '';
+                let votedHtml = '';
+                let resultsHtml = '';
+                let actListHtml = '';
+
+                lobbyElections.forEach(e => {
                     const isActive  = e.isActive == 1 || e.status === 'active';
                     const isCompleted = e.isCompleted == 1;
                     const hasVoted  = !!e.hasVoted;
-                    const statusText  = isActive ? '🟢 LIVE — Polls Open' : isCompleted ? '🔴 Election Ended' : '⏳ Coming Soon';
+                    
+                    const statusText  = isActive ? '🟢 LIVE' : isCompleted ? '🔴 Ended' : '⏳ Soon';
                     const statusColor = isActive ? '#22c55e' : isCompleted ? '#ef4444' : '#f59e0b';
-                    const borderColor = isActive ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.08)';
+                    
+                    if (isCompleted) {
+                        resultsHtml += `
+                        <div class="glass-panel" style="padding:1.5rem;">
+                            <h3 style="color:var(--neon-cyan); margin-bottom:0.5rem;">${e.name || 'Election'}</h3>
+                            <button class="submit-btn" style="width:100%; padding:0.6rem;" onclick="viewResults('${e.id}')">View Results 📊</button>
+                        </div>`;
+                    }
 
-                    const btnHtml = hasVoted
-                        ? `<button class="submit-btn" disabled style="opacity:0.6; cursor:not-allowed; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); color:#22c55e;">✅ Already Voted</button>`
-                        : isActive
-                            ? `<button class="submit-btn" style="background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="openElectionGateway('${e.id}','${(e.name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${e.electionCode}')">Enter Gateway ➔</button>`
-                            : isCompleted
-                                ? `<button class="submit-btn" disabled style="opacity:0.4; border:1px solid rgba(255,255,255,0.1); background:transparent;">Polls Restricted</button>`
-                                : `<button class="submit-btn" disabled style="opacity:0.6; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:#f59e0b;">⏳ Verification Pending</button>`;
-
-                    return `
-                        <div class="glass-panel animate-fade-in" style="padding:2.2rem; border-color:${borderColor}; position:relative; overflow:hidden; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);">
-                            ${isActive ? '<div style="position:absolute; top:1rem; right:1rem; background:rgba(34,197,94,0.1); color:#22c55e; padding:0.2rem 0.6rem; border-radius:99px; font-size:0.65rem; font-weight:800; letter-spacing:1px; border:1px solid rgba(34,197,94,0.3); animation:pulse 2s infinite;">LIVE</div>' : ''}
-                            <div style="font-size:0.75rem; color:var(--neon-cyan); text-transform:uppercase; letter-spacing:2px; margin-bottom:0.7rem; font-weight:800;">${e.type || 'college'} election</div>
-                            <h2 style="margin-bottom:0.6rem; font-size:1.6rem; font-family:var(--font-heading); color:white;">${e.name || 'Election'}</h2>
-                            ${e.endTime ? `<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.5rem;">
-                                <span style="font-size:0.8rem; color:var(--text-muted);">Access Window Ends:</span>
-                                <span style="font-size:0.8rem; color:white; font-weight:600;">${new Date(e.endTime).toLocaleString()}</span>
-                            </div>` : ''}
-                            <div style="margin-bottom:2rem; padding:1rem; background:rgba(255,255,255,0.03); border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
-                                <p style="font-size:0.85rem; font-weight:700; color:${statusColor}; display:flex; align-items:center; gap:0.5rem;">
-                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${statusColor};"></span>
-                                    ${statusText}
-                                </p>
+                    if (hasVoted) {
+                        votedHtml += `
+                        <div class="glass-panel" style="padding:1.5rem; border-color:rgba(34,197,94,0.3);">
+                            <div style="font-size:0.8rem; color:var(--text-muted); float:right;">✅ Voted</div>
+                            <h3 style="color:white; margin-bottom:0.5rem;">${e.name || 'Election'}</h3>
+                            <p style="color:var(--text-muted); font-size:0.85rem;">Your vote was successfully recorded.</p>
+                        </div>`;
+                        
+                        actListHtml += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <strong style="color:white;">${e.name}</strong>
+                                <div style="font-size:0.8rem; color:var(--text-muted);">Voted successfully</div>
                             </div>
+                            <span style="color:#22c55e; font-size:1.2rem;">✅</span>
+                        </div>`;
+                    } else {
+                        const btnHtml = isActive
+                            ? `<button class="submit-btn" style="width:100%; padding:0.6rem; background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="openElectionGateway('${e.id}','${(e.name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${e.electionCode}')">Enter Gateway ➔</button>`
+                            : isCompleted
+                                ? `<button class="submit-btn" disabled style="width:100%; padding:0.6rem; opacity:0.4; border:1px solid rgba(255,255,255,0.1); background:transparent;">Polls Closed</button>`
+                                : `<button class="submit-btn" disabled style="width:100%; padding:0.6rem; opacity:0.6; background:rgba(245,158,11,0.05); color:#f59e0b;">⏳ Verification Pending</button>`;
+
+                        toVoteHtml += `
+                        <div class="glass-panel" style="padding:1.5rem; border-color:${isActive ? 'rgba(6,182,212,0.3)' : 'rgba(255,255,255,0.08)'};">
+                            <h3 style="color:white; margin-bottom:0.5rem;">${e.name || 'Election'}</h3>
+                            <p style="color:${statusColor}; font-size:0.85rem; font-weight:600; margin-bottom:1.5rem;">${statusText}</p>
                             ${btnHtml}
                         </div>`;
-                }).join(''));
+                    }
+                });
+
+                setHTML('elections-lobby-grid', toVoteHtml || '<p class="text-muted text-center" style="grid-column:1/-1;">No pending elections to vote on.</p>');
+                setHTML('voted-history-grid', votedHtml || '<p class="text-muted text-center" style="grid-column:1/-1;">No voting history found.</p>');
+                setHTML('results-grid', resultsHtml || '<p class="text-muted text-center" style="grid-column:1/-1;">No results published yet.</p>');
+                setHTML('recent-activity-list', actListHtml || '<p class="text-muted text-center">No recent activity.</p>');
+
+                updateDashboardStats();
+
             } catch (err) {
                 console.error('Lobby error:', err);
                 setHTML('elections-lobby-grid', '<p class="text-danger" style="padding:2rem; text-align:center;">⚠️ Failed to load elections. Please refresh.</p>');
             }
         }
 
-        function openElectionGateway(id, name, electionCode) {
-            currentElectionCode = electionCode;
+        function updateDashboardStats() {
+            const voted = lobbyElections.filter(e => !!e.hasVoted).length;
+            const pending = lobbyElections.filter(e => !e.hasVoted && (e.isActive == 1 || e.status === 'active')).length;
+            const total = lobbyElections.length;
+            setText('stat-voted', voted);
+            setText('stat-pending', pending);
+            setText('stat-total', total);
+        }
+
+        // TABS LOGIC
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-menu-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`nav-${tab}`).classList.add('active');
+
+            if (tab === 'profile') loadProfileForm();
+        }
+
+        function switchSubTab(sub) {
+            document.getElementById('lobby-section').style.display = 'none';
+            document.getElementById('voted-history-section').style.display = 'none';
+            document.getElementById('results-section').style.display = 'none';
+
+            document.getElementById('subtab-to-vote').classList.remove('active');
+            document.getElementById('subtab-voted').classList.remove('active');
+            document.getElementById('subtab-results').classList.remove('active');
+
+            if (sub === 'to-vote') {
+                document.getElementById('lobby-section').style.display = 'block';
+                document.getElementById('subtab-to-vote').classList.add('active');
+            } else if (sub === 'voted') {
+                document.getElementById('voted-history-section').style.display = 'block';
+                document.getElementById('subtab-voted').classList.add('active');
+            } else {
+                document.getElementById('results-section').style.display = 'block';
+                document.getElementById('subtab-results').classList.add('active');
+            }
+        }
+
+        function viewResults(electionId) {
+            // For now, redirect to public results view (which you can implement)
+            // or show a simple alert if it's not fully ready.
+            window.location.href = `gateway.html`; 
+            // In a complete implementation, this would open a results modal.
+            alert("Redirecting to detailed results dashboard...");
+        }
+
+        function loadProfileForm() {
+            document.getElementById('prof-name').value = currentUser.name || '';
+            document.getElementById('prof-year').value = currentUser.year || '1st';
+            document.getElementById('prof-branch').value = currentUser.branch || 'CSE';
+            document.getElementById('prof-section').value = currentUser.section || '';
+            document.getElementById('prof-email').value = currentUser.email || '';
+
+            if (currentUser.role === 'contestant') {
+                document.getElementById('prof-candidate-fields').classList.remove('hidden');
+                document.getElementById('prof-symbol').value = currentUser.symbol || '';
+                document.getElementById('prof-manifesto').value = currentUser.manifesto || '';
+                document.getElementById('prof-password-group').classList.add('hidden');
+            }
+        }
+
+        let profileGeneratedOtp = null;
+        let profilePendingUpdates = null;
+
+        document.getElementById('profile-update-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('prof-save-btn');
+            btn.disabled = true;
+            btn.innerText = "Sending OTP...";
+
+            profilePendingUpdates = {
+                name: document.getElementById('prof-name').value,
+                year: document.getElementById('prof-year').value,
+                branch: document.getElementById('prof-branch').value,
+                section: document.getElementById('prof-section').value,
+                email: document.getElementById('prof-email').value
+            };
+
+            const newPass = document.getElementById('prof-new-pass').value.trim();
+            if (newPass) {
+                profilePendingUpdates.password = btoa(newPass);
+            }
+
+            if (currentUser.role === 'contestant') {
+                profilePendingUpdates.symbol = document.getElementById('prof-symbol').value;
+                profilePendingUpdates.manifesto = document.getElementById('prof-manifesto').value;
+            }
+
+            try {
+                profileGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                await StorageManager.sendEmailOtp(currentUser.email, currentUser.name, profileGeneratedOtp, "Profile Update");
+                
+                setText('prof-otp-hint', `Enter the code sent to ${currentUser.email}`);
+                document.getElementById('prof-otp-section').classList.remove('hidden');
+                btn.innerText = "OTP Sent ✓";
+            } catch (err) {
+                alert("Error sending OTP: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "Save Changes";
+            }
+        };
+
+        async function confirmProfileUpdate() {
+            const input = document.getElementById('prof-otp-input').value.trim();
+            const err = document.getElementById('prof-otp-error');
+            const btn = document.getElementById('prof-confirm-btn');
+            const msg = document.getElementById('prof-status-msg');
+
+            if (input !== profileGeneratedOtp) {
+                setText('prof-otp-error', "Invalid OTP code");
+                err.classList.remove('hidden');
+                return;
+            }
+
+            err.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerText = "Saving...";
+
+            try {
+                const updatesWithInst = {
+                    ...profilePendingUpdates,
+                    institution: currentUser.institution
+                };
+                await StorageManager.updateUserDetails(currentUser.regNum, updatesWithInst);
+                setText('prof-status-msg', "Profile updated successfully! ✅");
+                msg.style.background = "rgba(16, 185, 129, 0.2)";
+                msg.style.color = "#10b981";
+                msg.classList.remove('hidden');
+                
+                setTimeout(() => window.location.reload(), 2000);
+            } catch (error) {
+                setText('prof-status-msg', "Update Failed: " + error.message);
+                msg.style.background = "rgba(239, 68, 68, 0.2)";
+                msg.style.color = "#ef4444";
+                msg.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Confirm OTP";
+            }
+        }
+
             currentElectionObj  = lobbyElections.find(e => e.id === id) || null;
             setText('unlock-election-name', name);
             const input = document.getElementById('election-access-code');
