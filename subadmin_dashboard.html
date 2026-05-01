@@ -1077,18 +1077,23 @@ async function deleteClassRegistrationWindow() {
   } catch(e) { toast(e.message, false); }
 }
 
-function promptModifyRegistrationSchedule() {
+async function promptModifyRegistrationSchedule() {
   if(!classRegistrationConfig) return;
-  const newEnd = prompt("Enter new Registration End Date & Time (YYYY-MM-DDTHH:MM):", classRegistrationConfig.scope.regEndTime ? classRegistrationConfig.scope.regEndTime.slice(0, 16) : "");
+  const currentEnd = classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime 
+    ? classRegistrationConfig.scope.regEndTime.slice(0, 16) : '';
+  const newEnd = prompt('Enter new Registration End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
   if(!newEnd) return;
   const d = new Date(newEnd);
   if(isNaN(d.getTime())) return toast('Invalid date format', false);
   try {
-    classRegistrationConfig.scope.regEndTime = d.toISOString();
-    apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ scope: classRegistrationConfig.scope }) }).then(() => {
-      toast('Registration Schedule Modified!');
-      loadClassRegistration();
+    // Merge new endTime into scope and send the entire updated scope object
+    const updatedScope = { ...(classRegistrationConfig.scope || {}), regEndTime: d.toISOString() };
+    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scope: updatedScope })
     });
+    toast('Registration Schedule Modified!');
+    await loadClassRegistration(); // reload from server to get fresh data and restart countdown
   } catch(e) { toast(e.message, false); }
 }
 
@@ -1161,13 +1166,7 @@ function renderMyElection(){
     if(stopBtn) stopBtn.style.display='none';
   }
 
-  if(myElection.registrationOpen){
-    if(regStartBtn) regStartBtn.style.display='none';
-    if(regStopBtn) regStopBtn.style.display='inline-block';
-  } else {
-    if(regStartBtn) regStartBtn.style.display='inline-block';
-    if(regStopBtn) regStopBtn.style.display='none';
-  }
+
   // Info
   const status=myElection.isActive?'🟢 Running':myElection.isCompleted?'✅ Completed':'⏳ Pending';
   setHTML('my-elec-info', `
@@ -1423,14 +1422,15 @@ function copyElectionLink(){
 
 async function promptModifySchedule() {
   if(!myElection)return;
-  const newEnd = prompt("Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):", myElection.endTime ? myElection.endTime.slice(0, 16) : "");
+  const currentEnd = myElection.endTime ? myElection.endTime.slice(0, 16) : '';
+  const newEnd = prompt('Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
   if(!newEnd)return;
   const d = new Date(newEnd);
   if(isNaN(d.getTime())) return toast('Invalid date format', false);
   try {
     await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, {method:'PATCH', body:JSON.stringify({endTime: d.toISOString()})});
     toast('Schedule modified successfully!');
-    loadMyElection();
+    await loadMyElection(); // await so countdown restarts with the new endTime
   } catch(e) {
     toast(e.message, false);
   }

@@ -859,6 +859,12 @@ app.patch('/api/elections/:id', authGuard, async (req, res) => {
         const updates = req.body || {};
         const keys = Object.keys(updates);
         if (keys.length === 0) return res.json({ success: true });
+
+        // Serialize scope to JSON string if it's an object
+        if (updates.scope !== undefined && typeof updates.scope === 'object') {
+            updates.scope = JSON.stringify(updates.scope);
+        }
+
         const setClause = keys.map(k => `"${k}" = ?`).join(', ');
         const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
         values.push(req.params.id);
