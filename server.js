@@ -482,7 +482,17 @@ app.delete('/api/users/:id', async (req, res) => {
         if (userCheck.rows.length > 0) {
             const role = userCheck.rows[0].role;
             
-            if (role === 'admin') {
+            if (role === 'superadmin') {
+                // DELETE ALL DATA FOR THIS INSTITUTION (Complete Wipe)
+                await db.execute({ sql: "DELETE FROM auditLogs WHERE institution = ?", args: [inst] });
+                await db.execute({ sql: "DELETE FROM publicLedger WHERE institution = ?", args: [inst] });
+                await db.execute({ sql: "DELETE FROM questions WHERE institution = ?", args: [inst] });
+                await db.execute({ sql: "DELETE FROM globalChat WHERE institution = ?", args: [inst] });
+                await db.execute({ sql: "DELETE FROM system_alerts WHERE institution = ?", args: [inst] });
+                await db.execute({ sql: "DELETE FROM elections WHERE institution = ?", args: [inst] });
+                // Delete all other users of this institution (admins, sub-admins, voters, candidates)
+                await db.execute({ sql: "DELETE FROM users WHERE institution = ? AND regNum != ?", args: [inst, targetId] });
+            } else if (role === 'admin') {
                 // Delete all students managed by subadmins of this admin
                 await db.execute({ sql: "DELETE FROM users WHERE managedBy IN (SELECT regNum FROM users WHERE managedBy = ? AND institution = ?) AND institution = ?", args: [targetId, inst, inst] });
                 // Delete all subadmins managed by this admin
@@ -492,13 +502,11 @@ app.delete('/api/users/:id', async (req, res) => {
                 await db.execute({ sql: "DELETE FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
             }
             
-            // Delete all elections created by this user (including registration timers, class elections, etc)
+            // Delete all elections created by this user
             await db.execute({ sql: "DELETE FROM elections WHERE createdBy = ? AND institution = ?", args: [targetId, inst] });
-            // Delete all contestants created by this user
-            await db.execute({ sql: "DELETE FROM contestants WHERE createdBy = ? AND institution = ?", args: [targetId, inst] });
         }
 
-        // Finally delete the user
+        // Finally delete the user itself
         await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
         
         res.json({ success: true });
