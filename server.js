@@ -58,7 +58,7 @@ const db = {
 async function initDb() {
     try {
         await db.batch([
-            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, PRIMARY KEY (regNum, institution))`,
+            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, year TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, PRIMARY KEY (regNum, institution))`,
             `CREATE TABLE IF NOT EXISTS auditLogs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, user TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS deviceFingerprints (fingerprint TEXT PRIMARY KEY, firstSeen TEXT, lastActive TEXT, counts JSON)`,
             `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSON)`,
@@ -81,7 +81,8 @@ async function runMigrations() {
     const migrations = [
         { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" },
         { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" },
-        { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" }
+        { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" },
+        { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" }
     ];
     for (const m of migrations) {
         try {
@@ -270,13 +271,41 @@ app.post('/api/users/add', async (req, res) => {
             }
         }
 
+        // --- UNIQUENESS CHECKS ---
+        // 1. Check if ID (regNum) is already used
+        const idCheck = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [u.regNum, inst] });
+        if (idCheck.rows.length > 0) {
+            const existingRole = idCheck.rows[0].role;
+            let displayRole = existingRole === 'admin' ? 'Branch Admin' : existingRole === 'subadmin' ? 'Class Admin' : existingRole;
+            return res.status(409).json({ error: `The ID "${u.regNum}" is already used by a ${displayRole} in this institution. Please choose a unique ID.` });
+        }
+
+        // 2. Check if Branch already has an Admin
+        if (u.role === 'admin') {
+            const branchCheck = await db.execute({ sql: "SELECT regNum FROM users WHERE institution = ? AND role = 'admin' AND branch = ?", args: [inst, u.branch] });
+            if (branchCheck.rows.length > 0) {
+                return res.status(409).json({ error: `The branch "${u.branch}" already has a Branch Admin assigned (${branchCheck.rows[0].regNum}). Each branch can only have one Admin.` });
+            }
+        }
+
+        // 3. Check if Sub-Admin (Class Admin) for this specific class already exists
+        if (u.role === 'subadmin') {
+            const subCheck = await db.execute({ 
+                sql: "SELECT regNum FROM users WHERE institution = ? AND role = 'subadmin' AND branch = ? AND year = ? AND class = ?", 
+                args: [inst, u.branch, u.year, u.class] 
+            });
+            if (subCheck.rows.length > 0) {
+                return res.status(409).json({ error: `A Class Admin (${subCheck.rows[0].regNum}) is already assigned to ${u.year} year, ${u.branch}, ${u.class}. You cannot have multiple admins for the exact same class.` });
+            }
+        }
+
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, managedBy, canVote, category, packId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', 
                 boolInt(u.hasVoted), boolInt(u.isBanned), 
                 u.portrait || null, u.webcamReg || null, u.deviceFingerprint || null, 
-                u.branch || null, u.class || null, u.managedBy || null, 
+                u.branch || null, u.class || null, u.year || null, u.managedBy || null, 
                 boolInt(u.canVote), u.category || null, u.packId || null
             ]
         });
