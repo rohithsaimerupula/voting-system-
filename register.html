@@ -346,7 +346,63 @@
                 return;
             }
 
-            setText('inst-badge', `⛩️ ${inst}`);
+            const urlParams = new URLSearchParams(window.location.search);
+            let classCode = urlParams.get('classCode');
+            
+            if(!classCode) {
+                classCode = prompt("Enter your Class Registration Code (provided by your Class Admin):");
+                if(!classCode) {
+                    alert('Class Registration Code is required.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+            }
+
+            try {
+                const elections = await apiFetch(`/elections?institution=${encodeURIComponent(inst)}`);
+                const classElec = elections.find(e => e.electionCode === classCode && e.type === 'class');
+                if(!classElec) {
+                    alert('Invalid Class Code. Access denied.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Lock Year, Branch, Section
+                const yearEl = document.getElementById('year');
+                const branchEl = document.getElementById('branch');
+                const sectionEl = document.getElementById('section');
+
+                yearEl.innerHTML = `<option value="${classElec.scope.year}">${classElec.scope.year}</option>`;
+                branchEl.innerHTML = `<option value="${classElec.scope.branch}">${classElec.scope.branch}</option>`;
+                sectionEl.value = classElec.scope.class;
+                
+                yearEl.disabled = true;
+                branchEl.disabled = true;
+                sectionEl.disabled = true;
+
+                // Hide the group
+                yearEl.closest('.form-group').style.display = 'none';
+
+                window.customRegStatus = {
+                    isActive: classElec.registrationOpen === 1,
+                    startTime: classElec.scope && classElec.scope.regStartTime,
+                    endTime: classElec.scope && classElec.scope.regEndTime
+                };
+
+                window.customClassMode = {
+                    year: classElec.scope.year,
+                    branch: classElec.scope.branch,
+                    class: classElec.scope.class,
+                    section: classElec.scope.class.split('-').pop() // Fallback if section needed
+                };
+
+            } catch (e) {
+                alert('Error fetching class registration details.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            setText('inst-badge', `⛩️ ${inst} — Class: ${classCode}`);
             initRegistrationTimer();
         });
 
@@ -361,12 +417,15 @@
 
             // Core check function — re-fetches live status from server
             async function checkAndUpdate() {
-                let regStatus;
-                try {
-                    regStatus = await StorageManager.getRegistrationStatus();
-                } catch(e) {
-                    console.warn('[OVS] Registration status fetch failed:', e);
-                    return; // Don't change UI on network error
+                let regStatus = window.customRegStatus;
+                
+                if (!regStatus) {
+                    try {
+                        regStatus = await StorageManager.getRegistrationStatus();
+                    } catch(e) {
+                        console.warn('[OVS] Registration status fetch failed:', e);
+                        return; // Don't change UI on network error
+                    }
                 }
 
                 // Admin manually stopped registration (isActive=false)
@@ -1015,7 +1074,7 @@
             btn.disabled = true;
             btn.innerText = "Verifying status...";
             try {
-                const liveStatus = await StorageManager.getRegistrationStatus();
+                const liveStatus = window.customRegStatus || await StorageManager.getRegistrationStatus();
                 const now = Date.now();
                 if (!liveStatus || liveStatus.isActive === false) {
                     btn.innerText = "Registration Stopped";
@@ -1055,7 +1114,7 @@
             if (name.trim().length === 0) return showError("Name required.");
             if (!/^[A-Za-z ]+$/.test(name)) return showError("Name must contain only alphabets and spaces.");
             if (regNum.length > 10) return showError("Reg Num too long (Max 10).");
-            if (!/^[1-9]$/.test(section)) return showError("Section must be a single digit (1-9).");
+            if (!window.customClassMode && !/^[1-9]$/.test(section)) return showError("Section must be a single digit (1-9).");
 
             const pwdError = validatePassword(password, 6, 10);
             if (pwdError) return showError(pwdError);
@@ -1116,9 +1175,10 @@
 
             const user = {
                 role, name, regNum, institution: localStorage.getItem('ovs_inst_name') || 'Unknown',
-                year: document.getElementById('year').value,
-                branch: document.getElementById('branch').value,
-                section, class: document.getElementById('branch').value + '-' + section,
+                year: window.customClassMode ? window.customClassMode.year : document.getElementById('year').value,
+                branch: window.customClassMode ? window.customClassMode.branch : document.getElementById('branch').value,
+                section: window.customClassMode ? window.customClassMode.section : section,
+                class: window.customClassMode ? window.customClassMode.class : document.getElementById('branch').value + '-' + section,
                 password: role === 'voter' ? password : null,
                 symbol: role === 'contestant' ? symbol : null,
                 manifesto: manifestoVal,
