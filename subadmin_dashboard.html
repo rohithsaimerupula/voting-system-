@@ -104,6 +104,7 @@
     <div class="role-tag" id="class-label">Class Admin</div>
     <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span class="nav-icon">📊</span> Overview</div>
     <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My Class</div>
+    <div class="nav-item" id="nav-registrations" onclick="showPage('registrations',this)"><span class="nav-icon">📝</span> Manage Registrations</div>
     <div class="nav-group-label">🗳️ Voting</div>
     <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏛️</span> My Election</div>
     <div class="nav-sub-item" id="nav-voting-branch" onclick="showPage('voting-branch',this)"><span class="nav-icon">🏢</span> Branch Head Election</div>
@@ -205,6 +206,62 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- MANAGE REGISTRATIONS -->
+    <div class="page" id="page-registrations">
+      <div class="page-title">📝 Manage Registrations</div>
+      <div class="page-sub">Control the registration window for your class and manage student approvals.</div>
+
+      <!-- Start Registration Card -->
+      <div class="card" id="start-registration-card">
+        <h3>▶️ Start Class Registration</h3>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Set a timeframe for students in your class to register. This will generate a unique registration link and code for your class.</p>
+        <div class="form-grid" style="margin-bottom:1.5rem;">
+          <div class="form-field"><label>Registration Start</label><input type="datetime-local" id="class-reg-start-time"></div>
+          <div class="form-field"><label>Registration End</label><input type="datetime-local" id="class-reg-end-time"></div>
+        </div>
+        <button class="btn btn-purple" style="width:100%;" onclick="startClassRegistrationWindow()">🚀 Generate Link & Open Registration</button>
+      </div>
+
+      <!-- Active Registration Card -->
+      <div id="active-registration-card" style="display:none;">
+        <div class="election-code-box">
+          <div class="code-label">🔑 Class Registration Code</div>
+          <div class="code" id="class-reg-code">------</div>
+          <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--cyan); word-break:break-all;" id="class-reg-link"></div>
+          <div style="margin-top:0.8rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-sm btn-e" onclick="copyClassRegLink()">🔗 Copy Link</button>
+            <button class="btn-sm btn-e" onclick="copyClassRegCode()">📋 Copy Code</button>
+          </div>
+          <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-sm btn-d" onclick="stopClassRegistrationWindow()">⏹ Stop Registration</button>
+          </div>
+        </div>
+
+        <div id="standalone-reg-countdown-card" class="card" style="background:linear-gradient(135deg,rgba(6,182,212,0.08),transparent); border:1px solid rgba(6,182,212,0.2); margin-top:1.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">⏱️ Registration Window — Ends In</div>
+              <div id="standalone-reg-cd-display" style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
+            </div>
+            <button class="btn-sm" onclick="promptModifyRegistrationSchedule()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text);">⏱️ Modify Time</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registration Management (Pending Students) -->
+      <div class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
+        <div style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; color:#ff2a4d;">⏳ Pending Registrations</h3>
+          <span style="font-size:0.8rem; color:var(--muted);">Accept or reject requests</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th style="width:50px;">ID</th><th style="width:50px;">Face</th><th style="width:20%;">Reg No</th><th>Name</th><th style="width:15%;">Role</th><th style="width:22%;">Actions</th></tr></thead>
+          <tbody id="reg-pending-student-table"></tbody></table>
+        </div>
+      </div>
+
     </div>
 
     <!-- MY CLASS STUDENTS -->
@@ -581,12 +638,14 @@ function showPage(id,navEl){
   if(id==='voting-my') loadMyElection();
   if(id==='voting-branch') loadBranchElectionPage();
   if(id==='voting-college') loadCollegeElectionPage();
+  if(id==='registrations') loadClassRegistration();
 }
 
 async function refreshAll(){toast('🔄 Refreshing...');await loadAll();toast('Data refreshed!');}
 
 async function loadAll(){
   try{
+    await loadClassRegistration();
     const students=await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year||'1st')}`);
     classStudents=students;
     studentMap={};students.forEach(s=>{studentMap[s.regNum]=s;});
@@ -791,9 +850,10 @@ function renderPendingStudents(list) {
   setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
   if (!pending.length) { 
       setHTML('pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'); 
+      setHTML('reg-pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>'); 
       return; 
   }
-  setHTML('pending-student-table', pending.map(s => {
+  const html = pending.map(s => {
     const { portraitHtml, faceHtml } = _makeImgCells(s);
     const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
     return `<tr>
@@ -806,7 +866,9 @@ function renderPendingStudents(list) {
         <button onclick="rejectStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">✕ Reject</button>
       </td>
     </tr>`;
-  }).join(''));
+  }).join('');
+  setHTML('pending-student-table', html);
+  setHTML('reg-pending-student-table', html);
 }
 
 function renderApprovedStudents(list) {
@@ -889,6 +951,125 @@ function showPortrait(regNum,type){
   if(src.startsWith('data:application/pdf')){const w=window.open('','_blank');if(w){w.document.body.innerHTML=`<iframe src="${src}" width="100%" height="100%" style="border:none;"></iframe>`;}return;}
   document.getElementById('portrait-preview').src=src;
   document.getElementById('portrait-modal').style.display='flex';
+}
+
+// ─── CLASS REGISTRATION MANAGEMENT ──────────────────────────────
+let classRegistrationConfig = null;
+let standaloneRegCountdownInterval = null;
+
+async function loadClassRegistration() {
+  try {
+     const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class_registration&createdBy=${encodeURIComponent(session.regNum)}`);
+     classRegistrationConfig = elections[0] || null;
+     renderClassRegistration();
+  } catch(e) { console.error(e); }
+}
+
+function renderClassRegistration() {
+  const startCard = document.getElementById('start-registration-card');
+  const activeCard = document.getElementById('active-registration-card');
+  
+  if(!classRegistrationConfig) {
+    if(startCard) startCard.style.display = 'block';
+    if(activeCard) activeCard.style.display = 'none';
+    return;
+  }
+
+  if(startCard) startCard.style.display = 'none';
+  if(activeCard) activeCard.style.display = 'block';
+
+  setText('class-reg-code', classRegistrationConfig.electionCode || '------');
+  const link = window.location.origin + '/register.html?classCode=' + (classRegistrationConfig.electionCode||'');
+  setText('class-reg-link', link);
+  window.classRegLink = link;
+
+  if (classRegistrationConfig.registrationOpen && classRegistrationConfig.scope && classRegistrationConfig.scope.regEndTime) {
+    startStandaloneRegCountdown(classRegistrationConfig.scope.regEndTime);
+  } else {
+    setText('standalone-reg-cd-display', '00:00:00');
+    if(standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
+  }
+}
+
+async function startClassRegistrationWindow() {
+  const start = document.getElementById('class-reg-start-time').value;
+  const end = document.getElementById('class-reg-end-time').value;
+  if(!start || !end) return toast('Start and End times are required', false);
+
+  const payload = {
+    name: "Class Registration " + session.class,
+    type: "class_registration",
+    createdBy: session.regNum,
+    institution: session.institution,
+    scope: { branch: session.branch, classes: [session.class], regStartTime: new Date(start).toISOString(), regEndTime: new Date(end).toISOString() },
+    registrationOpen: 1,
+    isActive: 0,
+    isCompleted: 0
+  };
+
+  try {
+    await apiFetch('/elections', { method: 'POST', body: JSON.stringify(payload) });
+    toast('Class Registration Window Opened!');
+    await loadClassRegistration();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function stopClassRegistrationWindow() {
+  if(!classRegistrationConfig) return;
+  if(!confirm('Stop the registration window?')) return;
+  try {
+    await apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ registrationOpen: 0 }) });
+    toast('Registration Stopped!');
+    await loadClassRegistration();
+  } catch(e) { toast(e.message, false); }
+}
+
+function promptModifyRegistrationSchedule() {
+  if(!classRegistrationConfig) return;
+  const newEnd = prompt("Enter new Registration End Date & Time (YYYY-MM-DDTHH:MM):", classRegistrationConfig.scope.regEndTime ? classRegistrationConfig.scope.regEndTime.slice(0, 16) : "");
+  if(!newEnd) return;
+  const d = new Date(newEnd);
+  if(isNaN(d.getTime())) return toast('Invalid date format', false);
+  try {
+    classRegistrationConfig.scope.regEndTime = d.toISOString();
+    apiFetch(`/elections/${encodeURIComponent(classRegistrationConfig.id)}`, { method: 'PATCH', body: JSON.stringify({ scope: classRegistrationConfig.scope }) }).then(() => {
+      toast('Registration Schedule Modified!');
+      loadClassRegistration();
+    });
+  } catch(e) { toast(e.message, false); }
+}
+
+function startStandaloneRegCountdown(endTime) {
+  if(standaloneRegCountdownInterval) clearInterval(standaloneRegCountdownInterval);
+  const disp = document.getElementById('standalone-reg-cd-display');
+  function tick() {
+    const diff = new Date(endTime) - new Date();
+    if(!disp) return;
+    if(diff <= 0) {
+       setText('standalone-reg-cd-display', '00:00:00');
+       clearInterval(standaloneRegCountdownInterval);
+       stopClassRegistrationWindow();
+       return;
+    }
+    const d=Math.floor(diff/(1000*60*60*24));
+    const h=Math.floor((diff%(1000*60*60*24))/3600000).toString().padStart(2,'0');
+    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
+    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+    setText('standalone-reg-cd-display', d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+  }
+  tick();
+  standaloneRegCountdownInterval = setInterval(tick, 1000);
+}
+
+function copyClassRegLink() {
+  if(!window.classRegLink) return;
+  navigator.clipboard.writeText(window.classRegLink);
+  toast('Registration link copied!');
+}
+function copyClassRegCode() {
+  const code = document.getElementById('class-reg-code').innerText;
+  navigator.clipboard.writeText(code);
+  toast('Code copied!');
 }
 
 // ─── MY ELECTION ───────────────────────────────────────────────
