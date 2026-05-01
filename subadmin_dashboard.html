@@ -333,6 +333,15 @@
 
           <div class="form-field"><label>Election Start</label><input type="datetime-local" id="my-elec-start"></div>
           <div class="form-field"><label>Election End</label><input type="datetime-local" id="my-elec-end"></div>
+          <div class="form-field">
+            <label>Result Visibility</label>
+            <select id="my-elec-visibility">
+              <option value="all">Entire College</option>
+              <option value="branch">Branch Only</option>
+              <option value="class">Class Only</option>
+              <option value="voters_only">Only Eligible Voters</option>
+            </select>
+          </div>
         </div>
         <!-- Category Builder -->
         <div style="border-top:1px solid var(--border);padding-top:1.5rem;">
@@ -1364,6 +1373,7 @@ async function createMyElection(){
   const name=document.getElementById('my-elec-name').value.trim();
   const elecStart=document.getElementById('my-elec-start').value;
   const elecEnd=document.getElementById('my-elec-end').value;
+  const resultVis=document.getElementById('my-elec-visibility') ? document.getElementById('my-elec-visibility').value : 'class';
 
   if(!name)return toast('Election name required',false);
   if(!elecStart||!elecEnd)return toast('Election Start and End time required',false);
@@ -1375,7 +1385,7 @@ async function createMyElection(){
     for(const c of cat.candidates){if(!c.name.trim())return toast('All candidate names must be filled',false);}
   }
   try{
-    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year},startTime:new Date(elecStart).toISOString(),endTime:new Date(elecEnd).toISOString(),createdBy:session.regNum,createdByRole:'subadmin',categories:myCategories.map(c=>c.name)})});
+    const result=await apiFetch('/elections',{method:'POST',body:JSON.stringify({institution:session.institution,name,type:'class',scope:{class:session.class,branch:session.branch,year:session.year,resultVisibility:resultVis},startTime:new Date(elecStart).toISOString(),endTime:new Date(elecEnd).toISOString(),createdBy:session.regNum,createdByRole:'subadmin',categories:myCategories.map(c=>c.name)})});
     // Post candidates
     for(const cat of myCategories){
       for(const cand of cat.candidates){

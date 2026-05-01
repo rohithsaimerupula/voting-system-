@@ -257,6 +257,14 @@
           <div class="form-field"><label>Election Name</label><input type="text" id="br-elec-name" placeholder="Branch Pres 26"></div>
           <div class="form-field"><label>Start Date</label><input type="datetime-local" id="br-elec-start"></div>
           <div class="form-field"><label>End Date</label><input type="datetime-local" id="br-elec-end"></div>
+          <div class="form-field">
+            <label>Result Visibility</label>
+            <select id="br-elec-visibility">
+              <option value="all">Entire College</option>
+              <option value="branch">Branch Only</option>
+              <option value="voters_only">Only Eligible Voters</option>
+            </select>
+          </div>
         </div>
         
         <h4 style="margin: 1.5rem 0 0.5rem; color:var(--text); font-size: 0.95rem;">🎛️ Select Voting Access Scope</h4>
@@ -743,21 +751,21 @@ async function loadBranchElection() {
 }
 
 async function createBranchElection() {
-    const nm = document.getElementById('br-elec-name').value;
+    const nm = document.getElementById('br-elec-name').value.trim();
+    const resultVis = document.getElementById('br-elec-visibility') ? document.getElementById('br-elec-visibility').value : 'branch';
     if(!nm) return toast('Name required',false);
     
     const scopeAll = document.getElementById('br-scope-all').checked;
-    let classes = [];
+    let selectedClasses = [];
     if(!scopeAll) {
-        document.querySelectorAll('.cb-class').forEach(cb => { if(cb.checked) classes.push(cb.getAttribute('data-class')); });
+        document.querySelectorAll('.cb-class').forEach(cb => { if(cb.checked) selectedClasses.push(cb.getAttribute('data-class')); });
     }
     
-    // Convert selected classes to year/class representation for backend scope
-    let scopeData = { branch: session.branch };
-    if(!scopeAll && classes.length > 0) {
-        scopeData.classes = classes; // Can use this logic in backend analytics
-        // For simplicity with existing backend we will just treat it as branch scope, but could be enhanced later natively.
-    }
+    const scopeData = {
+        branch: session.branch,
+        classes: selectedClasses,
+        resultVisibility: resultVis
+    };
     
     try{
         await apiFetch('/elections',{method:'POST',body:JSON.stringify({

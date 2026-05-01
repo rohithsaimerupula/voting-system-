@@ -610,21 +610,39 @@ app.get('/api/voters/my-elections', async (req, res) => {
         const userRes = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [regNum, institution] });
         const voter = userRes.rows[0];
 
-        // Fetch all non-completed elections for this institution
+        // Fetch all elections for this institution
         const elecRes = await db.execute({
-            sql: "SELECT * FROM elections WHERE institution = ? AND (isCompleted = 0 OR isCompleted IS NULL) ORDER BY createdAt DESC",
+            sql: "SELECT * FROM elections WHERE institution = ? ORDER BY createdAt DESC",
             args: [institution]
         });
 
         const elections = [];
         for (const e of elecRes.rows) {
-            const scope = JSON.parse(e.scope || '{}');
-            // Branch elections: only show to voters in that branch
-            if (e.type === 'branch' && voter && scope.branch && scope.branch !== voter.branch) continue;
-            // Class elections: only show to voters whose class is in scope
+            let scope = {};
+            try { scope = JSON.parse(e.scope || '{}'); } catch(err) {}
+            const visibility = scope.resultVisibility || 'voters_only';
+            
+            // Check if user is in the ORIGINAL scope of the election
+            let inScope = true;
+            if (e.type === 'branch' && voter && scope.branch && scope.branch !== voter.branch) inScope = false;
             if (e.type === 'class' && voter && scope.classes && scope.classes.length > 0) {
-                if (!scope.classes.includes(voter.class)) continue;
+                if (!scope.classes.includes(voter.class)) inScope = false;
             }
+
+            // If the election is completed
+            if (e.isCompleted == 1) {
+                let canSeeResults = false;
+                if (visibility === 'all') canSeeResults = true;
+                else if (visibility === 'branch' && voter && voter.branch === scope.branch) canSeeResults = true;
+                else if (visibility === 'class' && voter && scope.classes && scope.classes.includes(voter.class)) canSeeResults = true;
+                else if (visibility === 'voters_only' && inScope) canSeeResults = true;
+
+                if (!canSeeResults) continue;
+            } else {
+                // If it's NOT completed, it's for voting. Only return if inScope.
+                if (!inScope) continue;
+            }
+
             // Check if this voter already voted in this election
             const ledgerCheck = await db.execute({
                 sql: "SELECT id FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND electionCode = ?",

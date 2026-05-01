@@ -997,6 +997,13 @@
                 <label>End Date &amp; Time</label>
                 <input type="datetime-local" id="v-end">
               </div>
+              <div class="form-field">
+                <label>Result Visibility <small style="color:var(--muted)">(Who can see the results?)</small></label>
+                <select id="v-result-visibility">
+                  <option value="all">Entire College</option>
+                  <option value="voters_only">Only Eligible Voters</option>
+                </select>
+              </div>
 
               <!-- ── WHO CAN VOTE? (Scope Selector) ── -->
               <div id="v-scope-section">
@@ -2233,6 +2240,7 @@
         const name  = document.getElementById('v-name').value.trim();
         const start = document.getElementById('v-start').value;
         const end   = document.getElementById('v-end').value;
+        const resultVis = document.getElementById('v-result-visibility') ? document.getElementById('v-result-visibility').value : 'all';
 
         if (!name)          return toast('Election name required', false);
         if (!start || !end) return toast('Start and end times required', false);
@@ -2774,6 +2782,7 @@
         const nm = document.getElementById('v-name').value.trim();
         const start = document.getElementById('v-start').value;
         const end = document.getElementById('v-end').value;
+        const resultVisibility = document.getElementById('v-result-visibility') ? document.getElementById('v-result-visibility').value : 'all';
         if (!nm) return toast('Election Name Required', false);
 
         const isAll = document.getElementById('sa-scope-all').checked;
