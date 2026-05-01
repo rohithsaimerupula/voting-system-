@@ -965,10 +965,15 @@ let standaloneRegCountdownInterval = null;
 
 async function loadClassRegistration() {
   try {
-     const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class_registration&createdBy=${encodeURIComponent(session.regNum)}`);
-     classRegistrationConfig = elections[0] || null;
+     // Fetch all class_registration elections for this institution (no createdBy filter to be robust)
+     const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=class_registration`);
+     // Match by createdBy first, then fall back to class scope match
+     classRegistrationConfig = elections.find(e => e.createdBy === session.regNum) 
+       || elections.find(e => e.scope && e.scope.classes && e.scope.classes.includes(session.class))
+       || null;
+     console.log('[RegMgmt] Found registration config:', classRegistrationConfig ? classRegistrationConfig.id : 'none', '| All records:', elections.length);
      renderClassRegistration();
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('[RegMgmt] loadClassRegistration error:', e); }
 }
 
 function renderClassRegistration() {
