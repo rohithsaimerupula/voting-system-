@@ -1446,8 +1446,9 @@
                 `);
             }
 
-            // Stop the background timer so it doesn't unhide the form
+            // Stop the background timers so they don't unhide the form
             if (window.regTimerInterval) clearInterval(window.regTimerInterval);
+            if (window.regPollInterval) clearInterval(window.regPollInterval);
             
             // Hide form, show success
             document.getElementById('reg-timer-container').classList.add('hidden');
