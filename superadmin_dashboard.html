@@ -1315,6 +1315,10 @@
             <option value="4th">4th Year</option>
           </select>
         </div>
+        <div class="form-field" id="edit-section-group">
+          <label>Section</label>
+          <input type="text" id="edit-section" placeholder="e.g. A, B, C" maxlength="1" oninput="this.value=this.value.toUpperCase()">
+        </div>
       </div>
 
       <div class="form-field" style="margin-bottom:1.5rem;">
@@ -1994,6 +1998,7 @@
     <td>
       <select class="action-select" onchange="superAction(this,'${s.regNum}')" style="padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;cursor:pointer;min-width:110px;">
         <option value="">⚡ Actions</option>
+        <option value="edit">✏️ Edit Academic Info</option>
         <option value="remove">🗑️ Remove</option>
       </select>
     </td>
@@ -2003,7 +2008,47 @@
       window.superAction = function (sel, regNum) {
         const action = sel.value; sel.value = '';
         if (action === 'remove') removeUser(regNum);
-        // Students cannot be edited by Super Admin — personal data is immutable
+        if (action === 'edit') {
+          const s = allStudents.find(x => x.regNum === regNum);
+          if (s) editStudent(s);
+        }
+      }
+
+      function editStudent(s) {
+        setText('edit-modal-title', '✏️ Edit Student Academic Info');
+        const roleEl = document.getElementById('edit-role');
+        if (roleEl) roleEl.value = s.role;
+        const regEl = document.getElementById('edit-regnum');
+        if (regEl) regEl.value = s.regNum;
+        setText('edit-regnum-display', s.regNum);
+        
+        // Students: Personal data is read-only for admins
+        document.getElementById('edit-name').value = s.name;
+        document.getElementById('edit-name').disabled = true;
+        document.getElementById('edit-email').value = s.email || '';
+        document.getElementById('edit-email').disabled = true;
+        
+        document.getElementById('edit-branch').value = s.branch || 'CSE';
+        document.getElementById('edit-branch').disabled = false;
+        document.getElementById('edit-class-group').style.display = 'flex';
+        document.getElementById('edit-class').value = s.class || '';
+        document.getElementById('edit-class').disabled = false;
+        document.getElementById('edit-year-group').style.display = 'flex';
+        document.getElementById('edit-year').value = s.year || '1st';
+        document.getElementById('edit-year').disabled = false;
+        
+        // Section field (added recently)
+        const secEl = document.getElementById('edit-section');
+        if (secEl) {
+            secEl.value = s.section || '';
+            secEl.disabled = false;
+            document.getElementById('edit-section-group').style.display = 'flex';
+        }
+
+        document.getElementById('edit-pass').value = '';
+        document.getElementById('edit-pass').parentElement.style.display = 'none'; // Cannot change student password
+        
+        document.getElementById('edit-modal').classList.add('open');
       }
 
       function filterStudents(q) {
@@ -2074,13 +2119,17 @@
         const regEl = document.getElementById('edit-regnum');
         if (regEl) regEl.value = id;
         setText('edit-regnum-display', id);
-        document.getElementById('edit-name').value = name;
-        document.getElementById('edit-email').value = email || '';
+        document.getElementById('edit-name').disabled = false;
+        document.getElementById('edit-email').disabled = false;
         document.getElementById('edit-branch').value = branch || 'CSE';
+        document.getElementById('edit-branch').disabled = false;
         document.getElementById('edit-class-group').style.display = 'none';
         document.getElementById('edit-year-group').style.display = 'none'; // HIDE YEAR FOR ADMIN
+        const secGrp = document.getElementById('edit-section-group');
+        if (secGrp) secGrp.style.display = 'none';
         document.getElementById('edit-class').value = '';
         document.getElementById('edit-pass').value = '';
+        document.getElementById('edit-pass').parentElement.style.display = 'block';
         document.getElementById('edit-modal').classList.add('open');
       }
 
@@ -2091,14 +2140,20 @@
         const regEl = document.getElementById('edit-regnum');
         if (regEl) regEl.value = id;
         setText('edit-regnum-display', id);
-        document.getElementById('edit-name').value = name;
-        document.getElementById('edit-email').value = email || '';
+        document.getElementById('edit-name').disabled = false;
+        document.getElementById('edit-email').disabled = false;
         document.getElementById('edit-branch').value = branch || 'CSE';
+        document.getElementById('edit-branch').disabled = false;
         document.getElementById('edit-class-group').style.display = 'flex';
+        document.getElementById('edit-class').disabled = false;
         document.getElementById('edit-year-group').style.display = 'flex'; // SHOW YEAR FOR SUB-ADMIN
+        document.getElementById('edit-year').disabled = false;
+        const secGrp = document.getElementById('edit-section-group');
+        if (secGrp) secGrp.style.display = 'none'; // Section managed by Super Admin or SubAdmin? Usually SuperAdmin
         document.getElementById('edit-class').value = cls || '';
         document.getElementById('edit-year').value = year || '1st';
         document.getElementById('edit-pass').value = '';
+        document.getElementById('edit-pass').parentElement.style.display = 'block';
         document.getElementById('edit-modal').classList.add('open');
       }
 
@@ -2116,12 +2171,16 @@
         const year = document.getElementById('edit-year').value;
         const pass = document.getElementById('edit-pass').value;
 
-        if (!name) return toast('Name required', false);
+        const updates = { branch };
+        // Only include name/email if they are NOT disabled (students)
+        if (!document.getElementById('edit-name').disabled) updates.name = name;
+        if (!document.getElementById('edit-email').disabled) updates.email = email;
 
-        const updates = { name, email, branch };
-        if (role === 'subadmin') {
+        if (role === 'subadmin' || role === 'voter' || role === 'contestant') {
           updates.class = cls;
           updates.year = year;
+          const secVal = document.getElementById('edit-section').value.trim().toUpperCase();
+          if (secVal) updates.section = secVal;
         }
 
         let validPwdFn = (pwd) => {
