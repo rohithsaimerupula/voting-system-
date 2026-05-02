@@ -1773,8 +1773,9 @@
           ]);
 
           // Filter strictly by institution
-          const instUsers = allUsers.filter(u => u.institution === saSession.institution);
-          const students = instUsers.filter(u => u && ['voter', 'contestant'].includes(u.role));
+          const instUsers = allUsers.filter(u => u && u.institution === saSession.institution);
+          const STAFF_ROLES = ['admin', 'subadmin', 'superadmin', 'developer'];
+          const students = instUsers.filter(u => u && ['voter', 'contestant'].includes(u.role) && !STAFF_ROLES.includes(u.role));
           const admins = instUsers.filter(u => u && u.role === 'admin');
           const subadmins = instUsers.filter(u => u && u.role === 'subadmin');
           allStudents = students;
@@ -1980,9 +1981,11 @@
       }
 
       function renderStudents(list) {
-        if (!list.length) { setHTML('student-table', '<tr><td colspan="11" class="empty">No students found</td></tr>'); return; }
-        setHTML('student-table', list.map((s, index) => `<tr>
-    <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">Total: ${list.length} / #${index + 1}</span></td>
+        // Safety: never render staff roles in the student table
+        const safeList = (list || []).filter(s => s && ['voter','contestant'].includes(s.role));
+        if (!safeList.length) { setHTML('student-table', '<tr><td colspan="11" class="empty">No students found</td></tr>'); return; }
+        setHTML('student-table', safeList.map((s, index) => `<tr>
+    <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">Total: ${safeList.length} / #${index + 1}</span></td>
     <td><strong>${s.regNum}</strong></td><td>${s.name}</td>
     <td><span class="badge" style="background:rgba(255,255,255,0.1); color:${(s && s.role === 'contestant') ? '#c084fc' : '#cbd5e1'}; border: 1px solid rgba(255,255,255,0.1);">${(s && s.role === 'contestant') ? 'Candidate' : 'Voter'}</span></td>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--purple);">${s.year || '1st'}</span></td>
