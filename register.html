@@ -1004,24 +1004,22 @@
                     badge.style.color = "#22c55e";
                 }
                 setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`);
-            } else if (score >= 25) {
-                aiVerified = false;
-                if(progress) progress.style.background = "#f59e0b";
-                setText('ai-badge', "Partial Match ⏳");
-                if(badge) {
-                    badge.style.background = "rgba(245,158,11,0.15)";
-                    badge.style.color = "#f59e0b";
-                }
-                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Confidence is a bit low. Your registration will require <strong>manual Admin approval</strong>. Try a clearer capture for instant access.`);
             } else {
                 aiVerified = false;
                 if(progress) progress.style.background = "#ff2a4d";
-                setText('ai-badge', "Mismatch 🚫");
+                setText('ai-badge', "Match Low ⚠️");
                 if(badge) {
                     badge.style.background = "rgba(239,68,68,0.15)";
                     badge.style.color = "#ff2a4d";
                 }
-                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Biometric data does not match the ID card portrait. Please retake the photo or use a clearer ID image.`);
+                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Identity match is below the required 40%. <strong>Please retake your live photo</strong> ensuring good lighting and a clear view of your face.`);
+                
+                // Show retake button prominently
+                const retakeBtn = document.getElementById('retake-btn');
+                if(retakeBtn) {
+                    retakeBtn.style.animation = "pulse-badge 1s infinite";
+                    retakeBtn.innerText = "Retake Photo 🔄";
+                }
             }
         }
 
@@ -1175,6 +1173,10 @@
             document.getElementById('capture-btn').classList.add('hidden');
             document.getElementById('retake-btn').classList.remove('hidden');
 
+            // Reset AI confidence for this new capture
+            aiConfidence = 0;
+            aiVerified = false;
+
             // --- Real-time AI check ---
             if (faceModelsLoaded) {
                 try {
@@ -1203,11 +1205,22 @@
         function retakeWebcam() {
             webcamPhoto = null;
             liveFaceDescriptor = null;
+            aiConfidence = 0;
+            aiVerified = false;
+            
+            const rb = document.getElementById('retake-btn');
+            if(rb) {
+                rb.style.animation = "";
+                rb.innerText = "Retake";
+            }
+
             document.getElementById('webcam-preview').classList.add('hidden');
             document.getElementById('webcam-video').classList.remove('hidden');
             document.getElementById('retake-btn').classList.add('hidden');
             document.getElementById('capture-btn').classList.remove('hidden');
             document.getElementById('ai-status-card').classList.add('hidden');
+            
+            // Re-detect on ID if needed? No, just clear live.
             checkSubmitStatus();
         }
 
