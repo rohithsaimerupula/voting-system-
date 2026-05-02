@@ -671,29 +671,17 @@
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
                     <div>
-                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Branch</label>
-                        <select id="edit-branch" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
-                            <option ${currentUser.branch==='CSE'?'selected':''}>CSE</option>
-                            <option ${currentUser.branch==='ECE'?'selected':''}>ECE</option>
-                            <option ${currentUser.branch==='EEE'?'selected':''}>EEE</option>
-                            <option ${currentUser.branch==='MECH'?'selected':''}>MECH</option>
-                            <option ${currentUser.branch==='CIVIL'?'selected':''}>CIVIL</option>
-                            <option ${currentUser.branch==='IT'?'selected':''}>IT</option>
-                        </select>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Branch (Locked)</label>
+                        <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.branch}</div>
                     </div>
                     <div>
-                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Year</label>
-                        <select id="edit-year" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
-                            <option ${currentUser.year==='1st'?'selected':''}>1st</option>
-                            <option ${currentUser.year==='2nd'?'selected':''}>2nd</option>
-                            <option ${currentUser.year==='3rd'?'selected':''}>3rd</option>
-                            <option ${currentUser.year==='4th'?'selected':''}>4th</option>
-                        </select>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Year (Locked)</label>
+                        <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.year}</div>
                     </div>
                 </div>
                 <div style="margin-bottom:1.5rem;">
-                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Section</label>
-                    <input type="text" id="edit-section" value="${currentUser.section || ''}" maxlength="1" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Section (Locked)</label>
+                    <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.section || 'Not Assigned'}</div>
                 </div>
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Registration Number (Locked)</label>
@@ -712,17 +700,12 @@
             msg.innerText = 'Syncing changes...';
             msg.style.color = 'var(--neon-cyan)';
             
-            const branch = document.getElementById('edit-branch').value;
-            const section = document.getElementById('edit-section').value;
+            // Removed local variable assignments for locked fields
             
             // Only send fields that students are allowed to change
             const updates = {
                 name: document.getElementById('edit-name').value,
-                email: document.getElementById('edit-email').value,
-                branch: branch,
-                year: document.getElementById('edit-year').value,
-                section: section,
-                class: branch + '-' + section
+                email: document.getElementById('edit-email').value
             };
 
             const newPass = document.getElementById('edit-pass').value;

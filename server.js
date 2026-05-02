@@ -577,7 +577,7 @@ app.patch('/api/users/:id', async (req, res) => {
 
             // 1. If caller is NOT an admin, prevent them from changing sensitive fields
             if (!['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
-                const SENSITIVE_FIELDS = ['role', 'status', 'canVote', 'hasVoted', 'votedFor', 'votedAt', 'isBanned', 'institution', 'regNum', 'packId', 'packRequest'];
+                const SENSITIVE_FIELDS = ['role', 'status', 'canVote', 'hasVoted', 'votedFor', 'votedAt', 'isBanned', 'institution', 'regNum', 'packId', 'packRequest', 'branch', 'year', 'section', 'class'];
                 const forbidden = Object.keys(updates).filter(k => SENSITIVE_FIELDS.includes(k));
                 if (forbidden.length > 0) {
                     return res.status(403).json({ error: `You are not authorized to modify these sensitive fields: ${forbidden.join(', ')}` });
