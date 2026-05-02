@@ -554,9 +554,13 @@
                 const branchEl = document.getElementById('branch');
                 const sectionEl = document.getElementById('section');
 
-                yearEl.innerHTML = `<option value="${classElec.scope.year}">${classElec.scope.year}</option>`;
-                branchEl.innerHTML = `<option value="${classElec.scope.branch}">${classElec.scope.branch}</option>`;
-                sectionEl.value = classElec.scope.class;
+                const scopeClass = classElec.scope.class || (classElec.scope.classes && classElec.scope.classes[0]) || '';
+                const scopeYear = classElec.scope.year || '1st';
+                const scopeBranch = classElec.scope.branch || '';
+
+                yearEl.innerHTML = `<option value="${scopeYear}">${scopeYear}</option>`;
+                branchEl.innerHTML = `<option value="${scopeBranch}">${scopeBranch}</option>`;
+                sectionEl.value = scopeClass;
                 
                 yearEl.disabled = true;
                 branchEl.disabled = true;
@@ -572,10 +576,10 @@
                 };
 
                 window.customClassMode = {
-                    year: classElec.scope.year,
-                    branch: classElec.scope.branch,
-                    class: classElec.scope.class,
-                    section: classElec.scope.class.split('-').pop() // Fallback if section needed
+                    year: scopeYear,
+                    branch: scopeBranch,
+                    class: scopeClass,
+                    section: scopeClass.includes('-') ? scopeClass.split('-').pop() : scopeClass
                 };
 
             } catch (e) {
