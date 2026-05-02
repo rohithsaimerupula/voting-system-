@@ -347,12 +347,15 @@
   </div>
 </div>
 
-<!-- EDIT MODAL -->
+<!-- EDIT MODAL (for Sub-Admins only - students are read-only) -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeEdit()">✕</button>
     <h3 id="edit-modal-title">✏️ Edit Details</h3>
     <input type="hidden" id="edit-regnum"><input type="hidden" id="edit-role">
+    <div id="student-readonly-notice" style="display:none;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:1rem;margin-bottom:1.2rem;font-size:0.85rem;color:#f59e0b;">
+      🔒 Student personal details cannot be modified. You may only manage their registration status and voting access.
+    </div>
     <div class="form-grid" style="margin-bottom:1rem;">
       <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
       <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
@@ -366,7 +369,7 @@
     <div class="form-field" style="margin-bottom:1.5rem;">
       <label>Password</label><input type="password" id="edit-pass">
     </div>
-    <button class="btn btn-cyan" style="width:100%" onclick="saveEdit()">Save Changes</button>
+    <button class="btn btn-cyan" id="edit-save-btn" style="width:100%" onclick="saveEdit()">Save Changes</button>
   </div>
 </div>
 
@@ -578,7 +581,6 @@ function filterStudents(){
                 ${s.status==='pending'?'<option value="accept">✔ Accept Registration</option>':''}
                 ${s.canVote==0&&s.status==='active'?'<option value="allow">✅ Allow Voting</option>':''}
                 ${s.canVote==1?'<option value="revoke">🚫 Revoke Voting</option>':''}
-                <option value="edit">✏️ Edit Details</option>
                 <option value="remove">🗑 Remove</option>
             </select>
          </td>
@@ -613,15 +615,6 @@ async function doAction(sel, id) {
     if(act==='allow'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:true,institution:session.institution})});toast('Allowed');loadAll();}
     if(act==='revoke'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:false,institution:session.institution})});toast('Revoked');loadAll();}
     if(act==='remove'){if(confirm(`Remove ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
-    if(act==='edit'){
-        const s = branchStudents.find(x=>x.regNum===id); if(!s) return;
-        document.getElementById('edit-regnum').value=id; document.getElementById('edit-role').value=s.role;
-        document.getElementById('edit-name').value=s.name; document.getElementById('edit-email').value=s.email||'';
-        document.getElementById('edit-class').value=s.class||''; document.getElementById('edit-year').value=s.year||'1st';
-        document.getElementById('edit-pass').value='';
-        document.getElementById('edit-modal').classList.add('open');
-
-    }
 }
 async function doSaAction(sel, id) {
     const act = sel.value; sel.value=''; if(!act) return;
@@ -637,7 +630,10 @@ async function doSaAction(sel, id) {
 
 function closeEdit(){document.getElementById('edit-modal').classList.remove('open');}
 async function saveEdit(){
-    const id=document.getElementById('edit-regnum').value; const rl=document.getElementById('edit-role').value;
+    const rl = document.getElementById('edit-role').value;
+    // Students cannot be edited by admin — only sub-admins can
+    if(rl === 'voter' || rl === 'contestant') return toast('Cannot edit student details', false);
+    const id=document.getElementById('edit-regnum').value;
     const upd={name:document.getElementById('edit-name').value,email:document.getElementById('edit-email').value,class:document.getElementById('edit-class').value.toUpperCase(),year:document.getElementById('edit-year').value};
     const p=document.getElementById('edit-pass').value; if(p) { upd.password = await StorageManager.hashPassword(p); }
     try{await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify(upd)});toast('Saved');closeEdit();loadAll();}catch(e){toast(e.message,false);}

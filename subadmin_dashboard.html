@@ -1166,34 +1166,25 @@
     </div>
   </div>
 
-  <!-- EDIT STUDENT MODAL -->
+  <!-- STUDENT INFO MODAL (read-only - admins cannot edit student details) -->
   <div class="modal-overlay" id="edit-modal">
     <div class="modal">
       <button class="modal-close" onclick="closeEdit()">✕</button>
-      <h3>✏️ Edit Student Details</h3>
-      <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">ID: <strong id="edit-regnum-display"
-          style="color:var(--purple);"></strong></p>
+      <h3>👤 Student Details</h3>
+      <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">ID: <strong id="edit-regnum-display" style="color:var(--purple);"></strong></p>
       <input type="hidden" id="edit-regnum">
-      <div class="form-grid" style="margin-bottom:1rem;">
-        <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
-        <div class="form-field"><label>Email</label><input type="email" id="edit-email"></div>
+      <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:1rem;margin-bottom:1.2rem;font-size:0.85rem;color:#f59e0b;">
+        🔒 Student personal details cannot be modified by admins. You may only approve or remove students.
       </div>
       <div class="form-grid" style="margin-bottom:1rem;">
-        <div class="form-field"><label>Year</label>
-          <select id="edit-year">
-            <option value="1st Year">1st Year</option>
-            <option value="2nd Year">2nd Year</option>
-            <option value="3rd Year">3rd Year</option>
-            <option value="4th Year">4th Year</option>
-          </select>
-        </div>
-        <div class="form-field"><label>Section (1-9)</label><input type="text" id="edit-section" maxlength="1"></div>
+        <div class="form-field"><label>Full Name</label><input type="text" id="edit-name" disabled style="opacity:0.5;cursor:not-allowed;"></div>
+        <div class="form-field"><label>Email</label><input type="email" id="edit-email" disabled style="opacity:0.5;cursor:not-allowed;"></div>
       </div>
-      <div class="form-field" style="margin-bottom:1.5rem;">
-        <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
-        <input type="password" id="edit-pass" placeholder="Enter new password to change">
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-field"><label>Year</label><input type="text" id="edit-year" disabled style="opacity:0.5;cursor:not-allowed;"></div>
+        <div class="form-field"><label>Class</label><input type="text" id="edit-section" disabled style="opacity:0.5;cursor:not-allowed;"></div>
       </div>
-      <button class="btn btn-purple" style="width:100%" onclick="saveEdit()">Save Changes</button>
+      <button class="btn" style="width:100%;background:rgba(255,255,255,0.05);cursor:default;" onclick="closeEdit()">Close</button>
     </div>
   </div>
 
@@ -1532,7 +1523,6 @@
       <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td>${roleBadge}</td>
       <td style="display:flex;gap:0.4rem;padding:0.6rem;">
-        <button onclick="openEdit('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(6,182,212,0.4);background:rgba(6,182,212,0.1);color:var(--cyan);cursor:pointer;font-size:0.8rem;font-weight:700;">✏️ Edit</button>
         <button onclick="removeStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">🗑️ Remove</button>
       </td>
     </tr>`;
@@ -1561,32 +1551,16 @@
       const emailEl = document.getElementById('edit-email');
       const yearEl = document.getElementById('edit-year');
       const sectionEl = document.getElementById('edit-section');
-      const passEl = document.getElementById('edit-pass');
       if (nameEl) nameEl.value = s.name || '';
       if (emailEl) emailEl.value = s.email || '';
-      if (yearEl) yearEl.value = s.year || '1st Year';
-      const sec = s.class && s.class.includes('-') ? s.class.split('-')[1] : '1';
-      if (sectionEl) sectionEl.value = sec;
-      if (passEl) passEl.value = '';
+      if (yearEl) yearEl.value = s.year || '';
+      if (sectionEl) sectionEl.value = s.class || '';
       const modal = document.getElementById('edit-modal');
       if (modal) modal.classList.add('open');
     }
     function closeEdit() {
       const modal = document.getElementById('edit-modal');
       if (modal) modal.classList.remove('open');
-    }
-    async function saveEdit() {
-      const id = document.getElementById('edit-regnum').value;
-      const name = document.getElementById('edit-name').value.trim();
-      const email = document.getElementById('edit-email').value.trim();
-      const year = document.getElementById('edit-year').value;
-      const section = document.getElementById('edit-section').value.trim();
-      const pass = document.getElementById('edit-pass').value;
-      if (!name) return toast('Name required', false);
-      if (section && !/^[1-9]$/.test(section)) return toast('Section must be 1-9', false);
-      const updates = { name, email, year, class: session.branch + '-' + section };
-      if (pass) { if (pass.length < 6) return toast('Password too short', false); updates.password = await StorageManager.hashPassword(pass); }
-      try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'PATCH', body: JSON.stringify(updates) }); toast('Updated!'); closeEdit(); loadAll(); } catch (e) { toast(e.message, false); }
     }
 
     function showPortrait(regNum, type) {

@@ -568,6 +568,30 @@ app.patch('/api/users/:id', async (req, res) => {
     try {
         const updates = req.body || {};
         const inst = decodeURIComponent(req.query.institution || '');
+        const callerRegNum = req.headers['x-ovs-reg-num'];
+
+        // Protect student personal data from admin edits
+        const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'section', 'regNum', 'deviceFingerprint'];
+
+        if (inst && callerRegNum && callerRegNum !== req.params.id) {
+            // Caller is an admin modifying someone else's record
+            const callerRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [callerRegNum, inst] });
+            const callerRole = callerRes.rows.length > 0 ? callerRes.rows[0].role : null;
+
+            if (['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
+                // Check target is a student
+                const targetRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+                const targetRole = targetRes.rows.length > 0 ? targetRes.rows[0].role : null;
+
+                if (['voter', 'contestant'].includes(targetRole)) {
+                    const forbidden = Object.keys(updates).filter(k => PROTECTED_STUDENT_FIELDS.includes(k));
+                    if (forbidden.length > 0) {
+                        return res.status(403).json({ error: `Admins cannot modify student personal details (${forbidden.join(', ')}). Only status and voting permissions may be changed.` });
+                    }
+                }
+            }
+        }
+
         const keys = Object.keys(updates);
         if (keys.length === 0) return res.json({ success: true, message: "No updates provided." });
         
@@ -584,6 +608,7 @@ app.patch('/api/users/:id', async (req, res) => {
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 
 app.get('/api/deviceFingerprints/:fp', async (req, res) => {
     try {

@@ -1921,7 +1921,6 @@
     <td>
       <select class="action-select" onchange="superAction(this,'${s.regNum}')" style="padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;cursor:pointer;min-width:110px;">
         <option value="">⚡ Actions</option>
-        <option value="edit">✏️ Edit Details</option>
         <option value="remove">🗑️ Remove</option>
       </select>
     </td>
@@ -1931,24 +1930,7 @@
       window.superAction = function (sel, regNum) {
         const action = sel.value; sel.value = '';
         if (action === 'remove') removeUser(regNum);
-        if (action === 'edit') {
-          const s = allStudents.find(x => x.regNum === regNum);
-          if (!s) return;
-          setText('edit-modal-title', '✏️ Edit Student/Candidate');
-          const roleEl = document.getElementById('edit-role');
-          if (roleEl) roleEl.value = s.role;
-          const regEl = document.getElementById('edit-regnum');
-          if (regEl) regEl.value = s.regNum;
-          setText('edit-regnum-display', s.regNum);
-          document.getElementById('edit-name').value = s.name;
-          document.getElementById('edit-email').value = s.email || '';
-          document.getElementById('edit-branch').value = s.branch || 'CSE';
-          document.getElementById('edit-class-group').style.display = 'flex';
-          document.getElementById('edit-class').value = s.class || '';
-          document.getElementById('edit-year').value = s.year || '1st';
-          document.getElementById('edit-pass').value = '';
-          document.getElementById('edit-modal').classList.add('open');
-        }
+        // Students cannot be edited by Super Admin — personal data is immutable
       }
 
       function filterStudents(q) {
@@ -2049,6 +2031,10 @@
 
       async function saveEdit() {
         const role = document.getElementById('edit-role').value;
+        // Students cannot be edited by any admin
+        if (role === 'voter' || role === 'contestant') {
+          return toast('❌ Student personal details cannot be modified by admins.', false);
+        }
         const id = document.getElementById('edit-regnum').value;
         const name = document.getElementById('edit-name').value.trim();
         const email = document.getElementById('edit-email').value.trim();
@@ -2060,14 +2046,13 @@
         if (!name) return toast('Name required', false);
 
         const updates = { name, email, branch };
-        if (role === 'subadmin' || role === 'voter' || role === 'contestant') {
+        if (role === 'subadmin') {
           updates.class = cls;
           updates.year = year;
         }
 
         let validPwdFn = (pwd) => {
-          // Validate password based on role length
-          let minLen = role === 'admin' ? 8 : (role === 'subadmin' ? 6 : 6);
+          let minLen = role === 'admin' ? 8 : 6;
           let minAlpha = 3; let minNum = 1; let minSpec = 1;
           return validateStrictPassword(pwd, minLen, minLen, minAlpha, minNum, minSpec);
         }
