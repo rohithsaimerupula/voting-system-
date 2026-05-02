@@ -1395,12 +1395,12 @@
                 section: window.customClassMode ? window.customClassMode.section : section,
                 class: window.customClassMode ? window.customClassMode.class : document.getElementById('branch').value + '-' + section,
                 password: role === 'voter' ? password : null,
-                symbol: role === 'contestant' ? symbol : null,
-                manifesto: manifestoVal,
+                symbol: null,
+                manifesto: null,
                 portrait: portraitBase64, hasVoted: false, email,
                 webcamReg: webcamPhoto, aiVerified,
                 status: aiVerified ? 'active' : 'pending',
-                category: categoryVal,
+                category: null,
                 campaignPoints: 0,
                 createdAt: new Date().toISOString()
             };
