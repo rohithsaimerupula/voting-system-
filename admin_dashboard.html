@@ -35,9 +35,100 @@
     .btn-g{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
     .btn-e{background:rgba(6,182,212,0.15);color:var(--cyan);border:1px solid rgba(6,182,212,0.3);}
     .layout{display:flex;min-height:100vh;}
-    .sidebar{width:240px;background:rgba(6,182,212,0.05);border-right:1px solid rgba(6,182,212,0.15);padding:1.5rem 1rem;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
-    .brand{font-size:1.4rem;font-weight:900;color:var(--cyan);margin-bottom:0.2rem;font-family:'Playfair Display', serif;}
-    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;}
+    .sidebar {
+      width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+    }
+
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      padding: 2rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Mobile Sidebar State */
+    @media (max-width: 900px) {
+      .sidebar {
+        left: -240px;
+      }
+      .sidebar.open {
+        left: 0;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      }
+      .main {
+        margin-left: 0;
+        padding: 1.5rem;
+      }
+    }
+
+    /* Sidebar Toggle */
+    .sa-toggle-bar {
+        position: fixed;
+        left: 1.5rem;
+        top: 1.5rem;
+        z-index: 2000;
+        display: none;
+    }
+    @media (max-width: 900px) {
+        .sa-toggle-bar { display: block; }
+    }
+
+    .sa-sidebar-toggle {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--cyan), var(--blue));
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+    }
+
+    .sa-hamburger {
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before,
+    .sa-hamburger::after {
+        content: '';
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: absolute;
+        left: 0;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before { top: -7px; }
+    .sa-hamburger::after { bottom: -7px; }
+
+    .sa-sidebar-toggle.active .sa-hamburger { background: transparent; }
+    .sa-sidebar-toggle.active .sa-hamburger::before { transform: rotate(45deg); top: 0; }
+    .sa-sidebar-toggle.active .sa-hamburger::after { transform: rotate(-45deg); bottom: 0; }
+
+    .sa-sidebar-toggle:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(6, 182, 212, 0.6); }
+    .brand{font-size:1.4rem;font-weight:900;color:var(--cyan);margin-bottom:0.2rem;font-family:'Playfair Display', serif;padding-left:60px;}
+    .role-tag{font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem;padding-left:60px;}
     .nav-item{padding:0.7rem 1rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.15rem;font-size:0.9rem;display:flex;align-items:center;gap:0.6rem;color:var(--muted);}
     .nav-icon{display:flex;align-items:center;justify-content:center;width:24px;flex-shrink:0;font-size:1.1rem;}
     .nav-item:hover,.nav-item.active{background:rgba(6,182,212,0.1);color:var(--cyan);font-weight:600;}
@@ -45,7 +136,6 @@
     .nav-sub-item{padding:0.55rem 1rem 0.55rem 2rem;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:0.1rem;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;color:var(--muted);}
     .nav-sub-item:hover,.nav-sub-item.active{background:rgba(6,182,212,0.08);color:var(--cyan);}
     .sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
-    .main{margin-left:240px;flex:1;padding:2rem;}
     .page{display:none;}.page.active{display:block;}
     .page-title{font-size:1.6rem;font-weight:800;margin-bottom:0.4rem;font-family:'Playfair Display', serif;}
     .page-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
@@ -112,10 +202,15 @@
     <div class="nav-group-label">🗳️ Voting</div>
     <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏢</span> My Election</div>
     <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span class="nav-icon">🎓</span> College Head Election</div>
-    <div class="sidebar-footer">
-      <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)"><span class="nav-icon">🔄</span> Refresh Data</div>
       <div class="nav-item" onclick="adminLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
     </div>
+  </div>
+
+  <!-- Sidebar Toggle -->
+  <div class="sa-toggle-bar">
+    <button class="sa-sidebar-toggle" onclick="toggleSidebar()" id="sa-toggle-btn">
+      <div class="sa-hamburger"></div>
+    </button>
   </div>
 
   <div class="main">
@@ -434,7 +529,14 @@ function toast(m,ok=true){
     setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-function adminLogout(){session=null;localStorage.removeItem('ovs_currentUser');window.location.href='login.html?admin=true';}
+function adminLogout() { localStorage.removeItem('ovs_admin_session'); window.location.href = 'login.html?admin=true'; }
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('sa-toggle-btn');
+  sidebar.classList.toggle('open');
+  btn.classList.toggle('active');
+}
 
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

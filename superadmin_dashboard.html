@@ -148,32 +148,111 @@
       display: flex;
       min-height: 100vh;
     }
-
     .sidebar {
       width: 240px;
-      background: rgba(255, 42, 77, 0.05);
-      border-right: 1px solid rgba(255, 42, 77, 0.15);
-      padding: 1.5rem 1rem;
-      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       position: fixed;
       top: 0;
       left: 0;
       height: 100vh;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
     }
 
-    .sidebar-brand {
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      padding: 2rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Mobile Sidebar State */
+    @media (max-width: 900px) {
+      .sidebar {
+        left: -240px;
+      }
+      .sidebar.open {
+        left: 0;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      }
+      .main {
+        margin-left: 0;
+        padding: 1.5rem;
+      }
+    }
+
+    /* Sidebar Toggle */
+    .sa-toggle-bar {
+        position: fixed;
+        left: 1.5rem;
+        top: 1.5rem;
+        z-index: 2000;
+        display: none;
+    }
+    @media (max-width: 900px) {
+        .sa-toggle-bar { display: block; }
+    }
+
+    .sa-sidebar-toggle {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--gold), #cc223e);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(255, 42, 77, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+    }
+
+    .sa-hamburger {
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before,
+    .sa-hamburger::after {
+        content: '';
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: absolute;
+        left: 0;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before { top: -7px; }
+    .sa-hamburger::after { bottom: -7px; }
+
+    .sa-sidebar-toggle.active .sa-hamburger { background: transparent; }
+    .sa-sidebar-toggle.active .sa-hamburger::before { transform: rotate(45deg); top: 0; }
+    .sa-sidebar-toggle.active .sa-hamburger::after { transform: rotate(-45deg); bottom: 0; }
+
+    .sa-sidebar-toggle:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255, 42, 77, 0.6); } .sidebar-brand {
       font-size: 1.4rem;
       font-weight: 900;
       color: var(--gold);
       margin-bottom: 0.25rem;
       font-family: 'Playfair Display', serif;
+      padding-left: 60px;
     }
 
     .sidebar-role {
       font-size: 0.75rem;
       color: var(--muted);
       margin-bottom: 2rem;
+      padding-left: 60px;
     }
 
     .nav-item {
@@ -207,12 +286,6 @@
       background: rgba(255, 42, 77, 0.15);
       color: var(--gold);
       font-weight: 600;
-    }
-
-    .main {
-      margin-left: 240px;
-      flex: 1;
-      padding: 2rem;
     }
 
     .page {
@@ -415,22 +488,18 @@
       font-size: 1.4rem;
       cursor: pointer;
     }
-
-    @media(max-width:700px) {
-      .sidebar {
-        display: none;
-      }
-
-      .main {
-        margin-left: 0;
-      }
-    }
   </style>
 </head>
 
 <body>
   <!-- Cyber Mesh Particles -->
   <div id="tsparticles" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></div>
+  
+  <div class="sa-toggle-bar">
+    <button class="sa-sidebar-toggle" id="sa-toggle-btn" onclick="toggleSidebar()">
+      <div class="sa-hamburger"></div>
+    </button>
+  </div>
 
   <style>
     @keyframes slideUp {
@@ -594,7 +663,7 @@
               number, 1 special)</small></label>
           <input type="password" id="sa-forgot-newpass" placeholder="Enter new 10-char password" maxlength="10"
             style="width:100%; height:48px; padding:0 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.3); color:white; font-family:'Outfit',sans-serif; font-size:1rem; outline:none;"
-            oninput="this.value=this.value.replace(/\\s/g,'').slice(0,10)">
+            oninput="this.value=this.value.replace(/\s/g,'').slice(0,10)">
         </div>
         <button onclick="saForgotReset()" id="sa-forgot-btn2"
           style="width:100%; height:48px; border-radius:10px; border:1px solid rgba(245,158,11,0.5); background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:700; font-size:1rem; cursor:pointer; font-family:'Outfit',sans-serif;">
@@ -1304,6 +1373,13 @@
         } catch (e) { toast(e.message, false); }
       }
 
+      function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const btn = document.getElementById('sa-toggle-btn');
+      sidebar.classList.toggle('open');
+      btn.classList.toggle('active');
+    }
+
       function toggleScheduleMode(isEditing) {
         const scheduler    = document.getElementById('v-scheduler-inner');
         const countdown    = document.getElementById('v-countdown-container');
@@ -1568,10 +1644,9 @@
       }
 
       function saLogout() {
-        saSession = null;
-        localStorage.removeItem('ovs_currentUser');
-        window.location.href = 'login.html?admin=true';
-      }
+      localStorage.removeItem('ovs_sa_session');
+      window.location.href = 'login.html?admin=true';
+    }
 
       // --- FORGOT MASTER PASSWORD FLOW ---
       let _saForgotOtp = null;
