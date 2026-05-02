@@ -275,7 +275,7 @@
                         </ol>
                     </div>
 
-                        <button class="submit-btn" onclick="window.location.href='index.html'">Return to Gateway</button>
+                        <button class="submit-btn" onclick="window.location.href='index.html'">Return to Home Portal</button>
                 </div>
 
             <!-- REGISTRATION TIMER (Skeleton/Loading) -->
@@ -1427,10 +1427,10 @@
                 successIconContainer.style.borderColor = "#22c55e";
                 successIconContainer.style.background = "rgba(34, 197, 94, 0.1)";
                 successIcon.innerText = "✅";
-                setHTML('next-steps-list', `
-                    <li>✅ AI has <strong>instantly verified</strong> your identity.</li>
-                    <li>🔑 Your account is <strong>ACTIVE</strong>. You may now login.</li>
-                    <li>🗳️ Head to the Gateway and use your Reg Number &amp; Password to vote.</li>
+                setHTML('success-next-steps', `
+                    <li>✅ AI Face Match was successful!</li>
+                    <li>⏳ Your registration has been sent to your <strong>Class Admin</strong> for final approval.</li>
+                    <li>🔑 Once approved, you can return to the Home Portal to login.</li>
                 `);
             } else {
                 successTitle.innerText = "Registration Submitted!";
@@ -1439,10 +1439,10 @@
                 successIconContainer.style.background = "rgba(245, 158, 11, 0.1)";
                 successIconContainer.style.animation = "pulse-badge 2s infinite";
                 successIcon.innerText = "⏳";
-                setHTML('next-steps-list', `
-                    <li>⏳ Your registration is <strong>PENDING</strong> Admin approval.</li>
-                    <li>📧 You will be notified once your account is approved.</li>
-                    <li>🔑 After approval, return to the Gateway to login and vote.</li>
+                setHTML('success-next-steps', `
+                    <li>⏳ Your registration is <strong>PENDING</strong> Admin review.</li>
+                    <li>📧 You will be notified once a decision is made.</li>
+                    <li>🔑 After approval, return to the Home Portal to login.</li>
                 `);
             }
 
