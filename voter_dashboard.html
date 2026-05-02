@@ -564,24 +564,31 @@
 
         // --- Initialization ---
         async function init() {
-            document.getElementById('sidebar-user-name').innerText = currentUser.name;
-            document.getElementById('sidebar-user-id').innerText = `ID: ${currentUser.regNum}`;
-            document.getElementById('welcome-name').innerText = currentUser.name.split(' ')[0];
-            document.getElementById('user-initial').innerText = currentUser.name[0];
-            document.getElementById('header-avatar').innerText = currentUser.name[0];
-            document.getElementById('header-user-name').innerText = currentUser.name;
+            if (!currentUser) return;
+
+            const nameEl = document.getElementById('sidebar-user-name');
+            const idEl = document.getElementById('sidebar-user-id');
+            const welcomeEl = document.getElementById('welcome-name');
+            const initialEl = document.getElementById('user-initial');
+
+            if (nameEl) nameEl.innerText = currentUser.name;
+            if (idEl) idEl.innerText = `ID: ${currentUser.regNum}`;
+            if (welcomeEl) welcomeEl.innerText = currentUser.name.split(' ')[0];
+            if (initialEl) initialEl.innerText = currentUser.name[0];
 
             loadDashboardStats();
             
-            tsParticles.load("tsparticles", {
-                fpsLimit: 60,
-                particles: {
-                    number: { value: 30, density: { enable: true, value_area: 800 } },
-                    color: { value: "#06b6d4" },
-                    links: { enable: true, opacity: 0.1, color: "#fff" },
-                    move: { enable: true, speed: 0.5 }
-                }
-            });
+            if (typeof tsParticles !== 'undefined') {
+                tsParticles.load("tsparticles", {
+                    fpsLimit: 60,
+                    particles: {
+                        number: { value: 30, density: { enable: true, value_area: 800 } },
+                        color: { value: "#06b6d4" },
+                        links: { enable: true, opacity: 0.1, color: "#fff" },
+                        move: { enable: true, speed: 0.5 }
+                    }
+                });
+            }
         }
 
         async function loadDashboardStats() {
