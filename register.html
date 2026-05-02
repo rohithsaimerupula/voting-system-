@@ -541,7 +541,7 @@
             }
 
             try {
-                const elections = await apiFetch(`/elections?institution=${encodeURIComponent(inst)}`);
+                const elections = await fetchApi(`/elections?institution=${encodeURIComponent(inst)}`);
                 const classElec = elections.find(e => e.electionCode === classCode && (e.type === 'class' || e.type === 'class_registration'));
                 if(!classElec) {
                     alert('Invalid Class Code. Access denied.');
