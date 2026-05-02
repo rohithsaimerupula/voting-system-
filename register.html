@@ -568,16 +568,23 @@
                 const scopeYear = classElec.scope.year || '1st';
                 const scopeBranch = classElec.scope.branch || '';
 
+                window.customClassMode = {
+                    year: scopeYear,
+                    branch: scopeBranch,
+                    class: scopeClass,
+                    section: scopeClass.includes('-') ? scopeClass.split('-').pop() : scopeClass
+                };
+
                 yearEl.innerHTML = `<option value="${scopeYear}">${scopeYear}</option>`;
                 branchEl.innerHTML = `<option value="${scopeBranch}">${scopeBranch}</option>`;
-                sectionEl.value = scopeClass;
+                sectionEl.value = window.customClassMode.section;
                 
                 yearEl.disabled = true;
                 branchEl.disabled = true;
                 sectionEl.disabled = true;
 
                 // Hide the group
-                yearEl.closest('.form-group').style.display = 'none';
+                // yearEl.closest('.form-group').style.display = 'none';
 
                 window.customRegStatus = {
                     isActive: classElec.registrationOpen === 1,

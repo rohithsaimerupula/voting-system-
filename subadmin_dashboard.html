@@ -1676,7 +1676,13 @@
         type: "class_registration",
         createdBy: session.regNum,
         institution: session.institution,
-        scope: { branch: session.branch, classes: [session.class], regStartTime: new Date(start).toISOString(), regEndTime: new Date(end).toISOString() },
+        scope: { 
+          branch: session.branch, 
+          classes: [session.class], 
+          year: session.year,
+          regStartTime: new Date(start).toISOString(), 
+          regEndTime: new Date(end).toISOString() 
+        },
         registrationOpen: 1,
         isActive: 0,
         isCompleted: 0
