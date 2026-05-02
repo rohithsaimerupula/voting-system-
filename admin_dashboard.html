@@ -202,9 +202,11 @@
     <div class="nav-group-label">🗳️ Voting</div>
     <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏢</span> My Election</div>
     <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span class="nav-icon">🎓</span> College Head Election</div>
-      <div class="nav-item" onclick="adminLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
+      <div class="sidebar-footer" style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
+        <div class="nav-item" onclick="refreshAll()" style="color:var(--cyan)"><span class="nav-icon">🔄</span> Refresh Data</div>
+        <div class="nav-item" onclick="adminLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout</div>
+      </div>
     </div>
-  </div>
 
   <!-- Sidebar Toggle -->
   <div class="sa-toggle-bar">
