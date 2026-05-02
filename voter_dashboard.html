@@ -400,7 +400,7 @@
                 <div class="vd-profile-trigger" onclick="switchTab('profile')">
                     <div class="vd-avatar" style="width:30px; height:30px; font-size:0.9rem;" id="header-avatar">?</div>
                     <span id="header-user-name">Student</span>
-                    <span style="font-size:0.7rem; color:var(--neon-cyan);">Manage Profile ⚙️</span>
+                    <span style="font-size:1rem;">⚙️</span>
                 </div>
             </div>
             <div class="vd-content-wrapper">
@@ -654,13 +654,17 @@
             msg.innerText = 'Syncing changes...';
             msg.style.color = 'var(--neon-cyan)';
             
+            const branch = document.getElementById('edit-branch').value;
+            const section = document.getElementById('edit-section').value;
+            
             const updated = {
                 ...currentUser,
                 name: document.getElementById('edit-name').value,
                 email: document.getElementById('edit-email').value,
-                branch: document.getElementById('edit-branch').value,
+                branch: branch,
                 year: document.getElementById('edit-year').value,
-                section: document.getElementById('edit-section').value
+                section: section,
+                class: branch + '-' + section
             };
 
             const newPass = document.getElementById('edit-pass').value;
@@ -673,7 +677,7 @@
                 msg.innerText = 'Profile Updated Successfully! ✅';
                 msg.style.color = 'var(--success)';
                 // Update local session
-                localStorage.setItem('currentUser', JSON.stringify(updated));
+                localStorage.setItem('ovs_currentUser', JSON.stringify(updated));
                 setTimeout(() => location.reload(), 1500);
             } catch(err) {
                 msg.innerText = 'Failed to update profile: ' + err.message;
