@@ -1399,6 +1399,7 @@
                 manifesto: null,
                 portrait: portraitBase64, hasVoted: false, email,
                 webcamReg: webcamPhoto, aiVerified,
+                faceDescriptor: (typeof liveFaceDescriptor !== 'undefined' && liveFaceDescriptor) ? JSON.stringify(Array.from(liveFaceDescriptor)) : null,
                 status: aiVerified ? 'active' : 'pending',
                 category: null,
                 campaignPoints: 0,

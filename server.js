@@ -58,7 +58,7 @@ const db = {
 async function initDb() {
     try {
         await db.batch([
-            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, year TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, PRIMARY KEY (regNum, institution))`,
+            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, year TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, faceDescriptor TEXT, PRIMARY KEY (regNum, institution))`,
             `CREATE TABLE IF NOT EXISTS auditLogs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, user TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS deviceFingerprints (fingerprint TEXT PRIMARY KEY, firstSeen TEXT, lastActive TEXT, counts JSON)`,
             `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSON)`,
@@ -82,7 +82,8 @@ async function runMigrations() {
         { sql: "ALTER TABLE users ADD COLUMN packId TEXT", label: "users.packId" },
         { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" },
         { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" },
-        { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" }
+        { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" },
+        { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" }
     ];
     for (const m of migrations) {
         try {
@@ -100,6 +101,16 @@ runMigrations();
 
 
 function boolInt(val) { return val ? 1 : 0; }
+
+function euclideanDistance(arr1, arr2) {
+    if (arr1.length !== arr2.length) return Infinity;
+    let sum = 0;
+    for (let i = 0; i < arr1.length; i++) {
+        let diff = arr1[i] - arr2[i];
+        sum += diff * diff;
+    }
+    return Math.sqrt(sum);
+}
 
 app.get('/api/users', async (req, res) => {
     try {
@@ -299,14 +310,46 @@ app.post('/api/users/add', async (req, res) => {
             }
         }
 
+        // 4. Check if Email is unique
+        if (u.email) {
+            const emailCheck = await db.execute({ sql: "SELECT regNum FROM users WHERE institution = ? AND email = ?", args: [inst, u.email] });
+            if (emailCheck.rows.length > 0) {
+                return res.status(409).json({ error: `The Email Address "${u.email}" is already registered to another account.` });
+            }
+        }
+
+        // 5. Check if Face is unique
+        if (u.faceDescriptor) {
+            const allFaces = await db.execute({ sql: "SELECT regNum, faceDescriptor FROM users WHERE institution = ? AND faceDescriptor IS NOT NULL", args: [inst] });
+            let liveDescriptor;
+            try {
+                liveDescriptor = JSON.parse(u.faceDescriptor);
+            } catch(e) {}
+            
+            if (liveDescriptor && Array.isArray(liveDescriptor)) {
+                for (const row of allFaces.rows) {
+                    try {
+                        const existingDescriptor = JSON.parse(row.faceDescriptor);
+                        if (existingDescriptor && Array.isArray(existingDescriptor)) {
+                            const dist = euclideanDistance(liveDescriptor, existingDescriptor);
+                            if (dist < 0.45) { // Threshold for identical face
+                                return res.status(409).json({ error: `Face mismatch: This face is already registered under Registration ID "${row.regNum}". Each student must register their own face.` });
+                            }
+                        }
+                    } catch(err) { continue; }
+                }
+            }
+        }
+
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId, faceDescriptor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', 
                 boolInt(u.hasVoted), boolInt(u.isBanned), 
                 u.portrait || null, u.webcamReg || null, u.deviceFingerprint || null, 
                 u.branch || null, u.class || null, u.year || null, u.managedBy || null, 
-                boolInt(u.canVote), u.category || null, u.packId || null
+                boolInt(u.canVote), u.category || null, u.packId || null,
+                u.faceDescriptor || null
             ]
         });
         res.json({ success: true });
