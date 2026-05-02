@@ -58,7 +58,7 @@ const db = {
 async function initDb() {
     try {
         await db.batch([
-            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, year TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, faceDescriptor TEXT, PRIMARY KEY (regNum, institution))`,
+            `CREATE TABLE IF NOT EXISTS users (regNum TEXT, institution TEXT, password TEXT, role TEXT, name TEXT, email TEXT, status TEXT, branch TEXT, class TEXT, year TEXT, section TEXT, managedBy TEXT, canVote INTEGER DEFAULT 0, hasVoted INTEGER DEFAULT 0, votedFor TEXT, votedAt TEXT, votePhoto TEXT, voteStatus TEXT, voteReceiptHash TEXT, voteFingerprint TEXT, isBanned INTEGER DEFAULT 0, portrait TEXT, webcamReg TEXT, deviceFingerprint TEXT, inviteCode TEXT, campaignPoints INTEGER DEFAULT 0, category TEXT, packId TEXT, faceDescriptor TEXT, PRIMARY KEY (regNum, institution))`,
             `CREATE TABLE IF NOT EXISTS auditLogs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, user TEXT, details TEXT, timestamp TEXT, institution TEXT)`,
             `CREATE TABLE IF NOT EXISTS deviceFingerprints (fingerprint TEXT PRIMARY KEY, firstSeen TEXT, lastActive TEXT, counts JSON)`,
             `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSON)`,
@@ -83,7 +83,8 @@ async function runMigrations() {
         { sql: "ALTER TABLE users ADD COLUMN packRequest TEXT", label: "users.packRequest" },
         { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" },
         { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" },
-        { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" }
+        { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" },
+        { sql: "ALTER TABLE users ADD COLUMN section TEXT", label: "users.section" }
     ];
     for (const m of migrations) {
         try {
