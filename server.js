@@ -683,19 +683,20 @@ app.get('/api/admin/system-health', authGuard, async (req, res) => {
 });
 
 // Get elections visible to a specific voter (lobby view)
-app.get('/api/voters/my-elections', async (req, res) => {
+app.get('/api/voters/my-elections', authGuard, async (req, res) => {
     try {
         const { regNum, institution } = req.query;
-        if (!institution) return res.status(400).json({ error: 'institution required' });
+        const inst = decodeURIComponent(institution || '');
+        if (!inst) return res.status(400).json({ error: 'institution required' });
 
         // Get voter info to check scope eligibility
-        const userRes = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [regNum, institution] });
+        const userRes = await db.execute({ sql: "SELECT * FROM users WHERE regNum = ? AND institution = ?", args: [regNum, inst] });
         const voter = userRes.rows[0];
 
-        // Fetch all elections for this institution
+        // Fetch all active or completed elections for this institution
         const elecRes = await db.execute({
-            sql: "SELECT * FROM elections WHERE institution = ? ORDER BY createdAt DESC",
-            args: [institution]
+            sql: "SELECT * FROM elections WHERE institution = ? AND (isActive = 1 OR isCompleted = 1) ORDER BY createdAt DESC",
+            args: [inst]
         });
 
         const elections = [];
@@ -727,10 +728,15 @@ app.get('/api/voters/my-elections', async (req, res) => {
 
             // Check if this voter already voted in this election
             const ledgerCheck = await db.execute({
-                sql: "SELECT id FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND electionCode = ?",
-                args: [regNum || '', institution, e.electionCode]
+                sql: "SELECT receiptHash FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND electionCode = ?",
+                args: [regNum || '', inst, e.id]
             });
-            elections.push({ ...e, scope, hasVoted: ledgerCheck.rows.length > 0 });
+            const ledgerCheck2 = await db.execute({
+                sql: "SELECT receiptHash FROM publicLedger WHERE voterRegNum = ? AND institution = ? AND electionCode = ?",
+                args: [regNum || '', inst, e.electionCode]
+            });
+            
+            elections.push({ ...e, scope, hasVoted: (ledgerCheck.rows.length > 0 || ledgerCheck2.rows.length > 0) });
         }
 
         res.json(elections);
@@ -819,27 +825,6 @@ app.post('/api/election/reset', async (req, res) => {
             { sql: "UPDATE users SET hasVoted = 0, votedFor = NULL, votePhoto = NULL, voteStatus = NULL, voteReceiptHash = NULL WHERE institution = ?", args: [institution] }
         ], "write");
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/voters/my-elections', authGuard, async (req, res) => {
-    try {
-        const inst = decodeURIComponent(req.query.institution || '');
-        const regNum = req.query.regNum;
-        
-        // Find elections for this institution
-        const elections = await db.execute({ sql: "SELECT * FROM elections WHERE institution = ? AND isActive = 1", args: [inst] });
-        
-        // Find if user has already voted in these elections
-        const votes = await db.execute({ sql: "SELECT electionCode FROM publicLedger WHERE voterRegNum = ? AND institution = ?", args: [regNum, inst] });
-        const votedCodes = new Set(votes.rows.map(v => v.electionCode));
-
-        const result = elections.rows.map(e => ({
-            ...e,
-            hasVoted: votedCodes.has(e.id) || votedCodes.has(e.electionCode) || votedCodes.has('global')
-        }));
-
-        res.json(result);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
