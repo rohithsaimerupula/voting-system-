@@ -570,20 +570,26 @@ app.patch('/api/users/:id', async (req, res) => {
         const inst = decodeURIComponent(req.query.institution || '');
         const callerRegNum = req.headers['x-ovs-reg-num'];
 
-        // Protect student personal data from admin edits
-        const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'section', 'regNum', 'deviceFingerprint'];
-
-        if (inst && callerRegNum && callerRegNum !== req.params.id) {
-            // Caller is an admin modifying someone else's record
+        if (inst && callerRegNum) {
             const callerRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [callerRegNum, inst] });
             const callerRole = callerRes.rows.length > 0 ? callerRes.rows[0].role : null;
 
-            if (['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
-                // Check target is a student
+            // 1. If caller is NOT an admin, prevent them from changing sensitive fields
+            if (!['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
+                const SENSITIVE_FIELDS = ['role', 'status', 'canVote', 'hasVoted', 'votedFor', 'votedAt', 'isBanned', 'institution', 'regNum', 'packId', 'packRequest'];
+                const forbidden = Object.keys(updates).filter(k => SENSITIVE_FIELDS.includes(k));
+                if (forbidden.length > 0) {
+                    return res.status(403).json({ error: `You are not authorized to modify these sensitive fields: ${forbidden.join(', ')}` });
+                }
+            }
+
+            // 2. Protect student personal data from admin edits (admins can only change status/permissions)
+            if (callerRegNum !== req.params.id && ['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
                 const targetRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
                 const targetRole = targetRes.rows.length > 0 ? targetRes.rows[0].role : null;
 
                 if (['voter', 'contestant'].includes(targetRole)) {
+                    const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'section', 'regNum', 'deviceFingerprint'];
                     const forbidden = Object.keys(updates).filter(k => PROTECTED_STUDENT_FIELDS.includes(k));
                     if (forbidden.length > 0) {
                         return res.status(403).json({ error: `Admins cannot modify student personal details (${forbidden.join(', ')}). Only status and voting permissions may be changed.` });

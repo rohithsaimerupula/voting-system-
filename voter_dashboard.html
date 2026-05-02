@@ -715,8 +715,8 @@
             const branch = document.getElementById('edit-branch').value;
             const section = document.getElementById('edit-section').value;
             
-            const updated = {
-                ...currentUser,
+            // Only send fields that students are allowed to change
+            const updates = {
                 name: document.getElementById('edit-name').value,
                 email: document.getElementById('edit-email').value,
                 branch: branch,
@@ -727,15 +727,16 @@
 
             const newPass = document.getElementById('edit-pass').value;
             if (newPass) {
-                updated.password = await StorageManager.hashPassword(newPass);
+                updates.password = await StorageManager.hashPassword(newPass);
             }
 
             try {
-                await StorageManager.updateUser(updated);
+                // We use updateUserDetails because it handles partial updates better
+                await StorageManager.updateUserDetails(currentUser.regNum, updates);
                 msg.innerText = 'Profile Updated Successfully! ✅';
                 msg.style.color = 'var(--success)';
                 // Update local session
-                localStorage.setItem('ovs_currentUser', JSON.stringify(updated));
+                localStorage.setItem('ovs_currentUser', JSON.stringify({ ...currentUser, ...updates }));
                 setTimeout(() => location.reload(), 1500);
             } catch(err) {
                 msg.innerText = 'Failed to update profile: ' + err.message;
