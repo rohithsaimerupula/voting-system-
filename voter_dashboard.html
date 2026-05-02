@@ -582,6 +582,7 @@
         }
 
         async function loadDashboardStats() {
+            const list = document.getElementById('activity-list');
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
                 const voted = elections.filter(e => e.hasVoted).length;
@@ -596,13 +597,16 @@
                         <span style="font-weight:700; color:${e.hasVoted?'#22c55e':'#f59e0b'}">${e.hasVoted?'Completed':'Pending'}</span>
                     </div>
                 `).join('');
-                document.getElementById('activity-list').innerHTML = activityHtml || "No recent activity recorded.";
-            } catch(e) { console.error(e); }
+                list.innerHTML = activityHtml || '<div style="text-align:center; padding:1rem; opacity:0.5;">No recent activity recorded.</div>';
+            } catch(e) { 
+                console.error(e); 
+                list.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--danger);">⚠️ Failed to sync activity: ${e.message}</div>`;
+            }
         }
 
         async function loadVotingCenter() {
             const list = document.getElementById('election-list');
-            list.innerHTML = 'Scanning for ballots...';
+            list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Scanning for ballots...</div>';
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
                 const pending = elections.filter(e => !e.isCompleted && !e.hasVoted);
@@ -617,12 +621,14 @@
                         </button>
                     </div>
                 `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No pending elections found for your profile.</div>';
-            } catch(e) { list.innerHTML = 'Error loading center.'; }
+            } catch(e) { 
+                list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--danger);">⚠️ Error loading voting center: ${e.message}</div>`; 
+            }
         }
 
         async function loadResults() {
             const list = document.getElementById('results-list');
-            list.innerHTML = 'Fetching official counts...';
+            list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Fetching official counts...</div>';
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
                 const completed = elections.filter(e => e.isCompleted);
@@ -637,7 +643,9 @@
                         </button>
                     </div>
                 `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No official results published yet.</div>';
-            } catch(e) { list.innerHTML = 'Error loading results.'; }
+            } catch(e) { 
+                list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--danger);">⚠️ Error loading results: ${e.message}</div>`; 
+            }
         }
 
         function loadProfile() {
