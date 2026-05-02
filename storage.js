@@ -261,6 +261,25 @@ const StorageManager = {
         }
     },
 
+    async updateUser(user) {
+        if (!user || !user.regNum) throw new Error("Invalid user data for update.");
+        const inst = user.institution || 'Unknown';
+        
+        // Log the audit
+        this.logAudit("User updated profile", user.regNum);
+        
+        try {
+            await fetchApi(`/users/${user.regNum}?institution=${encodeURIComponent(inst)}`, {
+                method: 'PATCH',
+                body: JSON.stringify(user)
+            });
+            return true;
+        } catch (error) {
+            console.error("Update User Error: ", error);
+            throw new Error(error.message);
+        }
+    },
+
     // --- LOGIN ---
     async login(regNum, password, skip2FA = false) {
         try {
