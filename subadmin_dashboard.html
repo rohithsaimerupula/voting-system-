@@ -143,10 +143,8 @@
 
     .sidebar {
       width: 240px;
-      background: rgba(255, 42, 77, 0.05);
-      border-right: 1px solid rgba(255, 42, 77, 0.15);
-      padding: 1.5rem 1rem;
-      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       position: fixed;
       top: 0;
       left: 0;
@@ -154,6 +152,8 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
     }
 
     .brand {
@@ -237,7 +237,79 @@
       margin-left: 240px;
       flex: 1;
       padding: 2rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* Mobile Sidebar State */
+    @media (max-width: 900px) {
+      .sidebar {
+        left: -240px;
+      }
+      .sidebar.open {
+        left: 0;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      }
+      .main {
+        margin-left: 0;
+        padding: 1.5rem;
+      }
+    }
+
+    /* Sidebar Toggle */
+    .sa-toggle-bar {
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+        z-index: 2000;
+        display: none;
+    }
+    @media (max-width: 900px) {
+        .sa-toggle-bar { display: block; }
+    }
+
+    .sa-sidebar-toggle {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--purple), #7c3aed);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+    }
+
+    .sa-hamburger {
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before,
+    .sa-hamburger::after {
+        content: '';
+        width: 22px;
+        height: 2px;
+        background: white;
+        position: absolute;
+        left: 0;
+        transition: all 0.3s;
+    }
+
+    .sa-hamburger::before { top: -7px; }
+    .sa-hamburger::after { bottom: -7px; }
+
+    .sa-sidebar-toggle.active .sa-hamburger { background: transparent; }
+    .sa-sidebar-toggle.active .sa-hamburger::before { transform: rotate(45deg); top: 0; }
+    .sa-sidebar-toggle.active .sa-hamburger::after { transform: rotate(-45deg); bottom: 0; }
+
+    .sa-sidebar-toggle:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(168, 85, 247, 0.6); }
 
     .page {
       display: none;
@@ -554,12 +626,14 @@
           class="nav-icon">🏢</span> Branch Head Election</div>
       <div class="nav-sub-item" id="nav-voting-college" onclick="showPage('voting-college',this)"><span
           class="nav-icon">🎓</span> College Head Election</div>
-      <div class="sidebar-footer">
-        <div class="nav-item" onclick="refreshAll()" style="color:var(--purple)"><span class="nav-icon">🔄</span>
-          Refresh Data</div>
-        <div class="nav-item" onclick="saLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Logout
-        </div>
       </div>
+    </div>
+
+    <!-- Sidebar Toggle -->
+    <div class="sa-toggle-bar">
+      <button class="sa-sidebar-toggle" onclick="toggleSidebar()" id="sa-toggle-btn">
+        <div class="sa-hamburger"></div>
+      </button>
     </div>
 
     <div class="main">
