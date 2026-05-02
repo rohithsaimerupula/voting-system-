@@ -246,8 +246,14 @@
         .vd-hamburger::before { top: -7px; }
         .vd-hamburger::after { bottom: -7px; }
 
+        /* Animation to X */
+        .vd-sidebar-toggle.active .vd-hamburger { background: transparent; }
+        .vd-sidebar-toggle.active .vd-hamburger::before { transform: rotate(45deg); top: 0; }
+        .vd-sidebar-toggle.active .vd-hamburger::after { transform: rotate(-45deg); bottom: 0; }
+
         .vd-sidebar-toggle:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(6,182,212,0.8); }
         .vd-sidebar-toggle:hover .vd-hamburger { background: rgba(255,255,255,0.8); }
+        .vd-sidebar-toggle.active:hover .vd-hamburger { background: transparent; }
 
         /* === DASHBOARD COMPONENTS === */
         .vd-tab { display: none; animation: fadeIn 0.5s ease forwards; }
@@ -526,7 +532,7 @@
             const sidebar = document.getElementById('sidebar');
             const btn = document.getElementById('sidebar-toggle-btn');
             sidebar.classList.toggle('collapsed');
-            btn.innerText = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+            btn.classList.toggle('active');
         }
 
         function switchTab(tabId, btn) {
