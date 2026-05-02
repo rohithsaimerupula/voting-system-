@@ -287,6 +287,16 @@
                 <h2 class="title" style="margin-bottom: 0.5rem; font-size: 2.2rem; font-weight: 900; color: #ff2a4d; font-family:'Playfair Display', serif;">REGISTRATION PORTAL</h2>
                 <div id="inst-badge" style="display:inline-block; margin-bottom: 2rem; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.82rem; color: var(--muted);">⛩️ Loading Institution...</div>
 
+                <div id="class-registration-info" class="hidden" style="margin-bottom: 2rem; padding: 1.5rem; background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; text-align: left;">
+                    <div style="font-size: 0.85rem; color: #22c55e; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">📚 Registration Target</div>
+                    <div id="class-registration-details" style="font-size: 1.1rem; color: white; font-weight: 500;">
+                        <!-- Injected dynamically -->
+                    </div>
+                    <div style="margin-top: 0.8rem; font-size: 0.85rem; color: var(--muted); line-height: 1.4;">
+                        <span style="color: #f59e0b;">⚠️ Note:</span> After completing your profile and AI Face capture, your registration will be sent to your Class Admin for final approval.
+                    </div>
+                </div>
+
                 <form id="register-form">
                     <!-- Consolidated Student Registration (All are registered as Voters initially) -->
                     <input type="hidden" id="role" value="voter">
@@ -581,6 +591,18 @@
                     class: scopeClass,
                     section: scopeClass.includes('-') ? scopeClass.split('-').pop() : scopeClass
                 };
+
+                // Show the Class Registration Info box
+                const infoBox = document.getElementById('class-registration-info');
+                const infoDetails = document.getElementById('class-registration-details');
+                if (infoBox && infoDetails) {
+                    infoBox.classList.remove('hidden');
+                    infoDetails.innerHTML = `
+                        <div style="margin-bottom: 0.3rem;"><strong>Year:</strong> ${scopeYear}</div>
+                        <div style="margin-bottom: 0.3rem;"><strong>Branch:</strong> ${scopeBranch}</div>
+                        <div style="margin-bottom: 0.3rem;"><strong>Class/Section:</strong> ${scopeClass}</div>
+                    `;
+                }
 
             } catch (e) {
                 // Show error inside modal instead of alert
@@ -1191,7 +1213,7 @@
 
         function checkSubmitStatus() {
             const btn = document.getElementById('final-submit-btn');
-            if (otpVerified && webcamPhoto) {
+            if (otpVerified && webcamPhoto && aiConfidence >= 40) {
                 btn.disabled = false;
                 btn.innerText = "Complete Registration";
             } else {
@@ -1199,7 +1221,8 @@
                 let missing = [];
                 if (!otpVerified) missing.push("OTP");
                 if (!webcamPhoto) missing.push("Face Capture");
-                btn.innerText = missing.length > 0 ? "Complete OTP & Face Capture to enable" : "Complete Registration";
+                if (webcamPhoto && aiConfidence < 40) missing.push("AI Match > 40%");
+                btn.innerText = missing.length > 0 ? "Complete " + missing.join(" & ") + " to enable" : "Complete Registration";
             }
         }
 

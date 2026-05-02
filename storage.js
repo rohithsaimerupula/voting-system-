@@ -220,11 +220,10 @@ const StorageManager = {
             user.password = await this.hashPassword(user.password);
         }
         
+        // All registrations now go to pending for Class Admin approval
+        user.status = 'pending';
         if (user.aiVerified === true) {
-            user.status = 'active';
-            this.logAudit("AI Auto-Approved Registration", user.regNum);
-        } else {
-            user.status = 'pending';
+            this.logAudit("AI Verified Registration (Pending Approval)", user.regNum);
         }
         delete user.aiVerified; // Clean up before POST
         user.hasVoted = false;
