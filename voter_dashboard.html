@@ -214,19 +214,40 @@
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 1.8rem;
             cursor: pointer;
             box-shadow: 0 0 20px rgba(6,182,212,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            line-height: 1;
             padding: 0;
-            padding-bottom: 4px; /* Optical adjustment for hamburger icon */
+            position: relative;
         }
 
-        .vd-sidebar-toggle:hover { transform: scale(1.1); }
+        .vd-hamburger {
+            width: 22px;
+            height: 2px;
+            background: white;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .vd-hamburger::before,
+        .vd-hamburger::after {
+            content: '';
+            width: 22px;
+            height: 2px;
+            background: white;
+            position: absolute;
+            left: 0;
+            transition: all 0.3s;
+        }
+
+        .vd-hamburger::before { top: -7px; }
+        .vd-hamburger::after { bottom: -7px; }
+
+        .vd-sidebar-toggle:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(6,182,212,0.8); }
+        .vd-sidebar-toggle:hover .vd-hamburger { background: rgba(255,255,255,0.8); }
 
         /* === DASHBOARD COMPONENTS === */
         .vd-tab { display: none; animation: fadeIn 0.5s ease forwards; }
@@ -479,7 +500,9 @@
 
         <!-- SIDEBAR TOGGLE BUTTON -->
         <div class="vd-toggle-bar">
-            <button class="vd-sidebar-toggle" onclick="toggleSidebar()" id="sidebar-toggle-btn">☰</button>
+            <button class="vd-sidebar-toggle" onclick="toggleSidebar()" id="sidebar-toggle-btn">
+                <div class="vd-hamburger"></div>
+            </button>
         </div>
     </div>
 
