@@ -1302,29 +1302,27 @@
             <option>AIDS</option>
           </select>
         </div>
-        <div class="form-grid" style="margin-bottom:1rem;">
-          <div class="form-field" id="edit-class-group">
-            <label>Class (e.g. CSE-5)</label>
-            <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
-          </div>
-          <div class="form-field" id="edit-year-group">
-            <label>Year</label>
-            <select id="edit-year">
-              <option value="1st">1st Year</option>
-              <option value="2nd">2nd Year</option>
-              <option value="3rd">3rd Year</option>
-              <option value="4th">4th Year</option>
-            </select>
-          </div>
+        <div class="form-field" id="edit-class-group">
+          <label>Class (e.g. CSE-5)</label>
+          <input type="text" id="edit-class" oninput="this.value=this.value.toUpperCase()">
         </div>
-
-        <div class="form-field" style="margin-bottom:1.5rem;">
-          <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
-          <input type="password" id="edit-pass" placeholder="Enter new password to change">
+        <div class="form-field" id="edit-year-group">
+          <label>Year</label>
+          <select id="edit-year">
+            <option value="1st">1st Year</option>
+            <option value="2nd">2nd Year</option>
+            <option value="3rd">3rd Year</option>
+            <option value="4th">4th Year</option>
+          </select>
         </div>
-
-        <button class="btn btn-gold" style="width:100%" onclick="saveEdit()">Save Changes</button>
       </div>
+
+      <div class="form-field" style="margin-bottom:1.5rem;">
+        <label>Password <small style="text-transform:none">(Leave blank to keep current)</small></label>
+        <input type="password" id="edit-pass" placeholder="Enter new password to change">
+      </div>
+
+      <button class="btn btn-gold" style="width:100%" onclick="saveEdit()">Save Changes</button>
     </div>
 
     <script>
@@ -1774,11 +1772,8 @@
             apiFetch(`/config/election_${saSession.institution}`).catch(() => ({}))
           ]);
 
-          // Filter by institution — also catch NULL institution for legacy admins by regNum
-          const instUsers = allUsers.filter(u =>
-            u.institution === saSession.institution ||
-            u.regNum === saSession.regNum
-          );
+          // Filter strictly by institution
+          const instUsers = allUsers.filter(u => u.institution === saSession.institution);
           const students = instUsers.filter(u => u && ['voter', 'contestant'].includes(u.role));
           const admins = instUsers.filter(u => u && u.role === 'admin');
           const subadmins = instUsers.filter(u => u && u.role === 'subadmin');
