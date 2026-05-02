@@ -1,1300 +1,633 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voter Dashboard - OVS</title>
-
-    <link rel="stylesheet" href="style.css">
+    <title>Vanguard - Student Portal</title>
+    
     <script src="storage.js"></script>
-    <script>
-        // Safety: Logout if institution is deleted
-        StorageManager.validateInstitution().then(isValid => {
-            if (!isValid) {
-                alert('Access Denied. Your institution is no longer active.');
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-    <script>
-        (function() {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('ovs_theme', 'dark');
-        })();
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
-        /* === FIX: Override global style.css broken variables === */
-        :root, [data-theme="dark"] {
+        :root {
             --neon-cyan: #06b6d4;
             --neon-blue: #3b82f6;
-            --neon-purple: #a855f7;
-            --gold-primary: #f59e0b;
-            --success: #22c55e;
+            --gold: #f59e0b;
             --danger: #ef4444;
-            --text-muted: #94a3b8;
-            --text-dim: #64748b;
+            --success: #22c55e;
+            --bg-deep: #020617;
+            --bg-surface: #0f172a;
+            --sidebar-bg: #0a0f1d;
             --glass-border: rgba(255,255,255,0.1);
-            --glass-bg: rgba(255,255,255,0.03);
-            --font-heading: 'Outfit', sans-serif;
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Outfit', sans-serif; background: #020b18; color: white; overflow: hidden; }
-        
-        /* Layout */
-        .vd-layout { display: flex; height: 100vh; overflow: hidden; }
-        .vd-sidebar { width: 260px; min-width: 260px; background: rgba(10,18,30,0.98); border-right: 1px solid rgba(6,182,212,0.15); padding: 1.5rem 1rem; display: flex; flex-direction: column; z-index: 100; }
-        .vd-main { flex: 1; overflow-y: auto; background: rgba(2,11,24,0.95); }
-        
-        /* Sidebar brand */
-        .vd-brand { text-align: center; margin-bottom: 2rem; }
-        .vd-brand-name { font-size: 1.6rem; font-weight: 900; background: linear-gradient(135deg, #fff, #06b6d4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
-        .vd-brand-sub { font-size: 0.7rem; color: #06b6d4; letter-spacing: 2px; text-transform: uppercase; margin-top: 0.2rem; }
-        
-        /* User card */
-        .vd-user-card { display: flex; align-items: center; gap: 0.8rem; background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2); border-radius: 12px; padding: 0.9rem; margin-bottom: 1.5rem; }
-        .vd-avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-        .vd-user-name { color: white; font-weight: 700; font-size: 0.9rem; line-height: 1.2; }
-        .vd-user-role { color: #94a3b8; font-size: 0.72rem; }
-        
-        /* Nav buttons */
-        .vd-nav { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
-        .vd-nav-btn { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; background: transparent; border: 1px solid transparent; color: #94a3b8; cursor: pointer; border-radius: 10px; font-weight: 600; font-size: 0.9rem; font-family: 'Outfit', sans-serif; transition: all 0.25s; text-align: left; width: 100%; }
-        .vd-nav-btn:hover { background: rgba(255,255,255,0.05); color: white; }
-        .vd-nav-btn.active { background: rgba(6,182,212,0.12); color: #06b6d4; border-color: rgba(6,182,212,0.3); }
-        .vd-nav-icon { font-size: 1.1rem; flex-shrink: 0; }
-        
-        /* Sidebar footer */
-        .vd-sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 0.4rem; }
-        .vd-btn-refresh { display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 1rem; width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; font-family: 'Outfit', sans-serif; }
-        .vd-btn-logout { display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 1rem; width: 100%; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #ef4444; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; font-family: 'Outfit', sans-serif; }
-        
-        /* Tab content */
-        .vd-tab { display: none; padding: 2rem 2.5rem; max-width: 1000px; }
-        .vd-tab.active { display: block; animation: fadeInUp 0.3s ease; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Page header */
-        .vd-page-title { font-size: 2rem; font-weight: 900; color: white; margin-bottom: 0.3rem; }
-        .vd-page-sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
-        
-        /* Stat cards */
-        .vd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
-        .vd-stat-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 1.4rem; display: flex; align-items: center; gap: 1.2rem; transition: transform 0.25s, box-shadow 0.25s; }
-        .vd-stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .vd-stat-icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; }
-        .vd-stat-num { font-size: 2rem; font-weight: 800; color: white; line-height: 1; }
-        .vd-stat-label { color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.25rem; }
-        
-        /* Cards */
-        .vd-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
-        .vd-card-title { font-size: 1rem; font-weight: 700; color: #f59e0b; margin-bottom: 1.2rem; }
-        
-        /* Activity item */
-        .vd-activity-item { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .vd-activity-item:last-child { border-bottom: none; }
-        .vd-activity-name { color: white; font-weight: 600; font-size: 0.9rem; }
-        .vd-activity-sub { color: #94a3b8; font-size: 0.78rem; margin-top: 0.2rem; }
-        
-        /* Sub tabs */
-        .vd-subtabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem; flex-wrap: wrap; }
-        .vd-subtab-btn { padding: 0.5rem 1.2rem; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; font-family: 'Outfit', sans-serif; transition: all 0.2s; }
-        .vd-subtab-btn.active { background: rgba(6,182,212,0.12); color: #06b6d4; border-color: rgba(6,182,212,0.4); }
-        .vd-subtab-btn:hover:not(.active) { background: rgba(255,255,255,0.07); color: white; }
-        
-        /* Election cards */
-        .vd-election-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
-        .vd-election-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 1.4rem; }
-        .vd-election-card.live { border-color: rgba(6,182,212,0.35); background: rgba(6,182,212,0.04); }
-        .vd-election-name { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 0.4rem; }
-        .vd-election-status { font-size: 0.8rem; font-weight: 700; margin-bottom: 1.2rem; }
-        
-        /* Buttons */
-        .vd-btn { display: block; width: 100%; padding: 0.7rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; border: none; font-family: 'Outfit', sans-serif; transition: all 0.2s; }
-        .vd-btn-primary { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; }
-        .vd-btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
-        .vd-btn-disabled { background: rgba(255,255,255,0.05); color: #64748b; border: 1px solid rgba(255,255,255,0.08); cursor: not-allowed; }
-        .vd-btn-pending { background: rgba(245,158,11,0.08); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); cursor: not-allowed; }
-        .vd-btn-view { background: rgba(6,182,212,0.1); color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); }
-        
-        /* Status banner */
-        .vd-status-banner { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; }
-        .vd-status-banner.pending { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
-        .vd-status-banner h2 { font-size: 1.4rem; font-weight: 800; color: #f59e0b; margin-bottom: 0.5rem; }
-        .vd-status-banner p { color: #94a3b8; font-size: 0.9rem; }
-        
-        /* Profile form */
-        .vd-form-group { margin-bottom: 1.2rem; }
-        .vd-form-group label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 0.5rem; }
-        .vd-form-group input, .vd-form-group select, .vd-form-group textarea { width: 100%; padding: 0.75rem 1rem; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: white; font-family: 'Outfit', sans-serif; font-size: 0.9rem; transition: border-color 0.2s; }
-        .vd-form-group input:focus, .vd-form-group select:focus { outline: none; border-color: #06b6d4; }
-        .vd-form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-        .vd-form-btn { width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'Outfit', sans-serif; margin-top: 0.5rem; transition: opacity 0.2s; }
-        .vd-form-btn:hover { opacity: 0.85; }
-        
-        /* Voting modal */
-        .vd-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; padding: 1rem; }
-        .vd-modal-overlay.open { display: flex; }
-        .vd-modal { background: #0a1220; border: 1px solid rgba(6,182,212,0.25); border-radius: 20px; padding: 2rem; width: 100%; max-width: 460px; position: relative; max-height: 90vh; overflow-y: auto; }
-        .vd-modal-close { position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
-        
-        /* Candidate cards */
-        .vd-candidate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-        .vd-candidate-card { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 1.2rem; cursor: pointer; transition: all 0.2s; text-align: center; }
-        .vd-candidate-card:hover { border-color: rgba(6,182,212,0.4); background: rgba(6,182,212,0.06); transform: translateY(-2px); }
-        .vd-candidate-card.selected { border-color: #06b6d4; background: rgba(6,182,212,0.1); box-shadow: 0 0 20px rgba(6,182,212,0.2); }
-        .vd-candidate-portrait { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.15); margin: 0 auto 0.8rem; display: block; }
-        .vd-candidate-name { font-weight: 700; color: white; font-size: 0.95rem; }
-        .vd-candidate-symbol { font-size: 1.6rem; margin-bottom: 0.3rem; }
-        
-        /* Overlays */
-        .vd-overlay { display: none; position: fixed; inset: 0; background: rgba(2,11,24,0.92); backdrop-filter: blur(12px); z-index: 99999; align-items: center; justify-content: center; text-align: center; padding: 2rem; }
-        .vd-overlay.show { display: flex; }
-        .vd-overlay-box { max-width: 480px; background: rgba(10,18,30,0.95); border: 1px solid rgba(255,42,77,0.3); border-radius: 20px; padding: 3rem 2.5rem; }
-        
-        /* Pending registration banner */
-        .vd-pending-notice { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 2rem; text-align: center; }
-        
-        /* Results modal */
-        .vd-results-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; align-items: center; justify-content: center; padding: 1rem; }
-        .vd-results-modal.open { display: flex; }
-        .vd-results-box { background: #0f172a; border: 1px solid rgba(6,182,212,0.25); border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; position: relative; }
-        .vd-result-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 6px; height: 10px; overflow: hidden; }
-        .vd-result-bar { height: 100%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 6px; transition: width 0.6s; }
-        
-        /* Loading */
-        .vd-loading { text-align: center; padding: 3rem; color: #94a3b8; font-size: 0.9rem; }
-        
-        /* Toast */
-        .vd-toast { position: fixed; bottom: 2rem; right: 2rem; background: #0f172a; border: 1px solid rgba(6,182,212,0.4); border-radius: 12px; padding: 1rem 1.5rem; font-size: 0.9rem; color: white; z-index: 99999; transform: translateY(100px); opacity: 0; transition: all 0.3s; pointer-events: none; }
-        .vd-toast.show { transform: translateY(0); opacity: 1; }
-        
-        .hidden { display: none !important; }
-        input[type=password], input[type=text], input[type=email] { color: white; }
-        select option { background: #0f172a; color: white; }
-        
-        /* OTP input */
-        .vd-otp-input { text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; }
-        
-        /* Particles */
-        #tsparticles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-        .vd-layout { position: relative; z-index: 1; }
-    </style>
-
-        #vote-btn:hover {
-            box-shadow: 0 0 30px rgba(6, 182, 212, 0.6);
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: var(--bg-deep); 
+            color: white; 
+            height: 100vh; 
+            overflow: hidden; 
         }
 
-        /* Voter Dashboard Additions */
-    .save-cart-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px dashed var(--neon-cyan);
-        color: var(--neon-cyan);
-    }
-    .save-cart-btn:hover { background: rgba(6, 182, 212, 0.2); }
+        /* === LAYOUT === */
+        .vd-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
 
-    .debate-section {
-        margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);
-    }
-    .q-box { background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; text-align: left; }
-    .q-ans { color: var(--success); font-size: 0.85rem; margin-top: 0.3rem; margin-left:1rem; border-left: 2px solid var(--success); padding-left:0.5rem;}
-    
-    .social-badge {
-        display: inline-block;
-        background: linear-gradient(45deg, #E1306C, #F56040, #FFDC80);
-        padding: 5px 15px; border-radius: 20px; color: white;
-        font-weight: bold; font-family: sans-serif; cursor: pointer;
-        text-decoration: none; margin-top: 1rem; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.4);
-    }
-    .social-badge:hover { transform: scale(1.05); }
-
-    /* ─── ELECTION TIMER ─── */
-    .election-timer-banner {
-        margin-bottom: 2rem;
-        padding: 1.5rem 2rem;
-        background: rgba(6, 182, 212, 0.05);
-        border: 1px solid rgba(6, 182, 212, 0.2);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
-    }
-
-    .timer-label h4 {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: var(--neon-cyan);
-        margin-bottom: 0.3rem;
-        font-weight: 800;
-    }
-
-    .timer-label p {
-        font-size: 0.95rem;
-        color: white;
-        font-weight: 600;
-    }
-
-    .timer-display {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .time-block {
-        text-align: center;
-        min-width: 50px;
-    }
-
-    .time-value {
-        font-size: 1.6rem;
-        font-weight: 900;
-        color: white;
-        font-family: var(--font-heading);
-        line-height: 1;
-    }
-
-    .time-unit {
-        font-size: 0.6rem;
-        text-transform: uppercase;
-        color: var(--text-dim);
-        letter-spacing: 0.05em;
-        margin-top: 0.2rem;
-    }
-
-    @media (max-width: 640px) {
-        .election-timer-banner {
+        /* === SIDEBAR === */
+        .vd-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
             flex-direction: column;
-            gap: 1.2rem;
+            padding: 2rem 1.5rem;
+            z-index: 1000;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .vd-sidebar.collapsed {
+            margin-left: -280px;
+        }
+
+        .vd-brand {
+            margin-bottom: 3rem;
             text-align: center;
+        }
+
+        .vd-brand h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff, var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .vd-brand span {
+            font-size: 0.7rem;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* User Profile in Sidebar */
+        .vd-user-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .vd-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .vd-user-info h3 { font-size: 0.95rem; font-weight: 700; color: white; margin-bottom: 2px; }
+        .vd-user-info p { font-size: 0.75rem; color: #94a3b8; }
+
+        /* Navigation Buttons */
+        .vd-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .vd-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: left;
+        }
+
+        .vd-nav-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        .vd-nav-btn.active {
+            background: rgba(6,182,212,0.1);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(6,182,212,0.2);
+        }
+
+        .vd-nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+
+        .vd-logout-btn {
+            margin-top: auto;
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.2);
+            background: rgba(248,113,113,0.05);
+        }
+        .vd-logout-btn:hover { background: rgba(248,113,113,0.1); color: #f87171; }
+
+        /* === MAIN CONTENT === */
+        .vd-main {
+            flex: 1;
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--bg-deep);
+            position: relative;
+            z-index: 1;
+        }
+
+        .vd-content-wrapper {
+            padding: 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar Toggle */
+        .vd-toggle-bar {
+            position: fixed;
+            left: 2rem;
+            bottom: 2rem;
+            z-index: 2000;
+        }
+
+        .vd-sidebar-toggle {
+            width: 50px;
+            height: 50px;
+            background: var(--neon-cyan);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(6,182,212,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .vd-sidebar-toggle:hover { transform: scale(1.1); }
+
+        /* === DASHBOARD COMPONENTS === */
+        .vd-tab { display: none; animation: fadeIn 0.5s ease forwards; }
+        .vd-tab.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .vd-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .vd-subtitle { color: #94a3b8; margin-bottom: 2.5rem; font-size: 1rem; }
+
+        /* Stats Grid */
+        .vd-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .vd-stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--glass-border);
+            padding: 2rem;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .vd-stat-card:hover { transform: translateY(-5px); border-color: rgba(6,182,212,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+        .vd-stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .vd-stat-value { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+        .vd-stat-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+        /* Election Cards */
+        .vd-election-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .vd-election-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 1.8rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vd-election-card:hover { border-color: var(--neon-cyan); transform: scale(1.02); }
+
+        .vd-status-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .vd-pill-live { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+        .vd-pill-soon { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .vd-pill-ended { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+
+        .vd-election-name { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .vd-election-info { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 1.5rem; }
+
+        .vd-action-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .vd-action-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .vd-action-btn:disabled { background: #334155; cursor: not-allowed; opacity: 0.5; }
+
+        /* Modal Styles */
+        .vd-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            justify-content: center;
             padding: 1.5rem;
         }
-    }
+
+        .vd-modal-overlay.open { display: flex; }
+
+        .vd-modal {
+            background: #0f172a;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 32px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2.5rem;
+            position: relative;
+            box-shadow: 0 0 50px rgba(6,182,212,0.2);
+        }
+
+        /* Utils */
+        .hidden { display: none !important; }
+        #tsparticles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        
+        @media (max-width: 768px) {
+            .vd-sidebar { position: fixed; left: 0; top: 0; height: 100vh; }
+            .vd-content-wrapper { padding: 1.5rem; }
+        }
     </style>
 </head>
-
 <body>
     <div id="tsparticles"></div>
-    <div class="vd-layout">
-
+    
+    <div class="vd-container">
         <!-- SIDEBAR -->
-        <div class="vd-sidebar">
+        <aside class="vd-sidebar" id="sidebar">
             <div class="vd-brand">
-                <div class="vd-brand-name">VANGUARD</div>
-                <div class="vd-brand-sub">Student Portal</div>
+                <h1>VANGUARD</h1>
+                <span>Student Portal</span>
             </div>
-            <div class="vd-user-card">
-                <div class="vd-avatar">🎓</div>
-                <div>
-                    <div id="voter-name" class="vd-user-name">-</div>
-                    <div class="vd-user-role">Student</div>
+            
+            <div class="vd-user-box">
+                <div class="vd-avatar" id="user-initial">?</div>
+                <div class="vd-user-info">
+                    <h3 id="sidebar-user-name">Loading...</h3>
+                    <p id="sidebar-user-id">ID: ----</p>
                 </div>
             </div>
+            
             <nav class="vd-nav">
-                <button class="vd-nav-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
+                <button class="vd-nav-btn active" onclick="switchTab('dashboard', this)">
                     <span class="vd-nav-icon">📊</span> Dashboard
                 </button>
-                <button class="vd-nav-btn" id="nav-voting" onclick="switchTab('voting')">
-                    <span class="vd-nav-icon">🗳️</span> Voting Details
+                <button class="vd-nav-btn" onclick="switchTab('voting', this)">
+                    <span class="vd-nav-icon">🗳️</span> Voting Center
                 </button>
-                <button class="vd-nav-btn" id="nav-profile" onclick="switchTab('profile')">
-                    <span class="vd-nav-icon">👤</span> Manage Profile
+                <button class="vd-nav-btn" onclick="switchTab('results', this)">
+                    <span class="vd-nav-icon">📈</span> Live Results
+                </button>
+                <button class="vd-nav-btn" onclick="switchTab('profile', this)">
+                    <span class="vd-nav-icon">👤</span> My Profile
+                </button>
+                
+                <button class="vd-nav-btn vd-logout-btn" onclick="logout()">
+                    <span class="vd-nav-icon">🚪</span> Logout
                 </button>
             </nav>
-            <div class="vd-sidebar-footer">
-                <button class="vd-btn-refresh" onclick="location.reload()">🔄 Refresh Sync</button>
-                <button class="vd-btn-logout" onclick="StorageManager.logout(); window.location.href='login.html'">🚪 Secure Logout</button>
-            </div>
-        </div>
+        </aside>
 
-        <!-- MAIN CONTENT -->
-        <div class="vd-main">
-
-            <!-- TAB 1: DASHBOARD -->
-            <div id="tab-dashboard" class="vd-tab active">
-                <div class="vd-page-title">Student Dashboard</div>
-                <div class="vd-page-sub">Overview of your voting activity and registration status.</div>
-
-                <div id="pending-notice-area"></div>
-
-                <div class="vd-stats">
-                    <div class="vd-stat-card">
-                        <div class="vd-stat-icon" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);">✅</div>
-                        <div>
-                            <div id="stat-voted" class="vd-stat-num">0</div>
-                            <div class="vd-stat-label">Voted Elections</div>
-                        </div>
-                    </div>
-                    <div class="vd-stat-card">
-                        <div class="vd-stat-icon" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);">⏳</div>
-                        <div>
-                            <div id="stat-pending" class="vd-stat-num">0</div>
-                            <div class="vd-stat-label">Pending Polls</div>
-                        </div>
-                    </div>
-                    <div class="vd-stat-card">
-                        <div class="vd-stat-icon" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);">🗳️</div>
-                        <div>
-                            <div id="stat-total" class="vd-stat-num">0</div>
-                            <div class="vd-stat-label">Total Elections</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="vd-card">
-                    <div class="vd-card-title">📋 Recent Activity</div>
-                    <div id="recent-activity-list"><p style="color:#64748b;font-size:0.9rem;">Loading activity...</p></div>
-                </div>
-            </div>
-
-            <!-- TAB 2: VOTING -->
-            <div id="tab-voting" class="vd-tab">
-                <div class="vd-page-title">Voting Details</div>
-                <div class="vd-subtabs">
-                    <button class="vd-subtab-btn active" id="subtab-to-vote" onclick="switchSubTab('to-vote')">To Vote</button>
-                    <button class="vd-subtab-btn" id="subtab-voted" onclick="switchSubTab('voted')">Voted History</button>
-                    <button class="vd-subtab-btn" id="subtab-results" onclick="switchSubTab('results')">Election Results</button>
-                </div>
-
-                <div id="lobby-section">
-                    <div id="elections-lobby-grid" class="vd-election-grid">
-                        <p class="vd-loading">🔍 Scanning for elections...</p>
-                    </div>
-                </div>
-
-                <div id="voted-history-section" style="display:none;">
-                    <div id="voted-history-grid" class="vd-election-grid"></div>
-                </div>
-
-                <div id="results-section" style="display:none;">
-                    <div id="results-grid" class="vd-election-grid"></div>
-                </div>
-            </div>
-
-            <!-- TAB 3: PROFILE -->
-            <div id="tab-profile" class="vd-tab">
-                <div class="vd-page-title">Manage Profile</div>
-                <div class="vd-page-sub">Your personal details — view only. Contact your admin for changes.</div>
-                <div class="vd-card">
-                    <form id="profile-update-form">
-                        <div class="vd-form-group">
-                            <label>Full Name</label>
-                            <input type="text" id="prof-name" required maxlength="50">
-                        </div>
-                        <div class="vd-form-row">
-                            <div class="vd-form-group">
-                                <label>Year</label>
-                                <select id="prof-year">
-                                    <option value="1st">1st Year</option>
-                                    <option value="2nd">2nd Year</option>
-                                    <option value="3rd">3rd Year</option>
-                                    <option value="4th">4th Year</option>
-                                </select>
-                            </div>
-                            <div class="vd-form-group">
-                                <label>Branch</label>
-                                <select id="prof-branch">
-                                    <option>CSE</option><option>ECE</option><option>EEE</option><option>CSC</option>
-                                    <option>MECH</option><option>IT</option><option>ECM</option><option>AIDS</option>
-                                    <option>CSM</option><option>CIVIL</option><option>CAI</option>
-                                </select>
-                            </div>
-                            <div class="vd-form-group">
-                                <label>Section</label>
-                                <input type="text" id="prof-section" required maxlength="1">
+        <!-- MAIN AREA -->
+        <main class="vd-main">
+            <div class="vd-content-wrapper">
+                
+                <!-- TAB 1: DASHBOARD -->
+                <section id="tab-dashboard" class="vd-tab active">
+                    <h1 class="vd-title">Welcome Back, <span id="welcome-name" style="color:var(--neon-cyan);">Voter</span></h1>
+                    <p class="vd-subtitle">Here's your voting overview and status for today.</p>
+                    
+                    <div class="vd-stats-grid">
+                        <div class="vd-stat-card">
+                            <div class="vd-stat-icon" style="background:rgba(34,197,94,0.1); color:#22c55e;">✅</div>
+                            <div>
+                                <div class="vd-stat-value" id="stat-voted">0</div>
+                                <div class="vd-stat-label">Votes Cast</div>
                             </div>
                         </div>
-                        <div class="vd-form-group">
-                            <label>Email Address</label>
-                            <input type="email" id="prof-email" required>
-                        </div>
-                        <div class="vd-form-group" id="prof-password-group">
-                            <label>New Password</label>
-                            <input type="password" id="prof-new-pass" placeholder="Leave blank to keep current">
-                            <small style="color:#64748b;font-size:0.78rem;">6-10 chars · 3+ letters · 1+ special · 1+ number</small>
-                        </div>
-                        <div id="prof-candidate-fields" class="hidden">
-                            <div class="vd-form-group">
-                                <label>Election Symbol (Emoji)</label>
-                                <input type="text" id="prof-symbol">
-                            </div>
-                            <div class="vd-form-group">
-                                <label>Manifesto / Slogan</label>
-                                <textarea id="prof-manifesto" maxlength="150" rows="3" style="width:100%;padding:0.75rem;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-family:'Outfit',sans-serif;resize:none;"></textarea>
+                        <div class="vd-stat-card">
+                            <div class="vd-stat-icon" style="background:rgba(6,182,212,0.1); color:#06b6d4;">🗳️</div>
+                            <div>
+                                <div class="vd-stat-value" id="stat-active">0</div>
+                                <div class="vd-stat-label">Active Elections</div>
                             </div>
                         </div>
-                        <button type="submit" id="prof-save-btn" class="vd-form-btn">Save Changes</button>
-                    </form>
-                    <div id="prof-otp-section" class="hidden" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.08);">
-                        <h3 style="color:#f59e0b;text-align:center;margin-bottom:1rem;">🔐 Security Check</h3>
-                        <p id="prof-otp-hint" style="color:#94a3b8;text-align:center;margin-bottom:1rem;font-size:0.9rem;"></p>
-                        <div class="vd-form-group">
-                            <input type="text" id="prof-otp-input" class="vd-otp-input" placeholder="0 0 0 0 0 0" maxlength="6">
+                        <div class="vd-stat-card">
+                            <div class="vd-stat-icon" style="background:rgba(245,158,11,0.1); color:#f59e0b;">🛡️</div>
+                            <div>
+                                <div class="vd-stat-value" id="stat-status">Active</div>
+                                <div class="vd-stat-label">Verification</div>
+                            </div>
                         </div>
-                        <button type="button" onclick="confirmProfileUpdate()" class="vd-form-btn" id="prof-confirm-btn">Confirm OTP</button>
-                        <p id="prof-otp-error" class="hidden" style="color:#ef4444;text-align:center;margin-top:0.5rem;font-size:0.85rem;"></p>
                     </div>
-                    <div id="prof-status-msg" class="hidden" style="margin-top:1rem;padding:1rem;border-radius:10px;text-align:center;"></div>
-                </div>
-            </div>
-
-        </div><!-- End vd-main -->
-    </div><!-- End vd-layout -->
-
-    <div class="vd-toast" id="vd-toast"></div>
-
-        <!-- ELECTION CODE MODAL -->
-        <div id="election-code-modal" class="modal">
-            <div class="glass-panel modal-content" style="width: 90%; max-width: 400px; padding: 2.5rem; text-align:center;">
-                <h2 style="font-family: var(--font-heading); margin-bottom:1rem;">Access Required</h2>
-                <p class="text-muted" style="margin-bottom:1.5rem;">Enter the 6-digit access code for <strong id="unlock-election-name" style="color:white;"></strong>.</p>
-                <input type="text" id="election-access-code" placeholder="XXXXXX" maxlength="6" style="text-align:center; font-size:1.5rem; letter-spacing:5px; margin-bottom:1.5rem; text-transform:uppercase; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; border-radius:8px;">
-                <p id="code-error" class="text-danger hidden" style="margin-bottom:1rem;"></p>
-                <div style="display:flex; gap:1rem;">
-                    <button class="submit-btn" style="background:transparent; border:1px solid var(--glass-border); color:white;" onclick="document.getElementById('election-code-modal').classList.remove('visible')">Cancel</button>
-                    <button class="submit-btn" id="unlock-election-btn" style="background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));">Unlock 🔓</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ELECTION STATUS / TIMER SKELETON -->
-        <div id="election-timer-container">
-            <div class="skeleton" style="height: 100px; border-radius: 24px; margin-bottom: 2rem;"></div>
-        </div>
-
-        <!-- Status Banner (Secondary) -->
-        <div id="status-banner" class="glass-panel text-center hidden" style="padding: 2rem; margin-bottom: 2rem;">
-            <h2 id="election-status-header"
-                style="margin-bottom: 0.5rem; font-family: var(--font-heading); font-size: 1.5rem;"></h2>
-            <p id="election-status-desc" class="text-muted"></p>
-        </div>
-
-        <!-- Voting Section (Skeleton) -->
-        <div id="voting-skeleton-loader" style="margin-top: 2rem; display:none;">
-            <div class="skeleton" style="height: 300px; border-radius: 24px; margin-bottom: 2rem;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                <div class="skeleton" style="height: 200px; border-radius: 24px;"></div>
-                <div class="skeleton" style="height: 200px; border-radius: 24px;"></div>
-            </div>
-        </div>
-
-        <!-- Voting Section -->
-        <div id="voting-section" class="hidden animate-fade-in">
-            <!-- Leaderboard -->
-            <div id="leaderboard-container" style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:12px; margin-bottom:2rem; border:1px solid var(--glass-border); display:none;">
-                <h3 style="color:var(--gold-primary); margin-bottom:1rem; text-align:center;">🌟 Live Campaign Leaderboard 🌟</h3>
-                <div id="leaderboard-list" style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;"></div>
-            </div>
-
-            <h3 style="margin-bottom: 1.5rem; color: var(--text-muted); font-weight: 500;">Select your candidate</h3>
-            <div class="dashboard-grid" id="candidates-grid">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-        <!-- Already Voted View -->
-        <div id="voted-section" class="glass-panel text-center hidden animate-fade-in" style="padding: 4rem 2rem;">
-            <div style="font-size: 5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 20px rgba(16,185,129,0.4));">✅</div>
-            <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Vote Recorded Successfully</h2>
-            <p class="text-muted">Your voice has been counted.</p>
-            <p class="mt-4" style="font-size: 1.2rem; background: rgba(255,255,255,0.05); display: inline-block; padding: 1rem 2rem; border-radius: 99px;">
-                You voted for: <span id="voted-candidate-name" style="font-weight: 700; color: var(--gold-primary);"></span>
-            </p>
-            <div style="margin-top: 2rem;">
-                <button onclick="downloadReceipt()" class="submit-btn" style="width: auto; background: var(--glass-border); border: 1px solid var(--gold-primary);">Download Receipt 📄</button>
-            </div>
-        </div>
-
-        <!-- Voted History Section -->
-        <div id="voted-history-section" style="display:none;">
-            <div id="voted-history-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem;"></div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="results-section" style="display:none;">
-            <div id="results-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem;"></div>
-        </div>
-
-    </div><!-- End tab-voting -->
-
-    <!-- TAB 3: MANAGE PROFILE -->
-    <div id="tab-profile" class="tab-content" style="max-width: 700px; margin: 0 auto;">
-        <div class="glass-panel" style="padding: 2.5rem; position: relative;">
-            <h2 style="font-family: var(--font-heading); font-size: 2rem; margin-bottom: 2rem;">Manage Profile</h2>
-            <form id="profile-update-form">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="prof-name" required maxlength="50" style="background:rgba(0,0,0,0.3);">
-                </div>
-                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label>Year</label>
-                        <select id="prof-year" style="background:rgba(0,0,0,0.3);">
-                            <option value="1st">1st Year</option>
-                            <option value="2nd">2nd Year</option>
-                            <option value="3rd">3rd Year</option>
-                            <option value="4th">4th Year</option>
-                        </select>
+                    
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); padding:2rem; border-radius:32px;">
+                        <h3 style="margin-bottom:1.5rem;">📅 Recent Activity</h3>
+                        <div id="activity-list" style="color:#94a3b8; font-size:0.9rem;">
+                            Scanning for updates...
+                        </div>
                     </div>
-                    <div>
-                        <label>Branch</label>
-                        <select id="prof-branch" style="background:rgba(0,0,0,0.3);">
-                            <option>CSE</option><option>ECE</option><option>EEE</option><option>CSC</option>
-                            <option>MECH</option><option>IT</option><option>ECM</option><option>AIDS</option>
-                            <option>CSM</option><option>CIVIL</option><option>CAI</option>
-                        </select>
+                </section>
+
+                <!-- TAB 2: VOTING -->
+                <section id="tab-voting" class="vd-tab">
+                    <h1 class="vd-title">Voting Center</h1>
+                    <p class="vd-subtitle">Cast your vote for active electoral categories.</p>
+                    <div class="vd-election-grid" id="election-list">
+                        <!-- Populated by JS -->
                     </div>
-                    <div>
-                        <label>Section</label>
-                        <input type="text" id="prof-section" required maxlength="1" style="background:rgba(0,0,0,0.3);">
+                </section>
+
+                <!-- TAB 3: RESULTS -->
+                <section id="tab-results" class="vd-tab">
+                    <h1 class="vd-title">Election Results</h1>
+                    <p class="vd-subtitle">Live and archived results from your institution.</p>
+                    <div class="vd-election-grid" id="results-list">
+                        <!-- Populated by JS -->
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="prof-email" required style="background:rgba(0,0,0,0.3);">
-                </div>
-                <div class="form-group" id="prof-password-group">
-                    <label>New Password</label>
-                    <input type="password" id="prof-new-pass" placeholder="Leave blank to keep current" style="background:rgba(0,0,0,0.3);">
-                    <small class="text-muted">6-10 chars · 3+ letters · 1+ special char · 1+ number.</small>
-                </div>
-                <div id="prof-candidate-fields" class="hidden">
-                    <div class="form-group">
-                        <label>Election Symbol (Emoji)</label>
-                        <input type="text" id="prof-symbol" style="background:rgba(0,0,0,0.3);">
+                </section>
+
+                <!-- TAB 4: PROFILE -->
+                <section id="tab-profile" class="vd-tab">
+                    <h1 class="vd-title">My Profile</h1>
+                    <p class="vd-subtitle">Manage your student credentials and registration data.</p>
+                    <div style="background:var(--bg-surface); border:1px solid var(--glass-border); padding:2.5rem; border-radius:32px; max-width:600px;">
+                        <div id="profile-data">
+                            <!-- Populated by JS -->
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Manifesto / Slogan</label>
-                        <textarea id="prof-manifesto" maxlength="150" rows="3" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; border-radius:8px; resize:none;"></textarea>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button type="submit" id="prof-save-btn" class="submit-btn" style="flex:2;">Save Changes</button>
-                </div>
-            </form>
-            <!-- OTP Verification Section -->
-            <div id="prof-otp-section" class="hidden mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
-                <h3 class="text-center" style="color: var(--gold-primary); margin-bottom: 1rem;">Security Check</h3>
-                <p id="prof-otp-hint" class="text-muted text-center" style="margin-bottom: 1rem;"></p>
-                <div class="form-group">
-                    <input type="text" id="prof-otp-input" placeholder="0 0 0 0 0 0" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; background:rgba(0,0,0,0.3);">
-                </div>
-                <button type="button" onclick="confirmProfileUpdate()" class="submit-btn" id="prof-confirm-btn">Confirm OTP</button>
-                <p id="prof-otp-error" class="text-danger text-center mt-2 hidden"></p>
+                </section>
+
             </div>
-            <div id="prof-status-msg" class="hidden mt-3 text-center" style="padding: 1rem; border-radius: 8px;"></div>
+        </main>
+
+        <!-- SIDEBAR TOGGLE BUTTON -->
+        <div class="vd-toggle-bar">
+            <button class="vd-sidebar-toggle" onclick="toggleSidebar()" id="sidebar-toggle-btn">☰</button>
         </div>
     </div>
 
-    </div><!-- End Main Content -->
-</div><!-- End Flex Container -->
-
-    <!-- Candidate Details Modal -->
-    <div id="candidate-modal" class="modal">
-        <div class="glass-panel modal-content"
-            style="width: 90%; max-width: 500px; padding: 2.5rem; text-align:center; border-color: var(--gold-primary);">
-            <div id="modal-portrait"></div>
-            <h2 id="modal-cand-name" style="margin-top:1rem; color:var(--gold-primary);"></h2>
-            <p id="modal-cand-details" class="text-muted"></p>
-
-            <div
-                style="margin: 2rem 0; text-align:left; background:rgba(255,255,255,0.05); padding:1rem; border-radius:8px;">
-                <h4 style="margin-bottom:0.5rem; color:var(--neon-blue);">Manifesto / Slogan</h4>
-                <p id="modal-manifesto" style="font-style:italic; line-height:1.6;"></p>
+    <!-- MODAL GATEWAY -->
+    <div class="vd-modal-overlay" id="vote-modal">
+        <div class="vd-modal">
+            <h2 id="modal-title" style="margin-bottom:1rem;">Cast Ballots</h2>
+            <div id="modal-content"></div>
+            <div style="display:flex; gap:1rem; margin-top:2rem;">
+                <button class="vd-action-btn" style="background:#334155;" onclick="closeModal()">Close</button>
             </div>
-
-            <button type="button" class="submit-btn"
-                onclick="document.getElementById('candidate-modal').classList.remove('visible')">Close</button>
-        </div>
-    </div>
-
-    <!-- Confirm Modal -->
-    <div id="confirm-modal" class="modal">
-        <div class="glass-panel modal-content"
-            style="width: 90%; max-width: 450px; padding: 2.5rem; border-color: var(--gold-primary);">
-            <h3 style="margin-bottom: 1.5rem; text-align: center; font-family: var(--font-heading);">Confirm Your Vote
-            </h3>
-
-            <div
-                style="text-align: center; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px;">
-                <p class="text-muted" style="margin-bottom: 0.5rem;">You are voting for</p>
-                <div id="confirm-candidate-name" style="color: var(--gold-primary); line-height:1.5;"></div>
-            </div>
-
-            <form id="confirm-form">
-                <!-- STEP 1: PASSWORD -->
-                <div id="step-password" class="step-section">
-                    <div class="form-group">
-                        <label>Enter Password to Confirm</label>
-                        <input type="password" id="confirm-password" required placeholder="Your Password"
-                            style="text-align: center;">
-                    </div>
-                </div>
-
-                <!-- STEP 2: WEBCAM -->
-                <div id="step-webcam" class="step-section hidden" style="text-align:center;">
-                    <p class="text-muted">Face Verification Required</p>
-                    <div
-                        style="background: black; border-radius: 8px; overflow: hidden; position: relative; margin: 1rem auto; width: 200px; height: 150px;">
-                        <video id="vote-video" autoplay playsinline
-                            style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
-                        <canvas id="vote-canvas" class="hidden"></canvas>
-                        <img id="vote-preview" class="hidden"
-                            style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);">
-                    </div>
-                    <button type="button" class="submit-btn" id="start-vote-cam" style="margin-top:0.5rem;"
-                        onclick="startVoteCam()">Open Camera</button>
-                    <button type="button" class="submit-btn hidden" id="capture-vote-cam"
-                        style="margin-top:0.5rem; background: var(--gold-primary); color:black;"
-                        onclick="captureVoteCam()">Capture & Verify</button>
-                </div>
-
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button type="button" class="submit-btn"
-                        style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);"
-                        onclick="closeModal()">Cancel</button>
-                    <button type="submit" id="modal-next-btn" class="submit-btn">Next ➔</button>
-                </div>
-            </form>
-            <p id="modal-error" class="text-danger text-center mt-4 hidden"></p>
         </div>
     </div>
 
     <script>
         const currentUser = StorageManager.getCurrentUser();
-        if (!currentUser || (currentUser.role !== 'voter' && currentUser.role !== 'contestant')) {
-            window.location.href = 'login.html';
+        if (!currentUser) window.location.href = 'login.html';
+
+        // --- Sidebar Logic ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            sidebar.classList.toggle('collapsed');
+            btn.innerText = sidebar.classList.contains('collapsed') ? '☰' : '✕';
         }
 
-        // Safe DOM Utilities
-        function setText(id, val) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        }
-        function setHTML(id, html) {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = html;
-        }
-
-        setText('voter-name', currentUser.name);
-
-        let currentElectionCode = null;
-        let currentElectionData = null;
-        let candidates = [];
-        let definedCategories = [];
-        let candidatesGrid = document.getElementById('candidates-grid');
-        let ballotCart = {}; // { categoryName: { id, name } }
-
-        async function init() {
-            try {
-                const statusHeader = document.getElementById('election-status-header');
-                const statusDesc = document.getElementById('election-status-desc');
-                const votingSection = document.getElementById('voting-section');
-
-                const news = await StorageManager.getAnnouncement();
-                if (news) {
-                    setHTML('news-ticker', `<marquee behavior='scroll' direction='left' style="background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); color:black; font-weight:bold; width:100%; position:fixed; top:0; left:0; z-index:9999; padding:0.5rem;">📢 IMPORTANT: ${news}</marquee>`);
-                    document.querySelector('nav').style.marginTop = "2rem";
-                }
-
-                const user = await fetchApi(`/users/${currentUser.regNum}?institution=${encodeURIComponent(currentUser.institution || '')}`)
-                    .catch(() => currentUser);
-
-                if (user.isBanned === 1 || user.isBanned === true) {
-                    setText('election-status-header', "Voting Rights Suspended 🚫");
-                    const header = document.getElementById('election-status-header');
-                    if(header) header.style.color = "var(--danger)";
-                    setHTML('election-status-desc', `<strong style="color:var(--danger);">Your account has been restricted.</strong>`);
-                    const vs = document.getElementById('voting-section');
-                    if(vs) vs.classList.add('hidden');
-                    return;
-                }
-
-                if (user.status === 'pending') {
-                    setHTML('election-status-header', `⏳ Registration Pending Approval`);
-                    const header = document.getElementById('election-status-header');
-                    if(header) header.style.color = "#f59e0b";
-                    setHTML('election-status-desc', `Your registration requires manual review by your college Admin.`);
-                    const vs = document.getElementById('voting-section');
-                    if(vs) vs.classList.add('hidden');
-                    return;
-                }
-
-                loadLobby();
-
-            } catch (err) {
-                console.error(err);
-                setText('election-status-header', "Connection Error");
-            }
-        }
-
-        // Stores elected objects from lobby for gateway lookup
-        let lobbyElections = [];
-        let currentElectionObj = null;
-
-        async function loadLobby() {
-            const ls = document.getElementById('lobby-section');
-            if(ls) ls.style.display = 'block';
-            setHTML('elections-lobby-grid', '<p class="text-center text-muted" style="padding:2rem;">🔍 Scanning for active elections...</p>');
-
-            try {
-                const elections = await fetchApi(`/voters/my-elections?regNum=${encodeURIComponent(currentUser.regNum)}&institution=${encodeURIComponent(currentUser.institution)}`);
-                lobbyElections = elections || [];
-
-                if (lobbyElections.length === 0) {
-                    setHTML('elections-lobby-grid', '<p style="color:#64748b;padding:2rem;text-align:center;">No elections available to vote on.</p>');
-                    setHTML('voted-history-grid', '<p style="color:#64748b;text-align:center;">No voting history found.</p>');
-                    setHTML('results-grid', '<p style="color:#64748b;text-align:center;">No results published yet.</p>');
-                    setHTML('recent-activity-list', '<p style="color:#64748b;font-size:0.9rem;text-align:center;">No recent activity.</p>');
-                    updateDashboardStats();
-                    return;
-                }
-
-                let toVoteHtml = '';
-                let votedHtml = '';
-                let resultsHtml = '';
-                let actListHtml = '';
-
-                lobbyElections.forEach(e => {
-                    const isActive    = e.isActive == 1 || e.status === 'active';
-                    const isCompleted = e.isCompleted == 1;
-                    const hasVoted    = !!e.hasVoted;
-                    const statusText  = isActive ? '🟢 LIVE' : isCompleted ? '🔴 Ended' : '⏳ Soon';
-                    const statusColor = isActive ? '#22c55e' : isCompleted ? '#ef4444' : '#f59e0b';
-
-                    if (isCompleted) {
-                        resultsHtml += `
-                        <div class="vd-election-card">
-                            <div class="vd-election-name">${e.name || 'Election'}</div>
-                            <div class="vd-election-status" style="color:#ef4444;margin-bottom:1rem;">🔴 Completed</div>
-                            <button onclick="viewResults('${e.id}','${(e.name||'').replace(/'/g,"\\'")}') " style="display:block;width:100%;padding:0.7rem;border-radius:10px;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(6,182,212,0.1);color:#06b6d4;border:1px solid rgba(6,182,212,0.3);font-family:'Outfit',sans-serif;">View Results 📊</button>
-                        </div>`;
-                    }
-
-                    if (hasVoted) {
-                        votedHtml += `
-                        <div class="vd-election-card" style="border-color:rgba(34,197,94,0.3);">
-                            <div style="font-size:0.75rem;color:#22c55e;float:right;">✅ Voted</div>
-                            <div class="vd-election-name">${e.name || 'Election'}</div>
-                            <p style="color:#64748b;font-size:0.82rem;margin-top:0.5rem;">Your vote was successfully recorded.</p>
-                        </div>`;
-                        actListHtml += `
-                        <div class="vd-activity-item">
-                            <div><div class="vd-activity-name">${e.name}</div><div class="vd-activity-sub">Voted successfully</div></div>
-                            <span style="color:#22c55e;font-size:1.2rem;">✅</span>
-                        </div>`;
-                    } else {
-                        const btnHtml = isActive
-                            ? `<button onclick="openElectionGateway('${e.id}','${(e.name||'').replace(/'/g,"\\'")}','${e.electionCode}')" style="display:block;width:100%;padding:0.7rem;border-radius:10px;background:linear-gradient(135deg,#06b6d4,#3b82f6);color:white;border:none;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Outfit',sans-serif;">Enter Gateway ➔</button>`
-                            : isCompleted
-                                ? `<button disabled style="display:block;width:100%;padding:0.7rem;border-radius:10px;background:rgba(255,255,255,0.04);color:#475569;border:1px solid rgba(255,255,255,0.08);font-weight:700;cursor:not-allowed;font-family:'Outfit',sans-serif;">Polls Closed</button>`
-                                : `<button disabled style="display:block;width:100%;padding:0.7rem;border-radius:10px;background:rgba(245,158,11,0.06);color:#f59e0b;border:1px solid rgba(245,158,11,0.25);font-weight:700;cursor:not-allowed;font-family:'Outfit',sans-serif;">⏳ Verification Pending</button>`;
-                        toVoteHtml += `
-                        <div class="vd-election-card ${isActive ? 'live' : ''}">
-                            <div class="vd-election-name">${e.name || 'Election'}</div>
-                            <div class="vd-election-status" style="color:${statusColor};margin-bottom:1rem;">${statusText}</div>
-                            ${btnHtml}
-                        </div>`;
-                    }
-                });
-
-                setHTML('elections-lobby-grid', toVoteHtml || '<p style="color:#64748b;text-align:center;padding:2rem;">No pending elections to vote on.</p>');
-                setHTML('voted-history-grid', votedHtml || '<p style="color:#64748b;text-align:center;">No voting history found.</p>');
-                setHTML('results-grid', resultsHtml || '<p style="color:#64748b;text-align:center;">No results published yet.</p>');
-                setHTML('recent-activity-list', actListHtml || '<p style="color:#64748b;font-size:0.9rem;text-align:center;">No recent activity yet.</p>');
-                updateDashboardStats();
-
-            } catch (err) {
-                console.error('Lobby error:', err);
-                setHTML('elections-lobby-grid', '<p style="color:#ef4444;padding:2rem;text-align:center;">⚠️ Failed to load elections. Please refresh.</p>');
-            }
-        }
-
-        function updateDashboardStats() {
-            const voted = lobbyElections.filter(e => !!e.hasVoted).length;
-            const pending = lobbyElections.filter(e => !e.hasVoted && (e.isActive == 1 || e.status === 'active')).length;
-            const total = lobbyElections.length;
-            setText('stat-voted', voted);
-            setText('stat-pending', pending);
-            setText('stat-total', total);
-        }
-
-        // TABS LOGIC
-        function switchTab(tab) {
-            document.querySelectorAll('.vd-tab').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.vd-nav-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            document.getElementById(`nav-${tab}`).classList.add('active');
-            if (tab === 'profile') loadProfileForm();
-        }
-
-        function switchSubTab(sub) {
-            document.getElementById('lobby-section').style.display = 'none';
-            document.getElementById('voted-history-section').style.display = 'none';
-            document.getElementById('results-section').style.display = 'none';
-            ['subtab-to-vote','subtab-voted','subtab-results'].forEach(id => document.getElementById(id).classList.remove('active'));
-            if (sub === 'to-vote') { document.getElementById('lobby-section').style.display = 'block'; document.getElementById('subtab-to-vote').classList.add('active'); }
-            else if (sub === 'voted') { document.getElementById('voted-history-section').style.display = 'block'; document.getElementById('subtab-voted').classList.add('active'); }
-            else { document.getElementById('results-section').style.display = 'block'; document.getElementById('subtab-results').classList.add('active'); }
-        }
-
-        async function viewResults(electionId, electionName) {
-            try {
-                const results = await fetchApi(`/elections/${encodeURIComponent(electionId)}/results`);
-                if (!results || results.length === 0) {
-                    return alert('No results available yet.');
-                }
-                const modal = document.getElementById('results-modal');
-                const title = document.getElementById('results-modal-title');
-                const body  = document.getElementById('results-modal-body');
-                if (title) title.textContent = '📊 ' + (electionName || 'Election Results');
-                if (body) {
-                    const maxVotes = results[0].votes || 1;
-                    body.innerHTML = results.map((r, i) => `
-                        <div style="margin-bottom:1.2rem;">
-                          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
-                            <span style="font-weight:600;color:${i===0?'#facc15':'white'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${r.name}</span>
-                            <span style="color:var(--neon-cyan);font-weight:700;">${r.votes} vote${r.votes!==1?'s':''}</span>
-                          </div>
-                          <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:10px;overflow:hidden;">
-                            <div style="height:100%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-blue));width:${maxVotes>0?Math.round((r.votes/maxVotes)*100):0}%;border-radius:6px;transition:width 0.6s;"></div>
-                          </div>
-                        </div>`).join('');
-                }
-                if (modal) modal.style.display = 'flex';
-            } catch(e) {
-                alert('Failed to load results: ' + e.message);
-            }
-        }
-
-        function loadProfileForm() {
-            document.getElementById('prof-name').value = currentUser.name || '';
-            document.getElementById('prof-year').value = currentUser.year || '1st';
-            document.getElementById('prof-branch').value = currentUser.branch || 'CSE';
-            document.getElementById('prof-section').value = currentUser.section || '';
-            document.getElementById('prof-email').value = currentUser.email || '';
-
-            if (currentUser.role === 'contestant') {
-                document.getElementById('prof-candidate-fields').classList.remove('hidden');
-                document.getElementById('prof-symbol').value = currentUser.symbol || '';
-                document.getElementById('prof-manifesto').value = currentUser.manifesto || '';
-                document.getElementById('prof-password-group').classList.add('hidden');
-            }
-        }
-
-        let profileGeneratedOtp = null;
-        let profilePendingUpdates = null;
-
-        document.getElementById('profile-update-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('prof-save-btn');
-            btn.disabled = true;
-            btn.innerText = "Sending OTP...";
-
-            profilePendingUpdates = {
-                name: document.getElementById('prof-name').value,
-                year: document.getElementById('prof-year').value,
-                branch: document.getElementById('prof-branch').value,
-                section: document.getElementById('prof-section').value,
-                email: document.getElementById('prof-email').value
-            };
-
-            const newPass = document.getElementById('prof-new-pass').value.trim();
-            if (newPass) {
-                profilePendingUpdates.password = btoa(newPass);
-            }
-
-            if (currentUser.role === 'contestant') {
-                profilePendingUpdates.symbol = document.getElementById('prof-symbol').value;
-                profilePendingUpdates.manifesto = document.getElementById('prof-manifesto').value;
-            }
-
-            try {
-                profileGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                await StorageManager.sendEmailOtp(currentUser.email, currentUser.name, profileGeneratedOtp, "Profile Update");
-                
-                setText('prof-otp-hint', `Enter the code sent to ${currentUser.email}`);
-                document.getElementById('prof-otp-section').classList.remove('hidden');
-                btn.innerText = "OTP Sent ✓";
-            } catch (err) {
-                alert("Error sending OTP: " + err.message);
-                btn.disabled = false;
-                btn.innerText = "Save Changes";
-            }
-        };
-
-        async function confirmProfileUpdate() {
-            const input = document.getElementById('prof-otp-input').value.trim();
-            const err = document.getElementById('prof-otp-error');
-            const btn = document.getElementById('prof-confirm-btn');
-            const msg = document.getElementById('prof-status-msg');
-
-            if (input !== profileGeneratedOtp) {
-                setText('prof-otp-error', "Invalid OTP code");
-                err.classList.remove('hidden');
-                return;
-            }
-
-            err.classList.add('hidden');
-            btn.disabled = true;
-            btn.innerText = "Saving...";
-
-            try {
-                const updatesWithInst = {
-                    ...profilePendingUpdates,
-                    institution: currentUser.institution
-                };
-                await StorageManager.updateUserDetails(currentUser.regNum, updatesWithInst);
-                setText('prof-status-msg', "Profile updated successfully! ✅");
-                msg.style.background = "rgba(16, 185, 129, 0.2)";
-                msg.style.color = "#10b981";
-                msg.classList.remove('hidden');
-                
-                setTimeout(() => window.location.reload(), 2000);
-            } catch (error) {
-                setText('prof-status-msg', "Update Failed: " + error.message);
-                msg.style.background = "rgba(239, 68, 68, 0.2)";
-                msg.style.color = "#ef4444";
-                msg.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "Confirm OTP";
-            }
-        }
-
-            currentElectionObj  = lobbyElections.find(e => e.id === id) || null;
-            setText('unlock-election-name', name);
-            const input = document.getElementById('election-access-code');
-            if(input) input.value = '';
-            const err = document.getElementById('code-error');
-            if(err) err.classList.add('hidden');
-            const modal = document.getElementById('election-code-modal');
-            if(modal) modal.classList.add('visible');
-        }
-
-        document.getElementById('unlock-election-btn').onclick = function() {
-            const inputVal = document.getElementById('election-access-code').value.trim().toUpperCase();
-            if (!inputVal) {
-                setText('code-error', 'Please enter the election code.');
-                const err = document.getElementById('code-error');
-                if(err) err.classList.remove('hidden');
-                return;
-            }
-
-            if (inputVal === String(currentElectionCode).trim().toUpperCase()) {
-                enterBallot(currentElectionObj || { electionCode: currentElectionCode });
-            } else {
-                setText('code-error', '❌ Incorrect code. Please try again.');
-                const err = document.getElementById('code-error');
-                if(err) err.classList.remove('hidden');
-            }
-        };
-
-        async function enterBallot(election) {
-            currentElectionData = election;
-            document.getElementById('election-code-modal').classList.remove('visible');
-            const ls = document.getElementById('lobby-section');
-            if(ls) ls.style.display = 'none';
-            const lo = document.getElementById('loading-overlay');
-            if(lo) lo.classList.remove('hidden');
-            const vs = document.getElementById('voting-section');
-            if(vs) vs.classList.remove('hidden');
-            await loadCandidates(election);
-            if(lo) lo.classList.add('hidden');
-        }
-
-        async function loadCandidates(elecObj) {
-            setHTML('candidates-grid', '<div class="text-center" style="padding:2rem;"><p class="text-muted animate-pulse">Scanning candidates...</p></div>');
-            try {
-                const fetchedCandidates = await StorageManager.getCandidates();
-                candidates = fetchedCandidates.filter(c => c.institution === currentUser.institution);
-                
-                definedCategories = [];
-                try {
-                    const data = await fetchApi('/config/categories_' + encodeURIComponent(currentUser.institution));
-                    if(data) {
-                        definedCategories = data.value?.categories || data.categories || [];
-                    }
-                } catch(e){}
-
-                const grouped = {};
-                candidates.forEach(c => {
-                    const cat = c.category || 'General';
-                    if(!grouped[cat]) grouped[cat] = [];
-                    grouped[cat].push(c);
-                });
-
-                const cats = new Set([...definedCategories, ...Object.keys(grouped)]);
-                if (cats.size === 0) {
-                    setHTML('candidates-grid', '<div class="text-center" style="padding:2rem;"><p class="text-muted">No candidates registered in this category yet.</p></div>');
-                } else {
-                    setHTML('candidates-grid', '');
-                    cats.forEach(cat => {
-                        const catCandidates = grouped[cat] || [];
-                        if(catCandidates.length === 0) return;
-
-                        const section = document.createElement('div');
-                        section.className = 'category-section';
-                        setHTML(section, `<h2 class="title" style="margin-top:2.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem; margin-bottom:1.5rem;"><span style="color:var(--neon-cyan)">${cat}</span> Category</h2>`);
-                        const grid = document.createElement('div');
-                        grid.style.display = 'grid';
-                        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(310px, 1fr))';
-                        grid.style.gap = '2rem';
-
-                        catCandidates.forEach(c => {
-                            const card = document.createElement('div');
-                            card.className = 'candidate-card glass-panel';
-                            card.id = `card-${c.regNum}`;
-                            setHTML(card, `
-                                <img src="${c.portrait || 'https://via.placeholder.com/150'}" class="candidate-photo">
-                                <div class="candidate-info">
-                                    <h3>${c.name}</h3>
-                                    <p style="margin:1rem 0;">Symbol: <span style="font-size:1.8rem;">${c.symbol}</span></p>
-                                    <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
-                                        <button class="btn-sm" onclick='showManifesto(${JSON.stringify(c).replace(/'/g, "&apos;")})'>📜 Manifesto</button>
-                                    </div>
-                                </div>
-                                <button class="vote-btn btn-outline" id="btn-vote-${c.regNum}" style="width:100%;" onclick="queueVote('${c.regNum}', '${c.name.replace(/'/g, "\\'")}', '${cat.replace(/'/g, "\\'")}')">Select for ${cat}</button>
-                                <div class="debate-section">
-                                    <p style="font-weight:700; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Vision Board</p>
-                                    <div id="qa-list-${c.regNum}" style="max-height:110px; overflow-y:auto; margin-bottom:1rem; font-size:0.8rem;"></div>
-                                    <div style="display:flex; gap:0.5rem;">
-                                        <input type="text" id="q-input-${c.regNum}" placeholder="Ask a question..." style="flex:1; padding:0.5rem; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:8px; color:white;">
-                                        <button class="btn-sm" style="padding:0 1rem;" onclick="askQuestion('${c.regNum}')">Ask</button>
-                                    </div>
-                                </div>
-                            `);
-                            grid.appendChild(card);
-                            loadQuestions(c.regNum);
-                        });
-                        section.appendChild(grid);
-                        candidatesGrid.appendChild(section);
-                    });
-                }
-                updateCartUI();
-            } catch(e){ console.error(e); }
-        }
-
-        function queueVote(id, name, cat) {
-            ballotCart[cat] = { id, name };
-            showToast(`Selected ${name} for ${cat}`, "success");
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.vd-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.vd-nav-btn').forEach(b => b.classList.remove('active'));
             
-            document.querySelectorAll(`button[id^="btn-vote-"]`).forEach(b => {
-                if(b.innerText.includes(`for ${cat}`)) {
-                    b.innerText = `Select for ${cat}`;
-                    b.style.background = 'transparent';
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if(btn) btn.classList.add('active');
+            
+            if(tabId === 'voting') loadVotingCenter();
+            if(tabId === 'results') loadResults();
+            if(tabId === 'profile') loadProfile();
+        }
+
+        // --- Initialization ---
+        async function init() {
+            document.getElementById('sidebar-user-name').innerText = currentUser.name;
+            document.getElementById('sidebar-user-id').innerText = `ID: ${currentUser.regNum}`;
+            document.getElementById('welcome-name').innerText = currentUser.name.split(' ')[0];
+            document.getElementById('user-initial').innerText = currentUser.name[0];
+
+            loadDashboardStats();
+            
+            tsParticles.load("tsparticles", {
+                fpsLimit: 60,
+                particles: {
+                    number: { value: 30, density: { enable: true, value_area: 800 } },
+                    color: { value: "#06b6d4" },
+                    links: { enable: true, opacity: 0.1, color: "#fff" },
+                    move: { enable: true, speed: 0.5 }
                 }
             });
-            const selBtn = document.getElementById(`btn-vote-${id}`);
-            if(selBtn) {
-                selBtn.innerText = `Selected ✅`;
-                selBtn.style.background = 'var(--neon-green)';
-            }
-            updateCartUI();
         }
 
-        function updateCartUI() {
-            let actBtn = document.getElementById('cart-finalize');
-            const total = Object.keys(ballotCart).length;
-            if(!actBtn && total > 0) {
-                actBtn = document.createElement('button');
-                actBtn.id = 'cart-finalize';
-                actBtn.className = 'submit-btn';
-                actBtn.style.cssText = "position:sticky; bottom:25px; z-index:1001; margin-top:3rem; box-shadow:0 0 40px rgba(0,0,0,0.5);";
-                document.getElementById('voting-section').appendChild(actBtn);
-            }
-            if(actBtn) {
-                if(total === 0) { actBtn.remove(); }
-                else {
-                    actBtn.innerText = `🗳️ Finalize Selections (${total}) — Proceed to Cast`;
-                    actBtn.onclick = () => startVoteFlow();
-                }
-            }
-        }
-
-        async function loadQuestions(id) {
-            const list = document.getElementById(`qa-list-${id}`);
-            if(!list) return;
-            const qs = await StorageManager.getQuestions(id);
-            const html = qs.length === 0 ? '<p class="text-muted">No entries yet.</p>' : qs.map(q => `<div class="q-box"><strong>${q.voterName}:</strong> ${q.question}</div>`).join('');
-            setHTML(list, html);
-        }
-
-        async function askQuestion(id) {
-            const input = document.getElementById(`q-input-${id}`);
-            const text = input.value.trim();
-            if(!text) return;
-            await StorageManager.submitQuestion(id, currentUser.name, text);
-            input.value = '';
-            showToast("Question posted!", "success");
-            loadQuestions(id);
-        }
-
-        function showManifesto(cand) {
-            setHTML('modal-portrait', `<img src="${cand.portrait || 'https://via.placeholder.com/150'}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid var(--gold-primary);">`);
-            setText('modal-cand-name', cand.name);
-            setText('modal-cand-details', `${cand.branch} | ${cand.regNum}`);
-            setText('modal-manifesto', cand.manifesto || "No manifesto provided.");
-            const modal = document.getElementById('candidate-modal');
-            if(modal) modal.classList.add('visible');
-        }
-
-        function startVoteFlow() {
-            setHTML('confirm-candidate-name', Object.entries(ballotCart).map(([k,v]) => `<strong>${k}:</strong> ${v.name}`).join('<br>'));
-            showStep(1);
-            const modal = document.getElementById('confirm-modal');
-            if(modal) modal.classList.add('visible');
-        }
-
-        let currentStep = 1;
-        let voteWebcamStream = null;
-        let voteWebcamPhoto = null;
-
-        function showStep(s) {
-            currentStep = s;
-            document.querySelectorAll('.step-section').forEach(el => el.classList.add('hidden'));
-            const nextBtn = document.getElementById('modal-next-btn');
-            if (s === 1) {
-                const sp = document.getElementById('step-password');
-                if(sp) sp.classList.remove('hidden');
-                if(nextBtn) nextBtn.innerText = "Next ➔";
-            } else {
-                const sw = document.getElementById('step-webcam');
-                if(sw) sw.classList.remove('hidden');
-                if(nextBtn) {
-                  nextBtn.innerText = "Cast Vote 🗳️";
-                  nextBtn.disabled = true;
-                }
-            }
-        }
-
-        async function startVoteCam() {
-            const video = document.getElementById('vote-video');
+        async function loadDashboardStats() {
             try {
-                voteWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = voteWebcamStream;
-                document.getElementById('start-vote-cam').classList.add('hidden');
-                document.getElementById('capture-vote-cam').classList.remove('hidden');
-            } catch(e) {
-                document.getElementById('modal-error').innerText = "Webcam access denied.";
-                document.getElementById('modal-error').classList.remove('hidden');
-            }
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                const voted = elections.filter(e => e.hasVoted).length;
+                const active = elections.filter(e => e.isActive && !e.hasVoted).length;
+                
+                document.getElementById('stat-voted').innerText = voted;
+                document.getElementById('stat-active').innerText = active;
+                
+                const activityHtml = elections.map(e => `
+                    <div style="padding:1rem 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                        <span>${e.name}</span>
+                        <span style="font-weight:700; color:${e.hasVoted?'#22c55e':'#f59e0b'}">${e.hasVoted?'Completed':'Pending'}</span>
+                    </div>
+                `).join('');
+                document.getElementById('activity-list').innerHTML = activityHtml || "No recent activity recorded.";
+            } catch(e) { console.error(e); }
         }
 
-        function captureVoteCam() {
-            const video = document.getElementById('vote-video');
-            const canvas = document.getElementById('vote-canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            voteWebcamPhoto = canvas.toDataURL('image/jpeg');
-            const preview = document.getElementById('vote-preview');
-            if(preview) {
-              preview.src = voteWebcamPhoto;
-              preview.classList.remove('hidden');
-            }
-            if(video) video.classList.add('hidden');
-            const capBtn = document.getElementById('capture-vote-cam');
-            if(capBtn) capBtn.classList.add('hidden');
-            const nextBtnEl = document.getElementById('modal-next-btn');
-            if(nextBtnEl) nextBtnEl.disabled = false;
+        async function loadVotingCenter() {
+            const list = document.getElementById('election-list');
+            list.innerHTML = 'Scanning for ballots...';
+            try {
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                const pending = elections.filter(e => !e.isCompleted && !e.hasVoted);
+                
+                list.innerHTML = pending.length ? pending.map(e => `
+                    <div class="vd-election-card">
+                        <span class="vd-status-pill ${e.isActive?'vd-pill-live':'vd-pill-soon'}">${e.isActive?'Live':'Verification Soon'}</span>
+                        <h3 class="vd-election-name">${e.name}</h3>
+                        <p class="vd-election-info">Access your digital ballot gateway to cast your vote for this session.</p>
+                        <button class="vd-action-btn" onclick="enterGateway('${e.id}')" ${!e.isActive?'disabled':''}>
+                            ${e.isActive?'Enter Gateway ➔':'Awaiting Sync'}
+                        </button>
+                    </div>
+                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No pending elections found for your profile.</div>';
+            } catch(e) { list.innerHTML = 'Error loading center.'; }
         }
 
-        document.getElementById('confirm-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (currentStep === 1) {
-                const pwd = document.getElementById('confirm-password').value;
-                const hashedInput = await StorageManager.hashPassword(pwd);
-                if (hashedInput !== currentUser.password && btoa(pwd) !== currentUser.password) {
-                    setText('modal-error', "Incorrect Password");
-                    const err = document.getElementById('modal-error');
-                    if(err) err.classList.remove('hidden');
-                    return;
-                }
-                showStep(2);
-            } else {
-                try {
-                    const payload = {};
-                    Object.entries(ballotCart).forEach(([k,v]) => payload[k] = v.id);
-                    const hash = await StorageManager.vote(currentUser.regNum, payload, voteWebcamPhoto, currentElectionCode);
-                    
-                    showToast("Vote Verified & Cast Successfully!", "success");
-                    confetti({ particleCount: 150, spread: 100 });
-                    new Audio('https://www.soundjay.com/misc/sounds/magic-chime-01.mp3').play().catch(e=>{});
-
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    doc.setFontSize(22);
-                    doc.text("Vanguard Voting Portal", 105, 20, null, null, "center");
-                    doc.setFontSize(14);
-                    doc.text("Official Election Receipt", 105, 30, null, null, "center");
-                    doc.text("-----------------------------------", 105, 35, null, null, "center");
-                    doc.text("Voter Name: " + currentUser.name, 30, 50);
-                    doc.text("Voter ID: " + currentUser.regNum, 30, 60);
-                    doc.text("Selection(s):", 30, 75);
-                    let y = 85;
-                    Object.entries(ballotCart).forEach(([k,v]) => {
-                        doc.text(`- ${k}: ${v.name}`, 40, y);
-                        y += 10;
-                    });
-                    doc.text("Receipt Hash: " + hash, 30, y + 10);
-                    doc.save(`Receipt_${currentUser.regNum}.pdf`);
-
-                    closeModal();
-                    setTimeout(()=>location.reload(), 5000);
-                } catch(err){
-                    setText('modal-error', "Submission failed: " + err.message);
-                    const errEl = document.getElementById('modal-error');
-                    if(errEl) errEl.classList.remove('hidden');
-                }
-            }
-        });
-
-        function closeModal() {
-            document.getElementById('confirm-modal').classList.remove('visible');
-            if(voteWebcamStream) {
-                voteWebcamStream.getTracks().forEach(track => track.stop());
-            }
+        async function loadResults() {
+            const list = document.getElementById('results-list');
+            list.innerHTML = 'Fetching official counts...';
+            try {
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                const completed = elections.filter(e => e.isCompleted);
+                
+                list.innerHTML = completed.length ? completed.map(e => `
+                    <div class="vd-election-card">
+                        <span class="vd-status-pill vd-pill-ended">Official Results</span>
+                        <h3 class="vd-election-name">${e.name}</h3>
+                        <p class="vd-election-info">View the verified digital tally for this concluded election.</p>
+                        <button class="vd-action-btn" style="background:rgba(6,182,212,0.1); color:#06b6d4; border:1px solid rgba(6,182,212,0.3);" onclick="viewResults('${e.id}', '${e.name}')">
+                            View Verified Tally 📈
+                        </button>
+                    </div>
+                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No official results published yet.</div>';
+            } catch(e) { list.innerHTML = 'Error loading results.'; }
         }
 
-        async function checkElectionStatus() {
-            const election = await StorageManager.getElectionStatus();
-            // ... timer logic is handled in original block 1-800 ...
+        function loadProfile() {
+            const area = document.getElementById('profile-data');
+            area.innerHTML = `
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Student Name</label>
+                    <div style="font-size:1.1rem; font-weight:700;">${currentUser.name}</div>
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Registration Number</label>
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--neon-cyan);">${currentUser.regNum}</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+                    <div>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Branch</label>
+                        <div style="font-size:1rem; font-weight:700;">${currentUser.branch || 'General'}</div>
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Academic Year</label>
+                        <div style="font-size:1rem; font-weight:700;">${currentUser.year || 'Unknown'}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:2rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">College / Institution</label>
+                    <div style="font-size:1rem; font-weight:700;">${currentUser.institution}</div>
+                </div>
+                <p style="color:#64748b; font-size:0.8rem; font-style:italic;">Note: Contact your college administrator to modify core profile data.</p>
+            `;
         }
 
-        function inactivityTime() {
-            let t;
-            window.onload = resetTimer;
-            document.onmousemove = resetTimer;
-            function logout() { StorageManager.logout(); location.href='login.html'; }
-            function resetTimer() { clearTimeout(t); t = setTimeout(logout, 600000); }
+        async function enterGateway(id) {
+            alert('Opening secure gateway... Please wait.');
+            // This would normally open a more complex voting flow, 
+            // for now it's a placeholder redirect to maintain logic flow.
+            window.location.href = `voter_dashboard_gateway.html?id=${id}`;
         }
-        inactivityTime();
 
-        tsParticles.load("tsparticles", {
-            fpsLimit: 60,
-            particles: {
-                number: { value: 30, density: { enable: true, value_area: 800 } },
-                color: { value: ["#ffffff", "#06b6d4"] },
-                links: { enable: true, opacity: 0.1 },
-                move: { enable: true, speed: 0.5 }
-            }
-        });
+        async function viewResults(id, name) {
+            const modal = document.getElementById('vote-modal');
+            const title = document.getElementById('modal-title');
+            const content = document.getElementById('modal-content');
+            
+            title.innerText = `Results: ${name}`;
+            content.innerHTML = 'Loading live tally...';
+            modal.classList.add('open');
+            
+            try {
+                const res = await fetchApi(`/voters/results?electionId=${id}`);
+                content.innerHTML = res.map(cat => `
+                    <div style="margin-bottom:1.5rem;">
+                        <h4 style="color:var(--neon-cyan); margin-bottom:0.5rem;">${cat.category}</h4>
+                        ${cat.results.map(r => `
+                            <div style="margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                                    <span>${r.name}</span>
+                                    <span>${r.votes} votes</span>
+                                </div>
+                                <div style="height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+                                    <div style="width:${r.percentage}%; height:100%; background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue));"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('') || "No results tallied yet.";
+            } catch(e) { content.innerHTML = "Error loading results."; }
+        }
+
+        function closeModal() { document.getElementById('vote-modal').classList.remove('open'); }
+        function logout() { StorageManager.logout(); window.location.href = 'login.html'; }
 
         init();
     </script>
-
-  <!-- 📊 Election Results Modal -->
-  <div id="results-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
-    <div style="background:#0f0f1a; border:1px solid rgba(6,182,212,0.25); border-radius:16px; padding:2rem; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; position:relative;">
-      <button onclick="document.getElementById('results-modal').style.display='none'" style="position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:0.3rem 0.7rem; cursor:pointer; font-size:1rem;">✕</button>
-      <h2 id="results-modal-title" style="color:var(--neon-cyan); margin-bottom:1.5rem; font-size:1.2rem;">📊 Election Results</h2>
-      <div id="results-modal-body"></div>
-    </div>
-  </div>
-
 </body>
 </html>
