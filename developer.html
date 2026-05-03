@@ -1531,11 +1531,16 @@
     }
 
     async function deleteSuperAdmin(id) {
-      const sa = (window.saCache || []).find(s => s.regNum === id);
+      if (!window.saCache) {
+          showToast('Sync error: Please refresh the page to update internal cache.', false);
+          return;
+      }
+
+      const sa = window.saCache.find(s => s.regNum === id);
       const instName = sa ? sa.institution : '';
       
       if (!instName) {
-          showToast('Could not identify institution for this user.', false);
+          showToast(`Error: Could not find institution for ID ${id}. Refresh and try again.`, false);
           return;
       }
 
@@ -1543,25 +1548,25 @@
       if (!confirmed) return;
       
       try {
-        // Show loading state
-        showToast('Initiating permanent deletion...', true);
+        showToast(`Processing deletion for ${instName}...`, true);
         
-        // Delete the super admin and all associated users (cascades on server)
-        const res = await fetch(API + `/users/${encodeURIComponent(id)}?institution=${encodeURIComponent(instName)}`, { 
+        // Delete via API - note: we don't encode id/instName twice as fetch/URLSearchParams handles it
+        const url = new URL(API + `/users/${id}`, window.location.origin);
+        url.searchParams.set('institution', instName);
+        
+        const res = await fetch(url, { 
             method: 'DELETE', 
             headers: { 'Content-Type': 'application/json' } 
         });
 
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || 'Deletion failed on server.');
-        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Server reported an error during deletion.');
 
-        showToast(`✅ Successfully deleted ${instName} and all associated data.`);
-        loadConsole(); // Refresh the table and stats
+        showToast(`✅ Fully removed ${instName} and all related accounts.`);
+        loadConsole(); 
       } catch (e) { 
           console.error('[DELETE_FAIL]', e);
-          showToast(e.message, false); 
+          showToast('Deletion Failed: ' + e.message, false); 
       }
     }
 
