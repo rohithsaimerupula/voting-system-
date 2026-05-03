@@ -285,10 +285,24 @@ app.post('/api/users/add', async (req, res) => {
 
         // --- UNIQUENESS CHECKS ---
         // 1. Check if ID (regNum) is already used
-        const idCheck = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [u.regNum, inst] });
+        // For Super Admins, we enforce GLOBAL uniqueness to prevent session/identity overlap across institutions
+        let idCheckSql = "SELECT role, institution FROM users WHERE regNum = ? AND institution = ?";
+        let idCheckArgs = [u.regNum, inst];
+        
+        if (u.role === 'superadmin') {
+            idCheckSql = "SELECT role, institution FROM users WHERE regNum = ?";
+            idCheckArgs = [u.regNum];
+        }
+
+        const idCheck = await db.execute({ sql: idCheckSql, args: idCheckArgs });
         if (idCheck.rows.length > 0) {
-            const existingRole = idCheck.rows[0].role;
+            const existing = idCheck.rows[0];
+            const existingRole = existing.role;
             let displayRole = existingRole === 'admin' ? 'Branch Admin' : existingRole === 'subadmin' ? 'Class Admin' : existingRole;
+            
+            if (u.role === 'superadmin' && existing.institution !== inst) {
+                return res.status(409).json({ error: `The ID "${u.regNum}" is already assigned to a ${displayRole} in another institution ("${existing.institution}"). Super Admin IDs must be globally unique.` });
+            }
             return res.status(409).json({ error: `The ID "${u.regNum}" is already used by a ${displayRole} in this institution. Please choose a unique ID.` });
         }
 
@@ -313,9 +327,21 @@ app.post('/api/users/add', async (req, res) => {
 
         // 4. Check if Email is unique
         if (u.email) {
-            const emailCheck = await db.execute({ sql: "SELECT regNum FROM users WHERE institution = ? AND email = ?", args: [inst, u.email] });
+            let emailCheckSql = "SELECT regNum, institution FROM users WHERE email = ? AND institution = ?";
+            let emailCheckArgs = [u.email, inst];
+            
+            if (u.role === 'superadmin') {
+                emailCheckSql = "SELECT regNum, institution FROM users WHERE email = ?";
+                emailCheckArgs = [u.email];
+            }
+
+            const emailCheck = await db.execute({ sql: emailCheckSql, args: emailCheckArgs });
             if (emailCheck.rows.length > 0) {
-                return res.status(409).json({ error: `The Email Address "${u.email}" is already registered to another account.` });
+                const existing = emailCheck.rows[0];
+                if (u.role === 'superadmin' && existing.institution !== inst) {
+                    return res.status(409).json({ error: `The Email Address "${u.email}" is already registered to an account in another institution ("${existing.institution}").` });
+                }
+                return res.status(409).json({ error: `The Email Address "${u.email}" is already registered to another account in this institution.` });
             }
         }
 

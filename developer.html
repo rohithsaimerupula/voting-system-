@@ -1004,67 +1004,7 @@
       } catch(e) { showToast(e.message, false); }
     }
 
-    async function createSuperAdmin() {
-      const nameInput = document.getElementById('sa-name').value;
-      if (nameInput.startsWith(' ')) return showToast('Name cannot start with a space.', false);
-      const name = nameInput.trim();
-      const id = document.getElementById('sa-id').value.trim();
-      const email = document.getElementById('sa-email').value.trim();
-      const institution = document.getElementById('sa-institution').value.trim();
-      const code = document.getElementById('sa-code').value.trim();
-      const pass = document.getElementById('sa-pass').value;
-      const packId = document.getElementById('sa-pack').value;
-      
-      if (!id || !name || !institution || !pass || !code) return showToast('Please fill all fields', false);
-      
-      if (id.length !== 9 || !/^[A-Z0-9]{9}$/.test(id)) {
-          return showToast('Super-Admin ID must be exactly 9 characters (Uppercase & Numbers only, no spaces)', false);
-      }
-      
-      if (name.length > 30) return showToast('Full name must not exceed 30 characters.', false);
-      if (!/^[a-zA-Z\s.]+$/.test(name)) return showToast('Full name can only contain alphabets, spaces, and dots.', false);
-      const dotCount = (name.match(/\./g) || []).length;
-      if (dotCount > 1) return showToast('Full name can only contain at most one dot (.)', false);
-      
-      const pwdErr = validatePassword(pass, 10, 10);
-      if (pwdErr) return showToast('Super Admin ' + pwdErr, false);
-      
-      try {
-        // --- DUPLICATION CHECKS ---
-        const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
-        const existingCodes = codesRes.ok ? (await codesRes.json()) : {};
-        
-        if (existingCodes[code]) {
-            return showToast(`Error: The code "${code}" is already active for "${existingCodes[code]}".`, false);
-        }
-
-        const inUse = Object.values(existingCodes).some(v => v.toLowerCase() === institution.toLowerCase());
-        if (inUse) {
-            return showToast(`Error: The institution "${institution}" already has a gateway code.`, false);
-        }
-
-        // --- CREATION ---
-        const addRes = await fetch(API + '/users/add', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ regNum: id, password: btoa(pass), role: 'superadmin', name, email, institution, status: 'active', packId: packId || null }) 
-        });
-        if (!addRes.ok) { const e = await addRes.json().catch(()=>({error:'Failed'})); throw new Error(e.error); }
-        
-        existingCodes[code] = institution;
-        await fetch(API + '/config/institution_codes', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: existingCodes })
-        });
-
-        const packLabel = packId ? ` with Pack: ${(window.packsCache||[]).find(p=>p.id===packId)?.name || packId}` : ' (No Pack)';
-        showToast(`Super Admin ${id} created${packLabel}! Code: ${code}!`);
-        ['sa-id', 'sa-name', 'sa-email', 'sa-institution', 'sa-code', 'sa-pass'].forEach(i => document.getElementById(i).value = '');
-        document.getElementById('sa-pack').value = '';
-        loadConsole();
-      } catch (e) { showToast(e.message, false); }
-    }
+    // Legacy function removed in favor of modal-based flow (createInstitutionWithSA)
 
     // --- PACK FUNCTIONS ---
     function togglePackForm() {
