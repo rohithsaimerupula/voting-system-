@@ -1654,8 +1654,6 @@
         }
       } catch (e) { console.error(e); }
     }
-      } catch (e) { console.error(e); }
-    }
 
     // ── Category Builder ───────────────────────────────────────────
     let myCategories = [];
@@ -1775,7 +1773,21 @@
     async function promptModifySchedule() {
       if (!myElection) return;
       const currentEnd = myElection.endTime ? myElection.endTime.slice(0, 16) : '';
-     async function loadBranchElectionPage() {
+      const newEnd = prompt('Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
+      if (!newEnd) return;
+      const d = new Date(newEnd);
+      if (isNaN(d.getTime())) return toast('Invalid date format', false);
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ endTime: d.toISOString() })
+        });
+        toast('Election Schedule Modified!');
+        loadMyElection();
+      } catch (e) { toast(e.message, false); }
+    }
+
+    async function loadBranchElectionPage() {
       try {
         const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch`);
         const branchElec = elections.find(e => e.scope && e.scope.branch === session.branch) || elections[0] || null;
