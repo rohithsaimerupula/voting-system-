@@ -826,6 +826,29 @@
           </div>
         </div>
 
+        <!-- Registration Management Tables -->
+        <div id="pending-registrations-card" class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
+          <div style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; color:#ff2a4d;">⏳ Pending Registrations</h3>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:50px;">ID</th>
+                  <th style="width:50px;">Face</th>
+                  <th style="width:20%;">Reg No</th>
+                  <th>Name</th>
+                  <th>Class</th>
+                  <th style="width:15%;">Role</th>
+                  <th style="width:22%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reg-pending-student-table"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div id="approved-students-card" class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
           <div
             style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.15); display:flex; justify-content:space-between; align-items:center;">
@@ -835,7 +858,7 @@
             <table>
               <thead>
                 <tr>
-                  <th style="width:50px;">Portrait</th>
+                  <th style="width:50px;">ID</th>
                   <th style="width:50px;">Face</th>
                   <th style="width:20%;">Reg No</th>
                   <th>Name</th>
@@ -844,7 +867,7 @@
                   <th style="width:22%;">Actions</th>
                 </tr>
               </thead>
-              <tbody id="approved-student-table"></tbody>
+              <tbody id="reg-approved-student-table"></tbody>
             </table>
           </div>
         </div>
@@ -1565,8 +1588,9 @@
       const pending = list.filter(s => s.status !== 'active');
       setText('pending-count', classStudents.filter(s => s.status !== 'active').length);
       if (!pending.length) {
-        setHTML('pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>');
-        setHTML('reg-pending-student-table', '<tr><td colspan="6" class="empty">No pending registrations 🎉</td></tr>');
+        const empty = '<tr><td colspan="7" class="empty">No pending registrations 🎉</td></tr>';
+        setHTML('pending-student-table', empty);
+        setHTML('reg-pending-student-table', empty);
         return;
       }
       const html = pending.map(s => {
@@ -1592,10 +1616,12 @@
       const approved = list.filter(s => s.status === 'active');
       setText('approved-count', classStudents.filter(s => s.status === 'active').length);
       if (!approved.length) {
-        setHTML('approved-student-table', '<tr><td colspan="6" class="empty">No approved students yet</td></tr>');
+        const empty = '<tr><td colspan="7" class="empty">No approved students yet</td></tr>';
+        setHTML('approved-student-table', empty);
+        setHTML('reg-approved-student-table', empty);
         return;
       }
-      setHTML('approved-student-table', approved.map(s => {
+      const html = approved.map(s => {
         const { portraitHtml, faceHtml } = _makeImgCells(s);
         const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
         return `<tr>
@@ -1608,7 +1634,9 @@
         <button onclick="removeStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">🗑️ Remove</button>
       </td>
     </tr>`;
-      }).join(''));
+      }).join('');
+      setHTML('approved-student-table', html);
+      setHTML('reg-approved-student-table', html);
     }
 
     // Keep renderStudents as a wrapper for backward compatibility
