@@ -233,29 +233,8 @@
       </div>
 
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;">
-        <!-- Registration Card -->
-        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(6,182,212,0.05), transparent);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-            <h3 style="margin-bottom:0;">📋 Branch Registration</h3>
-            <span id="reg-total-pill" style="background:rgba(255,255,255,0.1); padding:0.2rem 0.6rem; border-radius:10px; font-size:0.75rem; font-weight:bold; color:var(--cyan);">0 Total</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:2rem;">
-            <div style="width:130px; height:130px; position:relative; flex-shrink:0;">
-              <canvas id="chart-reg"></canvas>
-            </div>
-            <div style="flex:1;">
-              <div id="reg-legend" style="display:flex; flex-direction:column; gap:0.6rem;">
-                <!-- Legend items -->
-              </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-      </div>
     </div>
-
     <!-- STUDENTS -->
     <div class="page" id="page-students">
       <div class="page-title">🎓 My Branch Students</div>
@@ -347,12 +326,7 @@
             <button class="btn-sm btn-d" style="background:rgba(239,68,68,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
           </div>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
-          <div class="stat"><div class="num" id="br-v-total" style="color:var(--cyan)">-</div><div class="lbl">Eligible</div></div>
-          <div class="stat"><div class="num" id="br-v-allowed" style="color:var(--green)">-</div><div class="lbl">Can Vote</div></div>
-          <div class="stat"><div class="num" id="br-v-voted" style="color:var(--gold)">-</div><div class="lbl">Voted</div></div>
-          <div class="stat"><div class="num" id="br-v-pct" style="color:var(--purple)">-</div><div class="lbl">Turnout %</div></div>
-        </div>
+
 
         <!-- 🏆 Live Election Results -->
         <div class="card" id="br-elec-results-card" style="margin-top:1.5rem; display:none;">
@@ -383,23 +357,11 @@
       </div>
 
       <div class="card" id="col-stats-card">
-        <h3>📊 Branch Participation in College Election</h3>
-        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1.5rem;">
+        <h3>📊 Branch Students in College Election</h3>
+        <div class="stats-grid" style="grid-template-columns:1fr; gap:1.5rem;">
           <div class="stat" style="border-top:3px solid var(--cyan);">
             <div class="num" id="col-br-total" style="color:var(--cyan)">-</div>
             <div class="lbl">Total Branch Students</div>
-          </div>
-          <div class="stat" style="border-top:3px solid var(--green);">
-            <div class="num" id="col-br-allowed" style="color:var(--green)">-</div>
-            <div class="lbl">Eligibility</div>
-          </div>
-          <div class="stat" style="border-top:3px solid var(--gold);">
-            <div class="num" id="col-br-voted" style="color:var(--gold)">-</div>
-            <div class="lbl">Actually Voted</div>
-          </div>
-          <div class="stat" style="border-top:3px solid var(--purple);">
-            <div class="num" id="col-br-pct" style="color:var(--purple)">0%</div>
-            <div class="lbl">Branch Turnout</div>
           </div>
         </div>
       </div>
@@ -524,51 +486,13 @@ async function loadAll(){
         setText('o-students', studs.length);
         setText('o-subadmins', sas.length);
 
-        // Update Pills
-        setText('reg-total-pill', `${studs.length} Total`);
+
 
         filterStudents();
         renderSAs(sas);
         buildScopeHierarchy(studs);
 
-        // Chart 1: Registration
-        const activeS=studs.filter(s=>s.status==='active').length;
-        const pendingS=studs.length-activeS;
-        
-        // Custom Legend for Registration
-        setHTML('reg-legend', `
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.3rem;">
-                <span style="font-size:0.85rem; color:white;"><span style="color:var(--cyan); margin-right:5px;">●</span> Accepted</span>
-                <span style="font-size:0.85rem; font-weight:bold; color:var(--cyan);">${activeS}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Pending</span>
-                <span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted);">${pendingS}</span>
-            </div>
-        `);
-
-        if(cReg)cReg.destroy();
-        const crEl=document.getElementById('chart-reg');
-        if(!crEl) return;
-        const crCtx=crEl.getContext('2d');
-        cReg=new Chart(crCtx,{
-            type:'doughnut',
-            data:{
-                labels:['Accepted','Pending'],
-                datasets:[{
-                    data:[activeS,pendingS],
-                    backgroundColor:['#06b6d4','rgba(255,255,255,0.1)'],
-                    borderWidth:0,
-                    hoverOffset:4
-                }]
-            },
-            options:{
-                cutout:'65%',
-                responsive:true,
-                maintainAspectRatio:false,
-                plugins:{ legend:{display:false}, tooltip:{ enabled:true, backgroundColor:'rgba(0,0,0,0.8)', titleFont:{family:'Outfit'}, bodyFont:{family:'Outfit'}} }
-            }
-        });
+        // chart logic removed as redundant
         
     }catch(e){toast(e.message,false);}
 }
@@ -708,12 +632,7 @@ async function loadBranchElection() {
                 if(startBtn) startBtn.style.display='inline-block';
                 if(stopBtn) stopBtn.style.display='none';
             }
-            // analytics
-            const an = await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}/analytics`);
-            setText('br-v-total', an.total);
-            setText('br-v-allowed', an.allowed);
-            setText('br-v-voted', an.voted);
-            setText('br-v-pct', an.allowed>0?Math.round((an.voted/an.allowed)*100)+'%':'0%');
+
 
             // Fetch and Render Results
             const res = await StorageManager.fetchElectionResults(branchElection.id);
@@ -864,15 +783,7 @@ async function loadCollegeElection(){
             if(resCard) resCard.style.display = 'none';
         }
         
-        const total = branchStudents.length;
-        const allowed = branchStudents.filter(s=>s.canVote==1).length;
-        const voted = branchStudents.filter(s=>s.hasVoted==1).length;
-        const pct = total > 0 ? Math.round((voted / total) * 100) : 0;
-        
-        setText('col-br-total', total);
-        setText('col-br-allowed', allowed);
-        setText('col-br-voted', voted);
-        setText('col-br-pct', pct + '%');
+        setText('col-br-total', branchStudents.length);
     }catch(e){toast(e.message,false);}
 }
 

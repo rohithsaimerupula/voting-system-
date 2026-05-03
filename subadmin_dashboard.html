@@ -617,10 +617,7 @@
       <div class="role-tag" id="class-label">Class Admin</div>
       <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span
           class="nav-icon">📊</span> Overview</div>
-      <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My
-        Class</div>
-      <div class="nav-item" id="nav-registrations" onclick="showPage('registrations',this)"><span
-          class="nav-icon">📝</span> Manage Registrations</div>
+      <div class="nav-item" id="nav-registrations" onclick="showPage('registrations',this)"><span class="nav-icon">🎓</span> Class Students & Registrations</div>
       <div class="nav-group-label">🗳️ Voting</div>
       <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span
           class="nav-icon">🏛️</span> My Election</div>
@@ -651,52 +648,6 @@
           <div class="stat" style="border-bottom: 4px solid var(--purple);">
             <div class="num" id="s-students" style="color:var(--purple)">-</div>
             <div class="lbl">Students</div>
-          </div>
-          <div class="stat" style="border-bottom: 4px solid var(--gold);">
-            <div class="num" id="s-pending" style="color:var(--gold)">-</div>
-            <div class="lbl">Pending Reg</div>
-          </div>
-        </div>
-
-
-        <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
-          <!-- Funnel 1: Registration (Base) -->
-          <div class="card"
-            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(255,42,77,0.05), transparent);">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-              <h3 style="margin:0;">📋 1. Registration</h3>
-              <div id="reg-total-pill" class="pill-active"
-                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">Total:
-                -</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:1.5rem;">
-              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-                <canvas id="regChart"></canvas>
-              </div>
-              <div id="reg-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-                <div class="text-muted">Loading...</div>
-              </div>
-            </div>
-          </div>
-
-
-          <!-- Funnel 3: Participation (Subset of Allowed) -->
-          <div class="card"
-            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(245,158,11,0.05), transparent);">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-              <h3 style="margin:0;">🏁 3. Participation</h3>
-              <div id="part-total-pill" class="pill-active"
-                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">
-                Allowed: -</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:1.5rem;">
-              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-                <canvas id="participationChart"></canvas>
-              </div>
-              <div id="part-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-                <div class="text-muted">Waiting for Allowed...</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -997,58 +948,9 @@
           </div>
 
           <!-- Class Students Election Access (Added) -->
-          <div id="my-elec-students-card" class="card"
-            style="padding:0; overflow:hidden; margin-top:1.5rem; margin-bottom:1.5rem;">
-            <div
-              style="padding:1rem 1.5rem; background:rgba(168,85,247,0.05); border-bottom:1px solid rgba(168,85,247,0.1); display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">🎓 Class Students — Election Access</h3>
-              <button class="btn-sm btn-g" onclick="grantAllMyElec()">✅ Grant All</button>
-            </div>
-            <div style="overflow-x:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width:22%;">Reg No</th>
-                    <th>Name</th>
-                    <th style="width:20%;">Vote Status</th>
-                    <th style="width:17%;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="my-elec-student-table"></tbody>
-              </table>
-            </div>
-          </div>
 
 
-          <div
-            style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
-            <div class="stat">
-              <div class="num" id="my-v-total" style="color:var(--purple)">-</div>
-              <div class="lbl">Total Eligible</div>
-            </div>
-            <div class="stat">
-              <div class="num" id="my-v-allowed" style="color:#22c55e">-</div>
-              <div class="lbl">Can Vote</div>
-            </div>
-            <div class="stat">
-              <div class="num" id="my-v-voted" style="color:var(--gold)">-</div>
-              <div class="lbl">Votes Cast</div>
-            </div>
-            <div class="stat">
-              <div class="num" id="my-v-pct" style="color:var(--red)">-</div>
-              <div class="lbl">Turnout %</div>
-            </div>
-          </div>
 
-          <div class="analytics-grid">
-            <div class="card" style="margin-bottom:0;">
-              <h3>📊 Vote Distribution</h3>
-              <div style="position:relative;height:220px;"><canvas id="my-vote-chart"></canvas></div>
-              <div id="my-vote-legend"
-                style="display:flex;gap:1rem;justify-content:center;margin-top:1rem;font-size:0.8rem;flex-wrap:wrap;">
-              </div>
-            </div>
-          </div>
 
           <!-- 🏆 Live Election Results -->
           <div class="card" id="my-elec-results-card" style="margin-top:1.5rem; display:none;">
@@ -1089,51 +991,7 @@
             <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Branch Admin.</p>
           </div>
 
-          <!-- Student List -->
-          <div id="branch-students-card" class="card" style="padding:0; overflow:hidden;">
-            <div
-              style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.1); display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">🎓 Class Students in Branch Election</h3>
-            </div>
-            <div style="overflow-x:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width:30%;">Reg No</th>
-                    <th>Name</th>
-                  </tr>
-                </thead>
-                <tbody id="branch-student-table"></tbody>
-              </table>
-            </div>
-          </div>
 
-          <!-- 🏆 Branch Results Overview -->
-          <div class="card" id="branch-elec-results-card" style="display:none;">
-            <h3>🏆 Live Branch-wide Results</h3>
-            <div id="branch-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
-              <p class="text-muted">Loading branch results...</p>
-            </div>
-          </div>
-
-          <!-- Analytics -->
-          <div class="card">
-            <h3>📊 Branch Election Analytics (My Class)</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
-              <div class="stat">
-                <div class="num" id="br-total" style="color:var(--purple)">-</div>
-                <div class="lbl">Accepted Students</div>
-              </div>
-              <div class="stat">
-                <div class="num" id="br-allowed" style="color:#22c55e">-</div>
-                <div class="lbl">Allowed</div>
-              </div>
-              <div class="stat">
-                <div class="num" id="br-voted" style="color:var(--gold)">-</div>
-                <div class="lbl">Voted</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1166,51 +1024,7 @@
             <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Super Admin.</p>
           </div>
 
-          <!-- Student List -->
-          <div id="college-students-card" class="card" style="padding:0; overflow:hidden;">
-            <div
-              style="padding:1rem 1.5rem; background:rgba(6,182,212,0.05); border-bottom:1px solid rgba(6,182,212,0.1); display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">🎓 Class Students in College Election</h3>
-            </div>
-            <div style="overflow-x:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width:30%;">Reg No</th>
-                    <th>Name</th>
-                  </tr>
-                </thead>
-                <tbody id="college-student-table"></tbody>
-              </table>
-            </div>
-          </div>
 
-          <!-- 🏆 College Results Overview -->
-          <div class="card" id="college-elec-results-card" style="display:none;">
-            <h3>🏆 Live Institution-wide Results</h3>
-            <div id="college-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
-              <p class="text-muted">Loading institution results...</p>
-            </div>
-          </div>
-
-          <!-- Analytics -->
-          <div class="card">
-            <h3>📊 College Election Analytics (My Class)</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;">
-              <div class="stat">
-                <div class="num" id="col-total" style="color:var(--purple)">-</div>
-                <div class="lbl">Accepted Students</div>
-              </div>
-              <div class="stat">
-                <div class="num" id="col-allowed" style="color:#22c55e">-</div>
-                <div class="lbl">Allowed</div>
-              </div>
-              <div class="stat">
-                <div class="num" id="col-voted" style="color:var(--gold)">-</div>
-                <div class="lbl">Voted</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1336,104 +1150,15 @@
         const students = await apiFetch(`/voters/by-class/${encodeURIComponent(session.class)}?institution=${encodeURIComponent(session.institution)}&year=${encodeURIComponent(session.year || '1st')}`);
         classStudents = students;
         studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
-        const active = students.filter(s => s.status === 'active').length;
-        const allowed = students.filter(s => s.canVote == 1).length;
-        const voted = students.filter(s => s.hasVoted == 1).length;
+        // counts removed as they are redundant with status-based truth
 
         setText('s-students', students.length);
-        setText('s-pending', students.length - active);
 
         renderStudents(students);
-        updateCharts(students.length, active, allowed, voted);
       } catch (e) { toast(e.message, false); }
     }
 
-    function updateCharts(total, accepted, allowed, voted) {
-      const opts = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(15,23,42,0.9)',
-            titleFont: { family: 'Outfit', size: 13 },
-            bodyFont: { family: 'Outfit', size: 12 },
-            padding: 12,
-            borderRadius: 8,
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1
-          }
-        },
-        cutout: '65%'
-      };
 
-      // Funnel 1: Registration Status (All Students)
-      if (regChartInstance) regChartInstance.destroy();
-      const r1 = document.getElementById('regChart').getContext('2d');
-      regChartInstance = new Chart(r1, {
-        type: 'doughnut',
-        data: {
-          labels: ['Accepted', 'Pending'],
-          datasets: [{
-            data: [accepted, total - accepted],
-            backgroundColor: ['#ff2a4d', 'rgba(255,255,255,0.05)'],
-            borderColor: ['#ff2a4d', 'rgba(255,255,255,0.1)'],
-            borderWidth: 1,
-            hoverOffset: 4
-          }]
-        },
-        options: opts
-      });
-
-      setText('reg-total-pill', `Total: ${total}`);
-      setHTML('reg-legend', `
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="color:var(--muted)">✅ Accepted:</span>
-        <strong style="color:white">${accepted}</strong>
-    </div>
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
-        <span style="color:var(--muted)">⏳ Pending:</span>
-        <strong style="color:white">${total - accepted}</strong>
-    </div>
-    <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--purple); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${total > 0 ? Math.round((accepted / total) * 100) : 0}% Verified
-    </div>
-  `);
-
-      // Funnel 3: Voting Participation (Subset of Allowed Students Only)
-      if (partChartInstance) partChartInstance.destroy();
-      const r3 = document.getElementById('participationChart').getContext('2d');
-      const notVoted = allowed - voted;
-      partChartInstance = new Chart(r3, {
-        type: 'doughnut',
-        data: {
-          labels: ['Voted', 'Waiting'],
-          datasets: [{
-            data: [voted, notVoted],
-            backgroundColor: ['var(--gold)', 'rgba(255,255,255,0.05)'],
-            borderColor: ['var(--gold)', 'rgba(255,255,255,0.1)'],
-            borderWidth: 1,
-            hoverOffset: 4
-          }]
-        },
-        options: opts
-      });
-
-      setText('part-total-pill', `Allowed: ${allowed}`);
-      setHTML('part-legend', `
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="color:var(--muted)">🏁 Voted:</span>
-        <strong style="color:white">${voted}</strong>
-    </div>
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
-        <span style="color:var(--muted)">⏳ Not Voted:</span>
-        <strong style="color:white">${notVoted}</strong>
-    </div>
-    <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${allowed > 0 ? Math.round((voted / allowed) * 100) : 0}% Turned Out
-    </div>
-  `);
-    }
 
     // ── Student Tab Management ──────────────────────────────────────
     let currentStudentTab = 'pending';
@@ -1910,20 +1635,7 @@
         const allowed = acceptedStudents.length;
         const totalEligible = acceptedStudents.length;
 
-        setText('my-v-total', totalEligible);
-        setText('my-v-allowed', allowed);
-        setText('my-v-voted', stats.voted);
-        const pct = allowed > 0 ? Math.round((stats.voted / allowed) * 100) : 0;
-        setText('my-v-pct', pct + '%');
 
-        // Chart
-        const canvas = document.getElementById('my-vote-chart');
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          if (window.myElecChartInstance) window.myElecChartInstance.destroy();
-          window.myElecChartInstance = new Chart(ctx, { type: 'pie', data: { labels: ['Voted', 'Not Yet'], datasets: [{ data: [stats.voted, Math.max(0, allowed - stats.voted)], backgroundColor: ['rgba(255,42,77,0.8)', 'rgba(255,255,255,0.08)'], borderColor: ['#ff2a4d', '#333'], borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-        }
-        setHTML('my-vote-legend', `<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0, allowed - stats.voted)}</span>`);
 
         // Fetch and Render Results
         const results = await apiFetch(`/elections/${myElection.id}/results`);
@@ -2098,12 +1810,7 @@
         }
 
         const acceptedStudents = classStudents.filter(s => s.status === 'active');
-        renderBranchStudents(acceptedStudents);
-        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
-        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
-        setText('br-total', acceptedStudents.length);
-        setText('br-allowed', allowed);
-        setText('br-voted', voted);
+
       } catch (e) { toast(e.message, false); }
     }
 
@@ -2147,12 +1854,7 @@
         }
 
         const acceptedStudents = classStudents.filter(s => s.status === 'active');
-        renderCollegeStudents(acceptedStudents);
-        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
-        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
-        setText('col-total', acceptedStudents.length);
-        setText('col-allowed', allowed);
-        setText('col-voted', voted);
+
       } catch (e) { toast(e.message, false); }
     }
 

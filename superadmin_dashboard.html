@@ -1105,29 +1105,7 @@
             </div>
           </div>
 
-          <!-- Live Participation Analytics -->
-          <div class="card" id="election-live-stats" style="display:none; background: linear-gradient(135deg, rgba(34,197,94,0.05), transparent); border-color: rgba(34,197,94,0.2);">
-            <h3>📊 Live Participation Analytics</h3>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem;">Real-time participation data for your active election.</p>
-            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:1rem;">
-              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Total Voters</div>
-                <div id="v-total" style="font-size:1.5rem; font-weight:900; color:white;">0</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Can Vote</div>
-                <div id="v-canvote" style="font-size:1.5rem; font-weight:900; color:var(--green);">0</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Votes Cast</div>
-                <div id="v-voted" style="font-size:1.5rem; font-weight:900; color:var(--gold);">0</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.4rem;">Turnout %</div>
-                <div id="v-pct" style="font-size:1.5rem; font-weight:900; color:var(--cyan);">0%</div>
-              </div>
-            </div>
-          </div>
+
 
           <!-- Election Structure -->
           <div class="card" id="integrated-structure-card" style="display:none; border-color: rgba(168,85,247,0.2);">
@@ -1230,6 +1208,7 @@
             </tr>
           </tbody>
         </table>
+      </div> <!-- End Card -->
     </div> <!-- End Audit Page -->
 
   </div> <!-- End Main Content -->
@@ -1294,6 +1273,8 @@
 
       <button class="btn btn-gold" style="width:100%" onclick="saveEdit()">Save Changes</button>
     </div>
+  </div>
+
 
     <script>
       const API = (location.hostname === 'localhost' ? 'http://localhost:3001' : '') + '/api';
@@ -2423,12 +2404,7 @@
             try { cats = typeof scope === 'string' ? JSON.parse(scope).categories || [] : scope.categories || []; } catch(e) {}
             if (structList) structList.innerHTML = cats.map(c => `<div style="padding:0.5rem; background:rgba(255,255,255,0.05); border-radius:8px;"><strong>${c}</strong></div>`).join('');
 
-            // Live analytics
-            const stats = await apiFetch(`/elections/${activeElection.id}/analytics`);
-            setText('v-total',   stats.total);
-            setText('v-canvote', stats.allowed);
-            setText('v-voted',   stats.voted);
-            setText('v-pct',     stats.turnoutPct + '%');
+            // analytics removed as redundant
 
             // Results chart
             const results    = await apiFetch(`/elections/${activeElection.id}/results`);
@@ -2828,7 +2804,7 @@
               footer.style.justifyContent = 'space-between';
               footer.style.alignItems = 'center';
               footer.innerHTML = `
-                    <div style="font-size:0.75rem; color:var(--muted);">Turnout: <strong style="color:white;">${stats.voted}/${stats.allowed}</strong></div>
+
                     <button class="btn-sm btn-e" style="font-size:0.65rem;" onclick="viewFullResults('${elec.id}')">Full Report 📊</button>
                 `;
               card.appendChild(footer);
