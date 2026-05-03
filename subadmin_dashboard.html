@@ -835,7 +835,8 @@
             <table>
               <thead>
                 <tr>
-                  
+                  <th style="width:50px;">ID</th>
+                  <th style="width:50px;">Face</th>
                   <th style="width:20%;">Reg No</th>
                   <th>Name</th>
                   <th>Class</th>
@@ -856,7 +857,8 @@
             <table>
               <thead>
                 <tr>
-                  
+                  <th style="width:50px;">ID</th>
+                  <th style="width:50px;">Face</th>
                   <th style="width:20%;">Reg No</th>
                   <th>Name</th>
                   <th>Class</th>
@@ -972,7 +974,9 @@
               <label>Result Visibility</label>
               <select id="my-elec-visibility">
                 <option value="all">Entire College</option>
+                <option value="branch">Branch Only</option>
                 <option value="class">Class Only</option>
+                <option value="voters_only">Only Eligible Voters</option>
               </select>
             </div>
           </div>
@@ -1117,7 +1121,7 @@
       <!-- BRANCH HEAD ELECTION -->
       <div class="page" id="page-voting-branch">
         <div class="page-title">🏢 Branch Head Election</div>
-        <div class="page-sub">Grant or revoke voting access for your class students in the branch election</div>
+        <div class="page-sub">Monitor the branch-wide election and see results</div>
         <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
           <!-- Election Info -->
@@ -1129,10 +1133,10 @@
             <div style="font-size:2rem; margin-bottom:0.5rem;">🚫</div>
             <h3 style="color:#f59e0b; margin-bottom:0.5rem;">Your class is not included in this election</h3>
             <p style="color:var(--muted); font-size:0.85rem;">The Branch Admin has not included your class in this
-              election's scope. Your students are not eligible to vote.</p>
+              election's scope.</p>
           </div>
 
-          <!-- Live Countdown Timer (shown when election active + in scope) -->
+          <!-- Live Countdown Timer -->
           <div id="branch-countdown-card" class="card"
             style="display:none; background:linear-gradient(135deg,rgba(34,197,94,0.08),transparent); border:1px solid rgba(34,197,94,0.2);">
             <div
@@ -1140,29 +1144,33 @@
               ⏱️ Branch Election Running — Ends In</div>
             <div id="branch-cd-display"
               style="font-size:2.2rem; font-weight:900; color:#22c55e; font-family:monospace;">--:--:--</div>
-            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Branch Admin. You can only
-              grant or revoke vote access for your class students below.</p>
+            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Branch Admin.</p>
           </div>
 
-          <!-- Student Access Table (accepted only) -->
+          <!-- Student List -->
           <div id="branch-students-card" class="card" style="padding:0; overflow:hidden;">
             <div
               style="padding:1rem 1.5rem; background:rgba(34,197,94,0.05); border-bottom:1px solid rgba(34,197,94,0.1); display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">🎓 Class Students — Branch Election Access</h3>
-              <button class="btn-sm btn-g" onclick="grantAllBranch()">✅ Grant All</button>
+              <h3 style="margin:0;">🎓 Class Students in Branch Election</h3>
             </div>
             <div style="overflow-x:auto;">
               <table>
                 <thead>
                   <tr>
-                    <th style="width:22%;">Reg No</th>
+                    <th style="width:30%;">Reg No</th>
                     <th>Name</th>
-                    <th style="width:20%;">Vote Status</th>
-                    <th style="width:17%;">Action</th>
                   </tr>
                 </thead>
                 <tbody id="branch-student-table"></tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- 🏆 Branch Results Overview -->
+          <div class="card" id="branch-elec-results-card" style="display:none;">
+            <h3>🏆 Live Branch-wide Results</h3>
+            <div id="branch-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
+              <p class="text-muted">Loading branch results...</p>
             </div>
           </div>
 
@@ -1190,7 +1198,7 @@
       <!-- COLLEGE HEAD ELECTION -->
       <div class="page" id="page-voting-college">
         <div class="page-title">🎓 College Head Election</div>
-        <div class="page-sub">Grant or revoke voting access for your class students in the college election</div>
+        <div class="page-sub">Monitor the institutional election and see results</div>
         <div style="display:flex; flex-direction:column; gap:1.5rem;">
 
           <!-- Election Info -->
@@ -1213,29 +1221,33 @@
               ⏱️ College Election Running — Ends In</div>
             <div id="college-cd-display"
               style="font-size:2.2rem; font-weight:900; color:var(--cyan); font-family:monospace;">--:--:--</div>
-            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Super Admin. You can only
-              grant or revoke vote access for your class students below.</p>
+            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.5rem;">Managed by Super Admin.</p>
           </div>
 
-          <!-- Student Access Table (accepted only) -->
+          <!-- Student List -->
           <div id="college-students-card" class="card" style="padding:0; overflow:hidden;">
             <div
               style="padding:1rem 1.5rem; background:rgba(6,182,212,0.05); border-bottom:1px solid rgba(6,182,212,0.1); display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">🎓 Class Students — College Election Access</h3>
-              <button class="btn-sm btn-g" onclick="grantAllCollege()">✅ Grant All</button>
+              <h3 style="margin:0;">🎓 Class Students in College Election</h3>
             </div>
             <div style="overflow-x:auto;">
               <table>
                 <thead>
                   <tr>
-                    <th style="width:22%;">Reg No</th>
+                    <th style="width:30%;">Reg No</th>
                     <th>Name</th>
-                    <th style="width:20%;">Vote Status</th>
-                    <th style="width:17%;">Action</th>
                   </tr>
                 </thead>
                 <tbody id="college-student-table"></tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- 🏆 College Results Overview -->
+          <div class="card" id="college-elec-results-card" style="display:none;">
+            <h3>🏆 Live Institution-wide Results</h3>
+            <div id="college-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
+              <p class="text-muted">Loading institution results...</p>
             </div>
           </div>
 
@@ -1591,6 +1603,7 @@
         const { portraitHtml, faceHtml } = _makeImgCells(s);
         const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
         return `<tr>
+      <td>${portraitHtml}</td><td>${faceHtml}</td>
       <td><strong>${s.regNum}</strong></td>
       <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td><span style="color:var(--purple); font-weight:700;">${s.class || 'N/A'}</span></td>
@@ -1608,7 +1621,7 @@
       const approved = list.filter(s => s.status === 'active');
       setText('approved-count', classStudents.filter(s => s.status === 'active').length);
       if (!approved.length) {
-        const empty = '<tr><td colspan="4" class="empty">No approved students yet</td></tr>';
+        const empty = '<tr><td colspan="6" class="empty">No approved students yet</td></tr>';
         setHTML('approved-student-table', empty);
         setHTML('reg-approved-student-table', empty);
         return;
@@ -1617,6 +1630,7 @@
         const { portraitHtml, faceHtml } = _makeImgCells(s);
         const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
         return `<tr>
+      <td>${portraitHtml}</td><td>${faceHtml}</td>
       <td><strong>${s.regNum}</strong></td>
       <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td><span style="color:var(--purple); font-weight:700;">${s.class || 'N/A'}</span></td>
@@ -1996,7 +2010,7 @@
         const stats = await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/analytics`);
 
         const acceptedStudents = classStudents.filter(s => s.status === 'active');
-        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
+        const allowed = acceptedStudents.length;
         const totalEligible = acceptedStudents.length;
 
         setText('my-v-total', totalEligible);
@@ -2015,37 +2029,17 @@
         setHTML('my-vote-legend', `<span style="color:#ff2a4d">● Voted: ${stats.voted}</span> <span style="color:#cbd5e1">● Remaining: ${Math.max(0, allowed - stats.voted)}</span>`);
 
         // Fetch and Render Results
-        const res = await StorageManager.fetchElectionResults(myElection.id);
-        const resultsList = document.getElementById('my-elec-results-list');
-        const resultsCard = document.getElementById('my-elec-results-card');
+        const results = await apiFetch(`/elections/${myElection.id}/results`);
+        const resCard = document.getElementById('my-elec-results-card');
 
-        if (res.success && res.results.length > 0) {
-          if (resultsCard) resultsCard.style.display = 'block';
-          const totalVotes = res.results.reduce((sum, r) => sum + r.votes, 0);
-          setHTML('my-elec-results-list', res.results.map((r, idx) => {
-            const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
-            const isWinner = idx === 0 && r.votes > 0;
-            return `
-                <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid ${isWinner ? 'var(--gold)' : 'var(--border)'}; position:relative; overflow:hidden;">
-                    ${isWinner ? '<div style="position:absolute; top:0; right:0; background:var(--gold); color:black; font-size:0.6rem; font-weight:bold; padding:2px 8px; border-bottom-left-radius:8px;">LEADING</div>' : ''}
-                    <div style="display:flex; align-items:center; gap:1rem;">
-                        <img src="${r.portrait || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--border);">
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-                                <span style="font-weight:700; font-size:0.9rem;">${r.name} <span style="font-size:1.2rem; margin-left:0.5rem;">${r.symbol}</span></span>
-                                <span style="color:var(--gold); font-weight:700;">${r.votes} Votes</span>
-                            </div>
-                            <div style="width:100%; background:rgba(255,255,255,0.05); height:8px; border-radius:4px; overflow:hidden;">
-                                <div style="width:${pct}%; background:${isWinner ? 'var(--gold)' : 'var(--purple)'}; height:100%; transition:width 0.5s ease;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-          }).join(''));
+        if (results.length > 0) {
+          if (resCard) resCard.style.display = 'block';
+          renderResultsList(results, 'my-elec-results-list');
         } else {
-          if (resultsCard) resultsCard.style.display = 'none';
+          if (resCard) resCard.style.display = 'none';
         }
+      } catch (e) { console.error(e); }
+    }
       } catch (e) { console.error(e); }
     }
 
@@ -2167,66 +2161,45 @@
     async function promptModifySchedule() {
       if (!myElection) return;
       const currentEnd = myElection.endTime ? myElection.endTime.slice(0, 16) : '';
-      const newEnd = prompt('Enter new Election End Date & Time (YYYY-MM-DDTHH:MM):', currentEnd);
-      if (!newEnd) return;
-      const d = new Date(newEnd);
-      if (isNaN(d.getTime())) return toast('Invalid date format', false);
-      try {
-        await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ endTime: d.toISOString() }) });
-        toast('Schedule modified successfully!');
-        await loadMyElection(); // await so countdown restarts with the new endTime
-      } catch (e) {
-        toast(e.message, false);
-      }
-    }
-
-    // ─── BRANCH HEAD ELECTION PAGE ────────────────────────────────
-    let branchCountdownInterval = null;
-
-    async function loadBranchElectionPage() {
+     async function loadBranchElectionPage() {
       try {
         const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=branch`);
         const branchElec = elections.find(e => e.scope && e.scope.branch === session.branch) || elections[0] || null;
-        const infoDiv = document.getElementById('branch-elec-info');
-        const notInScope = document.getElementById('branch-not-in-scope');
-        const cdCard = document.getElementById('branch-countdown-card');
-        const studentsCard = document.getElementById('branch-students-card');
-
-        // Hide all conditional cards first
-        if (notInScope) notInScope.style.display = 'none';
-        if (cdCard) cdCard.style.display = 'none';
-        if (studentsCard) studentsCard.style.display = 'block';
+        const resCard = document.getElementById('branch-elec-results-card');
+        
         if (branchCountdownInterval) clearInterval(branchCountdownInterval);
 
         if (branchElec) {
-          // Check if this class is in scope
           const scopeClasses = branchElec.scope && branchElec.scope.classes;
           const inScope = !scopeClasses || scopeClasses.includes(session.class);
 
           setHTML('branch-elec-info', `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-        <div><h3 style="margin:0;">🏢 ${branchElec.name}</h3>
-        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive ? '<span class="pill-active">🟢 Running</span>' : branchElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
-      </div>`);
+            <div><h3 style="margin:0;">🏢 ${branchElec.name}</h3>
+            <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${branchElec.isActive ? '<span class="pill-active">🟢 Running</span>' : branchElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${branchElec.electionCode}</strong></p></div>
+          </div>`);
 
-          if (!inScope) {
-            if (notInScope) notInScope.style.display = 'block';
-            if (studentsCard) studentsCard.style.display = 'none';
-            setText('br-total', '–');
-            setText('br-allowed', '–');
-            setText('br-voted', '–');
-            return;
-          }
+          const notInScope = document.getElementById('branch-not-in-scope');
+          const studentsCard = document.getElementById('branch-students-card');
+          if (notInScope) notInScope.style.display = inScope ? 'none' : 'block';
+          if (studentsCard) studentsCard.style.display = inScope ? 'block' : 'none';
 
-          // Show countdown if active
-          if (branchElec.isActive && branchElec.endTime && cdCard) {
-            cdCard.style.display = 'block';
+          if (branchElec.isActive && branchElec.endTime) {
+            const cdCard = document.getElementById('branch-countdown-card');
+            if (cdCard) cdCard.style.display = 'block';
             startBranchCountdown(branchElec.endTime);
           }
+          
+          // Fetch and Render Results
+          if (resCard) {
+            resCard.style.display = 'block';
+            const results = await apiFetch(`/elections/${branchElec.id}/results`);
+            renderResultsList(results, 'branch-elec-results-list');
+          }
         } else {
-          setHTML('branch-elec-info', '<p style="color:var(--muted);">No branch-level election created yet. Branch Admin has not created one.</p>');
+          setHTML('branch-elec-info', '<p style="color:var(--muted);">No branch-level election created yet.</p>');
+          if (resCard) resCard.style.display = 'none';
         }
 
-        // Only accepted students in the vote access table
         const acceptedStudents = classStudents.filter(s => s.status === 'active');
         renderBranchStudents(acceptedStudents);
         const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
@@ -2235,6 +2208,89 @@
         setText('br-allowed', allowed);
         setText('br-voted', voted);
       } catch (e) { toast(e.message, false); }
+    }
+
+    async function loadCollegeElectionPage() {
+      try {
+        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
+        const collegeElec = elections[0] || null;
+        const resCard = document.getElementById('college-elec-results-card');
+
+        if (collegeCountdownInterval) clearInterval(collegeCountdownInterval);
+
+        if (collegeElec) {
+          const scopeClasses = collegeElec.scope && collegeElec.scope.classes;
+          const inScope = !scopeClasses || scopeClasses.includes(session.class);
+
+          setHTML('college-elec-info', `<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+            <div><h3 style="margin:0;">🎓 ${collegeElec.name}</h3>
+            <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${collegeElec.isActive ? '<span class="pill-active">🟢 Running</span>' : collegeElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${collegeElec.electionCode}</strong></p></div>
+          </div>`);
+
+          const notInScope = document.getElementById('college-not-in-scope');
+          const studentsCard = document.getElementById('college-students-card');
+          if (notInScope) notInScope.style.display = inScope ? 'none' : 'block';
+          if (studentsCard) studentsCard.style.display = inScope ? 'block' : 'none';
+
+          if (collegeElec.isActive && collegeElec.endTime) {
+            const cdCard = document.getElementById('college-countdown-card');
+            if (cdCard) cdCard.style.display = 'block';
+            startCollegeCountdown(collegeElec.endTime);
+          }
+
+          // Fetch and Render Results
+          if (resCard) {
+            resCard.style.display = 'block';
+            const results = await apiFetch(`/elections/${collegeElec.id}/results`);
+            renderResultsList(results, 'college-elec-results-list');
+          }
+        } else {
+          setHTML('college-elec-info', '<p style="color:var(--muted);">No college-level election created yet.</p>');
+          if (resCard) resCard.style.display = 'none';
+        }
+
+        const acceptedStudents = classStudents.filter(s => s.status === 'active');
+        renderCollegeStudents(acceptedStudents);
+        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
+        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
+        setText('col-total', acceptedStudents.length);
+        setText('col-allowed', allowed);
+        setText('col-voted', voted);
+      } catch (e) { toast(e.message, false); }
+    }
+
+    function renderResultsList(results, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!results.length) {
+        container.innerHTML = '<p class="text-muted">No candidates registered for this election.</p>';
+        return;
+      }
+
+      // Group by category if available, else show list
+      const totalVotes = results.reduce((sum, r) => sum + (r.votes || 0), 0);
+      
+      container.innerHTML = results.map(r => {
+        const pct = totalVotes > 0 ? Math.round((r.votes / totalVotes) * 100) : 0;
+        return `
+          <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.6rem; align-items:center;">
+              <div>
+                <span style="font-weight:700; color:var(--text);">${r.name}</span>
+                <span style="font-size:0.75rem; color:var(--muted); margin-left:0.5rem;">(${r.regNum})</span>
+              </div>
+              <div style="font-weight:900; color:var(--gold);">${r.votes} <small style="font-weight:400; color:var(--muted);">votes</small></div>
+            </div>
+            <div style="height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+              <div style="height:100%; width:${pct}%; background:linear-gradient(90deg, var(--purple), var(--cyan)); box-shadow:0 0 10px var(--cyan); transition:width 1s ease-out;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:0.4rem; font-size:0.7rem; color:var(--muted);">
+              <span>${r.category || 'Candidate'}</span>
+              <span>${pct}% of total</span>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function startBranchCountdown(endTime) {
@@ -2253,88 +2309,6 @@
       branchCountdownInterval = setInterval(tick, 1000);
     }
 
-    function renderBranchStudents(list) {
-      if (!list.length) {
-        setHTML('branch-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
-        return;
-      }
-      setHTML('branch-student-table', list.map(s => `<tr>
-    <td><strong>${s.regNum}</strong></td>
-    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
-    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
-    <td>
-      ${s.canVote == 0 ?
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'branch')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
-    </td>
-  </tr>`).join(''));
-    }
-
-
-
-
-    function renderMyElecStudents(list) {
-      if (!list.length) {
-        setHTML('my-elec-student-table', '<tr><td colspan="2" class="empty">No accepted students in class</td></tr>');
-        return;
-      }
-      setHTML('my-elec-student-table', list.map(s => `<tr>
-    <td><strong>${s.regNum}</strong></td>
-    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
-  </tr>`).join(''));
-    }
-
-
-    async function loadCollegeElectionPage() {
-      try {
-        const elections = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
-        const collegeElec = elections[0] || null;
-        const infoDiv = document.getElementById('college-elec-info');
-        const notInScope = document.getElementById('college-not-in-scope');
-        const cdCard = document.getElementById('college-countdown-card');
-        const studentsCard = document.getElementById('college-students-card');
-
-        if (notInScope) notInScope.style.display = 'none';
-        if (cdCard) cdCard.style.display = 'none';
-        if (studentsCard) studentsCard.style.display = 'block';
-        if (collegeCountdownInterval) clearInterval(collegeCountdownInterval);
-
-        if (collegeElec) {
-          const scopeClasses = collegeElec.scope && collegeElec.scope.classes;
-          const inScope = !scopeClasses || scopeClasses.includes(session.class);
-
-          setHTML('college-elec-info', `<div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
-        <div><h3 style="margin:0;">🎓 ${collegeElec.name}</h3>
-        <p style="color:var(--muted);margin-top:0.4rem;font-size:0.9rem;">Status: ${collegeElec.isActive ? '<span class="pill-active">🟢 Running</span>' : collegeElec.isCompleted ? '<span class="pill-completed">✅ Completed</span>' : '<span class="pill-pending">⏳ Pending</span>'} &nbsp;|&nbsp; Code: <strong>${collegeElec.electionCode}</strong></p></div>
-      </div>`);
-
-          if (!inScope) {
-            if (notInScope) notInScope.style.display = 'block';
-            if (studentsCard) studentsCard.style.display = 'none';
-            setText('col-total', '–');
-            setText('col-allowed', '–');
-            setText('col-voted', '–');
-            return;
-          }
-
-          if (collegeElec.isActive && collegeElec.endTime && cdCard) {
-            cdCard.style.display = 'block';
-            startCollegeCountdown(collegeElec.endTime);
-          }
-        } else {
-          setHTML('college-elec-info', '<p style="color:var(--muted);">No college-level election created yet.</p>');
-        }
-
-        const acceptedStudents = classStudents.filter(s => s.status === 'active');
-        renderCollegeStudents(acceptedStudents);
-        const allowed = acceptedStudents.filter(s => s.canVote == 1).length;
-        const voted = acceptedStudents.filter(s => s.hasVoted == 1).length;
-        setText('col-total', acceptedStudents.length);
-        setText('col-allowed', allowed);
-        setText('col-voted', voted);
-      } catch (e) { toast(e.message, false); }
-    }
-
     function startCollegeCountdown(endTime) {
       if (collegeCountdownInterval) clearInterval(collegeCountdownInterval);
       const disp = document.getElementById('college-cd-display');
@@ -2351,28 +2325,26 @@
       collegeCountdownInterval = setInterval(tick, 1000);
     }
 
+    function renderBranchStudents(list) {
+      if (!list.length) {
+        setHTML('branch-student-table', '<tr><td colspan="2" class="empty">No accepted students in class</td></tr>');
+        return;
+      }
+      setHTML('branch-student-table', list.map(s => `<tr>
+    <td><strong>${s.regNum}</strong></td>
+    <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
+  </tr>`).join(''));
+    }
+
     function renderCollegeStudents(list) {
       if (!list.length) {
-        setHTML('college-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+        setHTML('college-student-table', '<tr><td colspan="2" class="empty">No accepted students in class</td></tr>');
         return;
       }
       setHTML('college-student-table', list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td>
     <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
-    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
-    <td>
-      ${s.canVote == 0 ?
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'college')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
-    </td>
   </tr>`).join(''));
-    }
-
-    async function grantAllCollege() {
-      if (!confirm('Grant college election voting access to all accepted class students?')) return;
-      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
-      if (!eligible.length) return toast('All accepted students already have access.', false);
-      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length}!`); loadAll(); loadCollegeElectionPage(); } catch (e) { toast(e.message, false); }
     }
 
     document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none') saLogin(); });

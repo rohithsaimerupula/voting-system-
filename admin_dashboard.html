@@ -313,7 +313,7 @@
         </select>
       </div>
       <div class="card" style="padding:0.5rem;overflow-x:auto;">
-        <table><thead><tr><th>Reg No</th><th>Name</th><th>Yr</th><th>Cls</th></tr></thead>
+        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Yr</th><th>Cls</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -417,6 +417,13 @@
         </div>
       </div>
       
+      <div class="card" id="col-elec-results-card" style="margin-top:1.5rem; display:none;">
+          <h3>🏆 Live Institution-wide Results</h3>
+          <div id="col-elec-results-list" style="display:flex; flex-direction:column; gap:1rem;">
+              <p class="text-muted">Loading results...</p>
+          </div>
+      </div>
+
       <div class="card" id="col-stats-card">
         <h3>📊 Branch Participation in College Election</h3>
         <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1.5rem;">
@@ -426,7 +433,7 @@
           </div>
           <div class="stat" style="border-top:3px solid var(--green);">
             <div class="num" id="col-br-allowed" style="color:var(--green)">-</div>
-            <div class="lbl">Eligibility Granted</div>
+            <div class="lbl">Eligibility</div>
           </div>
           <div class="stat" style="border-top:3px solid var(--gold);">
             <div class="num" id="col-br-voted" style="color:var(--gold)">-</div>
@@ -670,7 +677,7 @@ function filterStudents(){
         let w='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">N/A</div>';
         if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;
         return `<tr>
-         <td><strong>${s.regNum}</strong></td>
+         <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
          <td>${s.name}</td>
          <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
         </tr>`;
@@ -878,6 +885,8 @@ async function loadCollegeElection(){
         const elecs = await apiFetch(`/elections?institution=${encodeURIComponent(session.institution)}&type=college`);
         const ce = elecs[0]||null;
         const i = document.getElementById('col-elec-info');
+        const resCard = document.getElementById('col-elec-results-card');
+
         if(ce){
             setHTML('col-elec-info', `
               <div style="display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;">
@@ -900,6 +909,35 @@ async function loadCollegeElection(){
                 iCard.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.08), transparent)';
                 iCard.style.borderColor = 'rgba(6,182,212,0.3)';
             }
+
+            // Fetch Results
+            if(resCard) {
+                resCard.style.display = 'block';
+                const res = await apiFetch(`/elections/${ce.id}/results`);
+                const totalV = res.reduce((s, r) => s + r.votes, 0);
+                setHTML('col-elec-results-list', res.map((r, idx) => {
+                    const pct = totalV > 0 ? Math.round((r.votes / totalV) * 100) : 0;
+                    return `
+                        <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <div style="flex:1;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                                        <span style="font-weight:700; font-size:0.9rem;">${r.name}</span>
+                                        <span style="color:var(--gold); font-weight:700;">${r.votes} Votes</span>
+                                    </div>
+                                    <div style="width:100%; background:rgba(255,255,255,0.05); height:8px; border-radius:4px; overflow:hidden;">
+                                        <div style="width:${pct}%; background:linear-gradient(90deg, var(--cyan), var(--blue)); height:100%; transition:width 0.5s ease;"></div>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; margin-top:0.4rem; font-size:0.7rem; color:var(--muted);">
+                                        <span>${r.category || 'Candidate'}</span>
+                                        <span>${pct}% of total</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join(''));
+            }
         } else {
             setHTML('col-elec-info', `
               <div style="padding:1rem;">
@@ -913,6 +951,7 @@ async function loadCollegeElection(){
                 iCard.style.background = 'rgba(255,255,255,0.02)';
                 iCard.style.borderColor = 'rgba(255,255,255,0.1)';
             }
+            if(resCard) resCard.style.display = 'none';
         }
         
         const total = branchStudents.length;
