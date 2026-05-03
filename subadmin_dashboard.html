@@ -2253,12 +2253,7 @@
   </tr>`).join(''));
     }
 
-    async function toggleVoteThenRefresh(regNum, val, page) {
-      await toggleVote(regNum, val);
-      await loadAll();
-      if (page === 'branch') loadBranchElectionPage();
-      else loadCollegeElectionPage();
-    }
+
 
     async function grantAllBranch() {
       if (!confirm('Grant branch election voting access to all accepted class students?')) return;

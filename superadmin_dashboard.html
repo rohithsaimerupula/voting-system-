@@ -2895,36 +2895,7 @@
         toast("Opening detailed audit report for " + elecId);
       }
 
-      async function createAdvancedElection() {
-        const nm = document.getElementById('v-name').value.trim();
-        const start = document.getElementById('v-start').value;
-        const end = document.getElementById('v-end').value;
-        const resultVisibility = document.getElementById('v-result-visibility') ? document.getElementById('v-result-visibility').value : 'all';
-        if (!nm) return toast('Election Name Required', false);
 
-        const isAll = document.getElementById('sa-scope-all').checked;
-        const payload = {
-          institution: saSession.institution,
-          name: nm,
-          type: isAll ? 'college' : 'college',
-          scope: isAll ? { college: true } : getSaScopeData(),
-          startTime: start || null,
-          endTime: end || null,
-          createdBy: saSession.regNum,
-          createdByRole: 'superadmin'
-        };
-
-        try {
-          const res = await apiFetch('/elections', { method: 'POST', body: JSON.stringify(payload) });
-          toast(`Advanced Election created! Code: ${res.electionCode}`);
-
-          await apiFetch(`/config/election_${saSession.institution}`, {
-            method: 'POST',
-            body: JSON.stringify({ isActive: true, isCompleted: false, name: nm, startTime: payload.startTime, endTime: payload.endTime })
-          });
-          loadAll();
-        } catch (e) { toast(e.message, false); }
-      };
 
       window.loadSystemHealth = async function() {
         const table = document.getElementById('health-alerts-table');

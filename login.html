@@ -1304,35 +1304,7 @@
             if (e.key === 'Enter') { e.preventDefault(); saModalLogin(); }
         });
 
-        // Add back button in buildUI voter section
-        // Assuming 'back-button' is an element that should be shown/hidden based on isVoter
-        // and its click event should toggle isVoter to false (staff mode)
-        const backButton = document.getElementById('back-button');
-        if (backButton) {
-            backButton.addEventListener('click', () => {
-                // This logic assumes a global 'isVoter' variable and a 'buildUI' function
-                // that re-renders the login form based on 'isVoter'.
-                // If 'buildUI' is not defined elsewhere, this will need to be adapted.
-                isVoter = false;
-                // Assuming buildUI() exists and re-renders the form based on isVoter
-                if (typeof buildUI === 'function') {
-                    buildUI();
-                } else {
-                    // Fallback or more specific UI update if buildUI is not a global function
-                    console.warn("buildUI() function not found. Cannot re-render UI after back button click.");
-                    // Example: Manually update elements if buildUI is not available
-                    document.getElementById('login-title').innerText = "Staff Login";
-                    document.getElementById('reg-label').innerText = "Admin/Sub-Admin ID";
-                    document.getElementById('password-label').innerText = "Password";
-                    const fp = document.getElementById('forgot-password-link'); if(fp) fp.style.display = 'none';
-                    document.getElementById('register-link').classList.remove('hidden'); // Show register for staff
-                    document.getElementById('back-button').classList.add('hidden'); // Hide back button
-                    // Update input placeholders and types if necessary
-                    document.getElementById('regNum').placeholder = "Enter ID";
-                    document.getElementById('password').placeholder = "Enter Password";
-                }
-            });
-        }
+
 
 
         document.getElementById('regNum').addEventListener('keydown', function(e) {
