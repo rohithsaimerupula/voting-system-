@@ -1127,28 +1127,7 @@ app.get('/api/staff/branch/:branch', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Grant or revoke canVote for a single student
-app.post('/api/voters/can-vote', async (req, res) => {
-    try {
-        const { regNum, canVote, institution } = req.body;
-        await db.execute({ sql: 'UPDATE users SET canVote = ? WHERE regNum = ? AND institution = ?', args: [boolInt(canVote), regNum, institution] });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Bulk grant canVote for multiple students
-app.post('/api/voters/can-vote-bulk', async (req, res) => {
-    try {
-        const { regNums, canVote, institution } = req.body;
-        if (!Array.isArray(regNums) || !regNums.length) return res.json({ success: true, updated: 0 });
-        const placeholders = regNums.map(() => '?').join(',');
-        const result = await db.execute({
-            sql: `UPDATE users SET canVote = ? WHERE institution = ? AND regNum IN (${placeholders})`,
-            args: [boolInt(canVote), institution, ...regNums]
-        });
-        res.json({ success: true, updated: result.rowsAffected });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+// Endpoints removed - Voting is now tied exclusively to 'Accepted' status.
 
 app.get('/api/candidates', async (req, res) => {
     try {

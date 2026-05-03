@@ -840,7 +840,6 @@
                   <th style="width:20%;">Reg No</th>
                   <th>Name</th>
                   <th>Class</th>
-                  <th style="width:15%;">Role</th>
                   <th style="width:22%;">Actions</th>
                 </tr>
               </thead>
@@ -863,7 +862,6 @@
                   <th style="width:20%;">Reg No</th>
                   <th>Name</th>
                   <th>Class</th>
-                  <th style="width:15%;">Role</th>
                   <th style="width:22%;">Actions</th>
                 </tr>
               </thead>
@@ -918,7 +916,7 @@
                     <th style="width:20%;">Reg No</th>
                     <th>Name</th>
                     <th>Class</th>
-                    <th style="width:15%;">Role</th>
+                    
                     <th style="width:22%;">Actions</th>
                   </tr>
                 </thead>
@@ -945,7 +943,7 @@
                     <th style="width:20%;">Reg No</th>
                     <th>Name</th>
                     <th>Class</th>
-                    <th style="width:15%;">Role</th>
+                    
                     <th style="width:22%;">Actions</th>
                   </tr>
                 </thead>
@@ -1601,7 +1599,6 @@
       <td><strong>${s.regNum}</strong></td>
       <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td><span style="color:var(--purple); font-weight:700;">${s.class || 'N/A'}</span></td>
-      <td>${roleBadge}</td>
       <td style="display:flex;gap:0.4rem;padding:0.6rem;">
         <button onclick="acceptStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;font-weight:700;">✔ Accept</button>
         <button onclick="rejectStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">✕ Reject</button>
@@ -1616,7 +1613,7 @@
       const approved = list.filter(s => s.status === 'active');
       setText('approved-count', classStudents.filter(s => s.status === 'active').length);
       if (!approved.length) {
-        const empty = '<tr><td colspan="7" class="empty">No approved students yet</td></tr>';
+        const empty = '<tr><td colspan="6" class="empty">No approved students yet</td></tr>';
         setHTML('approved-student-table', empty);
         setHTML('reg-approved-student-table', empty);
         return;
@@ -1629,7 +1626,6 @@
       <td><strong>${s.regNum}</strong></td>
       <td><div style="font-weight:500;">${s.name}</div><div style="font-size:0.8rem;color:var(--muted);">${s.email || ''}</div></td>
       <td><span style="color:var(--purple); font-weight:700;">${s.class || 'N/A'}</span></td>
-      <td>${roleBadge}</td>
       <td style="display:flex;gap:0.4rem;padding:0.6rem;">
         <button onclick="removeStudent('${s.regNum}')" style="padding:0.35rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;font-weight:700;">🗑️ Remove</button>
       </td>
@@ -1647,7 +1643,6 @@
 
     async function acceptStudent(id) { try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) }); toast(`✅ Accepted ${id}`); loadAll(); } catch (e) { toast(e.message, false); } }
     async function rejectStudent(id) { if (!confirm(`⚠️ Permanently delete registration for ${id}? This cannot be undone.`)) return; try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'DELETE' }); toast(`🗑️ ${id} rejected & deleted`); loadAll(); } catch (e) { toast(e.message, false); } }
-    async function toggleVote(regNum, val) { try { await apiFetch('/voters/can-vote', { method: 'POST', body: JSON.stringify({ regNum, canVote: val, institution: session.institution }) }); toast(val ? 'Vote access granted!' : 'Vote access revoked'); loadAll(); } catch (e) { toast(e.message, false); } }
     async function removeStudent(id) { if (!confirm(`Remove ${id}?`)) return; try { await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`, { method: 'DELETE' }); toast(`${id} removed`); loadAll(); } catch (e) { toast(e.message, false); } }
 
     function filterStudents(q) { renderStudents(classStudents.filter(s => [s.regNum, s.name].join(' ').toLowerCase().includes(q.toLowerCase()))); }
@@ -2283,47 +2278,18 @@
 
 
 
-    async function grantAllBranch() {
-      if (!confirm('Grant branch election voting access to all accepted class students?')) return;
-      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
-      if (!eligible.length) return toast('All accepted students already have access.', false);
-      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length} students!`); loadAll(); loadBranchElectionPage(); } catch (e) { toast(e.message, false); }
-    }
-
-    // ─── COLLEGE HEAD ELECTION PAGE ───────────────────────────────
-    let collegeCountdownInterval = null;
-
-    async function toggleVoteThenRefresh(regNum, val, page) {
-      await toggleVote(regNum, val);
-      await loadAll();
-      if (page === 'branch') loadBranchElectionPage();
-      else if (page === 'college') loadCollegeElectionPage();
-      else if (page === 'class') loadMyElection();
-    }
 
     function renderMyElecStudents(list) {
       if (!list.length) {
-        setHTML('my-elec-student-table', '<tr><td colspan="4" class="empty">No accepted students in class</td></tr>');
+        setHTML('my-elec-student-table', '<tr><td colspan="2" class="empty">No accepted students in class</td></tr>');
         return;
       }
       setHTML('my-elec-student-table', list.map(s => `<tr>
     <td><strong>${s.regNum}</strong></td>
     <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
-    <td>${s.canVote == 1 ? '<span class="pill-active">✅ Allowed</span>' : '<span class="pill-pending">⏳ Not Allowed</span>'}</td>
-    <td>
-      ${s.canVote == 0 ?
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',1,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:#22c55e;cursor:pointer;font-size:0.8rem;">✅ Allow</button>` :
-          `<button onclick="toggleVoteThenRefresh('${s.regNum}',0,'class')" style="padding:0.3rem 0.6rem;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🚫 Revoke</button>`}
-    </td>
   </tr>`).join(''));
     }
 
-    async function grantAllMyElec() {
-      if (!confirm('Grant class election voting access to all accepted class students?')) return;
-      const eligible = classStudents.filter(s => s.status === 'active' && s.canVote == 0);
-      if (!eligible.length) return toast('All accepted students already have access.', false);
-      try { await apiFetch('/voters/can-vote-bulk', { method: 'POST', body: JSON.stringify({ regNums: eligible.map(s => s.regNum), canVote: true, institution: session.institution }) }); toast(`Granted to ${eligible.length} students!`); loadAll(); loadMyElection(); } catch (e) { toast(e.message, false); }
-    }
 
     async function loadCollegeElectionPage() {
       try {

@@ -311,10 +311,9 @@
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
         </select>
-        <button class="btn btn-green" onclick="grantAllVoteAccess()">✅ Grant All Vote</button>
       </div>
       <div class="card" style="padding:0.5rem;overflow-x:auto;">
-        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Role</th><th>Yr</th><th>Cls</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Yr</th><th>Cls</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -557,18 +556,13 @@ async function loadAll(){
             apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`)
         ]);
         branchStudents=studs; branchSAs=sas;
-        const allowed=studs.filter(s=>s.canVote==1).length;
-        const voted=studs.filter(s=>s.hasVoted==1).length;
         setText('o-students', studs.length);
-        setText('o-canvote', allowed);
         setText('o-voted', voted);
         setText('o-subadmins', sas.length);
 
         // Update Summary Bar
         setText('sum-total', studs.length);
-        setText('sum-can', allowed);
         setText('sum-voted', voted);
-        setText('sum-not', studs.length - allowed);
 
         // Update Pills
         setText('reg-total-pill', `${studs.length} Total`);
@@ -677,14 +671,8 @@ function filterStudents(){
         if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;
         return `<tr>
          <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
-         <td>${s.name}</td><td><span class="badge" style="background:rgba(255,255,255,0.1);">${s.role}</span></td>
+         <td>${s.name}</td>
          <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
-         <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:180px;">
-             ${s.status==='pending'?'<button class="btn-sm btn-outline" style="color:var(--green);border-color:rgba(34,197,94,0.3);" onclick="doAction(\'accept\',\''+s.regNum+'\')">✔ Accept</button>':''}
-             ${s.canVote==0&&s.status==='active'?'<button class="btn-sm btn-outline" style="color:var(--blue);border-color:rgba(59,130,246,0.3);" onclick="doAction(\'allow\',\''+s.regNum+'\')">✅ Allow</button>':''}
-             ${s.canVote==1?'<button class="btn-sm btn-outline" style="color:var(--orange);border-color:rgba(249,115,22,0.3);" onclick="doAction(\'revoke\',\''+s.regNum+'\')">🚫 Revoke</button>':''}
-             <button class="btn-sm btn-danger-sm" onclick="doAction(\'remove\',\''+s.regNum+'\')">🗑</button>
-         </td>
         </tr>`;
     }).join(''));
 }
@@ -700,19 +688,10 @@ function renderSAs(sas){
     </tr>`).join(''));
 }
 
-async function grantAllVoteAccess() {
-    if(!confirm('Grant voting access to ALL active students in the branch?')) return;
-    const act = branchStudents.filter(s=>s.status==='active'&&s.canVote==0);
-    if(!act.length) return toast('No active/unallowed students.', false);
-    try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:act.map(s=>s.regNum),canVote:true,institution:session.institution})});toast('Done!');loadAll();}catch(e){toast(e.message,false);}
-}
 
 async function doAction(act, id) {
-    if(!act) return;
-    if(act==='accept'){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify({status:'active'})});toast('Accepted');loadAll();}
-    if(act==='allow'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:true,institution:session.institution})});toast('Allowed');loadAll();}
-    if(act==='revoke'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:false,institution:session.institution})});toast('Revoked');loadAll();}
-    if(act==='remove'){if(confirm(`Remove ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
+    // Only accept actions from class admins (subadmins) now
+    return toast('This action is restricted to Class Admins.', false);
 }
 async function doSaAction(act, id) {
     if(!act) return;
