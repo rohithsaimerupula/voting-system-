@@ -927,6 +927,10 @@
             idFaceImg = null;
 
             try {
+                if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                    throw new Error("HEIC/HEIF formats (common on iPhones) are not supported by most browsers. Please take a screenshot of your ID card or convert it to JPG/PNG first.");
+                }
+
                 if (!faceModelsLoaded) {
                     msgText.innerText = "Waiting for AI models to initialize...";
                     let waitCount = 0;
@@ -1390,9 +1394,13 @@
                     }
 
                     try {
-                        btn.innerText = "Compressing Image...";
-                        await new Promise(r => setTimeout(r, 50));
-                        portraitBase64 = await convertToBase64(file);
+                        if (idFaceImg) {
+                            portraitBase64 = idFaceImg;
+                        } else {
+                            btn.innerText = "Compressing Image...";
+                            await new Promise(r => setTimeout(r, 50));
+                            portraitBase64 = await convertToBase64(file);
+                        }
                     } catch (err) {
                         btn.disabled = false;
                         btn.innerText = "Complete Registration";
