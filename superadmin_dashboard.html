@@ -1995,18 +1995,15 @@
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--purple);">${s.year || '1st'}</span></td>
     <td>${s.branch || '-'}</td><td>${s.class || '-'}</td>
     <td>${s.webcamReg ? '<span class="badge" style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); font-size:0.75rem;" title="AI Face Verified">🤖 AI Verified</span>' : '<span class="badge" style="background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid rgba(100,116,139,0.3); font-size:0.75rem;" title="Manual Registration">👤 Manual</span>'}</td>
-    <td>
-      <select class="action-select" onchange="superAction(this,'${s.regNum}')" style="padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:0.8rem;cursor:pointer;min-width:110px;">
-        <option value="">⚡ Actions</option>
-        <option value="edit">✏️ Edit Academic Info</option>
-        <option value="remove">🗑️ Remove</option>
-      </select>
+    <td style="display:flex;gap:0.4rem;align-items:center;">
+      <button class="btn-sm btn-outline" style="color:var(--blue);border-color:rgba(59,130,246,0.3);" onclick="superAction('edit', '${s.regNum}')">✏️ Edit</button>
+      <button class="btn-sm btn-danger-sm" onclick="superAction('remove', '${s.regNum}')">🗑️</button>
     </td>
   </tr>`).join(''));
       }
 
-      window.superAction = function (sel, regNum) {
-        const action = sel.value; sel.value = '';
+      window.superAction = function (action, regNum) {
+        if (!action) return;
         if (action === 'remove') removeUser(regNum);
         if (action === 'edit') {
           const s = allStudents.find(x => x.regNum === regNum);

@@ -679,14 +679,11 @@ function filterStudents(){
          <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
          <td>${s.name}</td><td><span class="badge" style="background:rgba(255,255,255,0.1);">${s.role}</span></td>
          <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
-         <td>
-            <select class="action-select" onchange="doAction(this,'${s.regNum}')">
-                <option value="">⚡ Actions</option>
-                ${s.status==='pending'?'<option value="accept">✔ Accept Registration</option>':''}
-                ${s.canVote==0&&s.status==='active'?'<option value="allow">✅ Allow Voting</option>':''}
-                ${s.canVote==1?'<option value="revoke">🚫 Revoke Voting</option>':''}
-                <option value="remove">🗑 Remove</option>
-            </select>
+         <td style="display:flex;gap:0.4rem;flex-wrap:wrap;min-width:180px;">
+             ${s.status==='pending'?'<button class="btn-sm btn-outline" style="color:var(--green);border-color:rgba(34,197,94,0.3);" onclick="doAction(\'accept\',\''+s.regNum+'\')">✔ Accept</button>':''}
+             ${s.canVote==0&&s.status==='active'?'<button class="btn-sm btn-outline" style="color:var(--blue);border-color:rgba(59,130,246,0.3);" onclick="doAction(\'allow\',\''+s.regNum+'\')">✅ Allow</button>':''}
+             ${s.canVote==1?'<button class="btn-sm btn-outline" style="color:var(--orange);border-color:rgba(249,115,22,0.3);" onclick="doAction(\'revoke\',\''+s.regNum+'\')">🚫 Revoke</button>':''}
+             <button class="btn-sm btn-danger-sm" onclick="doAction(\'remove\',\''+s.regNum+'\')">🗑</button>
          </td>
         </tr>`;
     }).join(''));
@@ -696,12 +693,9 @@ function renderSAs(sas){
     if(!sas.length){setHTML('sa-table', '<tr><td colspan="6" class="empty">No sub-admins found</td></tr>');return;}
     setHTML('sa-table', sas.map(s=>`<tr>
         <td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.year||'-'}</td><td>${s.class||'-'}</td><td>${s.email||'-'}</td>
-        <td>
-           <select class="action-select" onchange="doSaAction(this,'${s.regNum}')">
-             <option value="">⚡ Actions</option>
-             <option value="edit">✏️ Edit</option>
-             <option value="remove">🗑 Remove</option>
-           </select>
+        <td style="display:flex;gap:0.4rem;">
+           <button class="btn-sm btn-outline" style="color:var(--purple);border-color:rgba(168,85,247,0.3);" onclick="doSaAction(\'edit\',\''+s.regNum+'\')">✏️ Edit</button>
+           <button class="btn-sm btn-danger-sm" onclick="doSaAction(\'remove\',\''+s.regNum+'\')">🗑 Remove</button>
         </td>
     </tr>`).join(''));
 }
@@ -713,15 +707,15 @@ async function grantAllVoteAccess() {
     try{await apiFetch('/voters/can-vote-bulk',{method:'POST',body:JSON.stringify({regNums:act.map(s=>s.regNum),canVote:true,institution:session.institution})});toast('Done!');loadAll();}catch(e){toast(e.message,false);}
 }
 
-async function doAction(sel, id) {
-    const act = sel.value; sel.value=''; if(!act) return;
+async function doAction(act, id) {
+    if(!act) return;
     if(act==='accept'){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'PATCH',body:JSON.stringify({status:'active'})});toast('Accepted');loadAll();}
     if(act==='allow'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:true,institution:session.institution})});toast('Allowed');loadAll();}
     if(act==='revoke'){await apiFetch('/voters/can-vote',{method:'POST',body:JSON.stringify({regNum:id,canVote:false,institution:session.institution})});toast('Revoked');loadAll();}
     if(act==='remove'){if(confirm(`Remove ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
 }
-async function doSaAction(sel, id) {
-    const act = sel.value; sel.value=''; if(!act) return;
+async function doSaAction(act, id) {
+    if(!act) return;
     if(act==='remove'){if(confirm(`Remove SubAdmin ${id}?`)){await apiFetch(`/users/${id}?institution=${encodeURIComponent(session.institution)}`,{method:'DELETE'});toast('Removed');loadAll();}}
     if(act==='edit'){
         const s = branchSAs.find(x=>x.regNum===id); if(!s) return;
