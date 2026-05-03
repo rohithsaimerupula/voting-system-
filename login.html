@@ -624,14 +624,6 @@
                         return;
                     }
 
-                    // Status Check — pending voters reach dashboard to see proper status screen
-                    const isStaffRole = ['admin', 'subadmin', 'superadmin'].includes(user.role);
-                    if (user.status === 'pending' && isStaffRole) {
-                        showError("Account Pending Approval. Please contact Admin.");
-                        setText('login-btn', "Secure Login"); submitBtn.disabled = false;
-                        return;
-                    }
-
                     if (user.status === 'rejected') {
                         showError("Registration Rejected. Please register again.");
                         setText('login-btn', "Secure Login"); submitBtn.disabled = false;

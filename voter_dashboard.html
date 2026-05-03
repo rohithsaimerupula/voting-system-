@@ -530,6 +530,14 @@
             window.location.href = 'login.html'; 
         } else {
             console.log("[Vanguard] Logged in as:", currentUser.role, currentUser.regNum);
+
+            // Pending Guard: Block students whose registration has not been approved yet
+            if (currentUser.status === 'pending') {
+                StorageManager.logout();
+                alert('⏳ Access Denied\n\nYour registration is still pending approval by your Class Admin. Please wait for them to review and accept your registration before logging in.');
+                window.location.href = 'login.html';
+            }
+
             // Role Guard: Staff members must not access the student portal
             const STAFF_ROLES = ['admin', 'subadmin', 'superadmin', 'developer'];
             if (STAFF_ROLES.includes(currentUser.role)) {

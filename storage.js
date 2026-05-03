@@ -289,15 +289,18 @@ const StorageManager = {
                 const apiPath = inst ? `/users/${regNum}?institution=${encodeURIComponent(inst)}` : `/users/${regNum}`;
                 userData = await fetchApi(apiPath);
             } catch (e) {
-                if (e.message === "Not found") return null;
-                throw new Error(`Backend connection failed: ${e.message}. If on Vercel, ensure TURSO DB variables are set.`);
+                if (e.message === "Not found") {
+                    throw new Error("Your details are not found in our records for this college. Please check your ID or Register first.");
+                }
+                throw new Error("Backend connection failed: " + e.message);
             }
 
-            if (!userData) return null;
+            if (!userData) throw new Error("Could not retrieve user data.");
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
+            
             if (userData.status === 'pending') {
-                throw new Error("Your registration is pending approval by your Class Admin. Please wait for them to accept your registration before logging in.");
+                throw new Error("Your registration is pending approval by your Class Admin. You cannot login until they accept your request.");
             }
 
             const activeInst = localStorage.getItem('ovs_inst_name');
