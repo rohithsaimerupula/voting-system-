@@ -84,7 +84,11 @@ async function runMigrations() {
         { sql: "ALTER TABLE users ADD COLUMN symbol TEXT", label: "users.symbol" },
         { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" },
         { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" },
-        { sql: "ALTER TABLE users ADD COLUMN section TEXT", label: "users.section" }
+        { sql: "ALTER TABLE users ADD COLUMN section TEXT", label: "users.section" },
+        { sql: "ALTER TABLE auditLogs ADD COLUMN institution TEXT", label: "auditLogs.institution" },
+        { sql: "ALTER TABLE publicLedger ADD COLUMN institution TEXT", label: "publicLedger.institution" },
+        { sql: "ALTER TABLE questions ADD COLUMN institution TEXT", label: "questions.institution" },
+        { sql: "ALTER TABLE system_alerts ADD COLUMN institution TEXT", label: "system_alerts.institution" }
     ];
     for (const m of migrations) {
         try {
