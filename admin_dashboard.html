@@ -226,30 +226,12 @@
           <div class="num" id="o-students" style="color:var(--cyan)">-</div>
           <div class="lbl">Students</div>
         </div>
-        <div class="stat" style="border-bottom: 4px solid var(--green);">
-          <div class="num" id="o-canvote" style="color:var(--green)">-</div>
-          <div class="lbl">Can Vote</div>
-        </div>
         <div class="stat" style="border-bottom: 4px solid var(--purple);">
           <div class="num" id="o-subadmins" style="color:var(--purple)">-</div>
           <div class="lbl">Sub-Admins</div>
         </div>
-        <div class="stat" style="border-bottom: 4px solid var(--gold);">
-          <div class="num" id="o-voted" style="color:var(--gold)">-</div>
-          <div class="lbl">Voted</div>
-        </div>
       </div>
 
-      <!-- Quick Summary Header Requested by User -->
-      <div id="overview-summary-bar" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.1rem; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--cyan); font-weight:900;" id="sum-total">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Total Students</span></div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--green); font-weight:900;" id="sum-can">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Can Vote</span></div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;" id="sum-voted">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span></div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;" id="sum-not">0</span> <span style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not Granted</span></div>
-      </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;">
         <!-- Registration Card -->
@@ -266,35 +248,11 @@
               <div id="reg-legend" style="display:flex; flex-direction:column; gap:0.6rem;">
                 <!-- Legend items -->
               </div>
-              <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:0.5rem;">
-                <span style="font-size:0.75rem; color:var(--muted);">Verification Rate</span>
-                <span id="reg-rate-badge" style="background:rgba(6,182,212,0.1); color:var(--cyan); padding:0.1rem 0.4rem; border-radius:6px; font-size:0.7rem; font-weight:bold;">0%</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Voting Card -->
-        <div class="card" style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(34,197,94,0.05), transparent);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-            <h3 style="margin-bottom:0;">🗳️ Branch Voting Access</h3>
-            <span id="vote-total-pill" style="background:rgba(255,255,255,0.1); padding:0.2rem 0.6rem; border-radius:10px; font-size:0.75rem; font-weight:bold; color:var(--green);">0 Total</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:2rem;">
-            <div style="width:130px; height:130px; position:relative; flex-shrink:0;">
-              <canvas id="chart-vote"></canvas>
-            </div>
-            <div style="flex:1;">
-              <div id="vote-legend" style="display:flex; flex-direction:column; gap:0.6rem;">
-                <!-- Legend items -->
-              </div>
-              <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:0.5rem;">
-                <span style="font-size:0.75rem; color:var(--muted);">Eligibility Rate</span>
-                <span id="vote-rate-badge" style="background:rgba(34,197,94,0.1); color:var(--green); padding:0.1rem 0.4rem; border-radius:6px; font-size:0.7rem; font-weight:bold;">0%</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -564,16 +522,10 @@ async function loadAll(){
         ]);
         branchStudents=studs; branchSAs=sas;
         setText('o-students', studs.length);
-        setText('o-voted', voted);
         setText('o-subadmins', sas.length);
-
-        // Update Summary Bar
-        setText('sum-total', studs.length);
-        setText('sum-voted', voted);
 
         // Update Pills
         setText('reg-total-pill', `${studs.length} Total`);
-        setText('vote-total-pill', `${studs.length} Total`);
 
         filterStudents();
         renderSAs(sas);
@@ -582,8 +534,6 @@ async function loadAll(){
         // Chart 1: Registration
         const activeS=studs.filter(s=>s.status==='active').length;
         const pendingS=studs.length-activeS;
-        const regRate = studs.length ? Math.round((activeS/studs.length)*100) : 0;
-        setText('reg-rate-badge', `${regRate}%`);
         
         // Custom Legend for Registration
         setHTML('reg-legend', `
@@ -608,46 +558,6 @@ async function loadAll(){
                 datasets:[{
                     data:[activeS,pendingS],
                     backgroundColor:['#06b6d4','rgba(255,255,255,0.1)'],
-                    borderWidth:0,
-                    hoverOffset:4
-                }]
-            },
-            options:{
-                cutout:'65%',
-                responsive:true,
-                maintainAspectRatio:false,
-                plugins:{ legend:{display:false}, tooltip:{ enabled:true, backgroundColor:'rgba(0,0,0,0.8)', titleFont:{family:'Outfit'}, bodyFont:{family:'Outfit'}} }
-            }
-        });
-
-        // Chart 2: Voting
-        const denied=studs.length-allowed;
-        const voteRate = studs.length ? Math.round((allowed/studs.length)*100) : 0;
-        setText('vote-rate-badge', `${voteRate}%`);
-
-        // Custom Legend for Voting
-        setHTML('vote-legend', `
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.3rem;">
-                <span style="font-size:0.85rem; color:white;"><span style="color:var(--green); margin-right:5px;">●</span> Allowed</span>
-                <span style="font-size:0.85rem; font-weight:bold; color:var(--green);">${allowed}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <span style="font-size:0.85rem; color:var(--text-muted);"><span style="color:rgba(255,255,255,0.2); margin-right:5px;">●</span> Restricted</span>
-                <span style="font-size:0.85rem; font-weight:bold; color:var(--text-muted);">${denied}</span>
-            </div>
-        `);
-
-        if(cVote)cVote.destroy();
-        const cvEl=document.getElementById('chart-vote');
-        if(!cvEl) return;
-        const cvCtx=cvEl.getContext('2d');
-        cVote=new Chart(cvCtx,{
-            type:'doughnut',
-            data:{
-                labels:['Allowed','Restricted'],
-                datasets:[{
-                    data:[allowed,denied],
-                    backgroundColor:['#22c55e','rgba(255,255,255,0.1)'],
                     borderWidth:0,
                     hoverOffset:4
                 }]

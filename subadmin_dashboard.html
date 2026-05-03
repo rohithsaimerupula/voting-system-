@@ -652,52 +652,12 @@
             <div class="num" id="s-students" style="color:var(--purple)">-</div>
             <div class="lbl">Students</div>
           </div>
-          <div class="stat" style="border-bottom: 4px solid #22c55e;">
-            <div class="num" id="s-canvote" style="color:#22c55e">-</div>
-            <div class="lbl">Can Vote</div>
-          </div>
-          <div class="stat" style="border-bottom: 4px solid var(--gold);">
-            <div class="num" id="s-voted" style="color:var(--gold)">-</div>
-            <div class="lbl">Voted</div>
-          </div>
-          <div class="stat" style="border-bottom: 4px solid var(--muted);">
-            <div class="num" id="s-not-granted" style="color:var(--muted)">-</div>
-            <div class="lbl">Not Granted</div>
-          </div>
           <div class="stat" style="border-bottom: 4px solid var(--gold);">
             <div class="num" id="s-pending" style="color:var(--gold)">-</div>
             <div class="lbl">Pending Reg</div>
           </div>
         </div>
 
-        <!-- Quick Summary Header Requested by User -->
-        <div id="overview-summary-bar"
-          style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.1rem; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--purple); font-weight:900;"
-              id="sum-total">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Students</span>
-          </div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:#22c55e; font-weight:900;"
-              id="sum-can">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Can
-              Vote</span></div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;"
-              id="sum-voted">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span>
-          </div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--red); font-weight:900;"
-              id="sum-not">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not
-              Granted</span></div>
-          <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.5rem;"><span style="color:var(--gold); font-weight:900;"
-              id="sum-pending">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Pending</span>
-          </div>
-        </div>
 
         <div class="analytics-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
           <!-- Funnel 1: Registration (Base) -->
@@ -719,24 +679,6 @@
             </div>
           </div>
 
-          <!-- Funnel 2: Access (Subset of Accepted) -->
-          <div class="card"
-            style="margin-bottom:0; padding:1.5rem; position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(34,197,94,0.05), transparent);">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-              <h3 style="margin:0;">🗳️ 2. Voting Access</h3>
-              <div id="vote-total-pill" class="pill-active"
-                style="background:rgba(255,255,255,0.05); color:var(--text); border-color:rgba(255,255,255,0.1);">
-                Accepted: -</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:1.5rem;">
-              <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
-                <canvas id="voteChart"></canvas>
-              </div>
-              <div id="vote-legend" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
-                <div class="text-muted">Waiting for Accepted...</div>
-              </div>
-            </div>
-          </div>
 
           <!-- Funnel 3: Participation (Subset of Allowed) -->
           <div class="card"
@@ -1399,17 +1341,7 @@
         const voted = students.filter(s => s.hasVoted == 1).length;
 
         setText('s-students', students.length);
-        setText('s-canvote', allowed);
-        setText('s-voted', voted);
-        setText('s-not-granted', students.length - allowed);
         setText('s-pending', students.length - active);
-
-        // Update Summary Bar
-        setText('sum-total', students.length);
-        setText('sum-can', allowed);
-        setText('sum-voted', voted);
-        setText('sum-not', students.length - allowed);
-        setText('sum-pending', students.length - active);
 
         renderStudents(students);
         updateCharts(students.length, active, allowed, voted);
@@ -1465,41 +1397,6 @@
     </div>
     <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--purple); font-weight:600; text-transform:uppercase; letter-spacing:1px;">
         ${total > 0 ? Math.round((accepted / total) * 100) : 0}% Verified
-    </div>
-  `);
-
-      // Funnel 2: Voting Access (Subset of Accepted Students Only)
-      // Per user request: Allowed/Not Allowed only shown for registration completed students
-      if (voteChartInstance) voteChartInstance.destroy();
-      const r2 = document.getElementById('voteChart').getContext('2d');
-      const deniedAccess = accepted - allowed;
-      voteChartInstance = new Chart(r2, {
-        type: 'doughnut',
-        data: {
-          labels: ['Allowed', 'Not Allowed'],
-          datasets: [{
-            data: [allowed, deniedAccess],
-            backgroundColor: ['#22c55e', 'rgba(255,255,255,0.05)'],
-            borderColor: ['#22c55e', 'rgba(255,255,255,0.1)'],
-            borderWidth: 1,
-            hoverOffset: 4
-          }]
-        },
-        options: opts
-      });
-
-      setText('vote-total-pill', `Accepted: ${accepted}`);
-      setHTML('vote-legend', `
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="color:var(--muted)">🗳️ Allowed:</span>
-        <strong style="color:white">${allowed}</strong>
-    </div>
-    <div style="display:flex; justify-content:space-between; padding-bottom:0.4rem;">
-        <span style="color:var(--muted)">🚫 Not Allowed:</span>
-        <strong style="color:white">${deniedAccess}</strong>
-    </div>
-    <div style="margin-top:0.5rem; font-size:0.75rem; color:#22c55e; font-weight:600; text-transform:uppercase; letter-spacing:1px;">
-        ${accepted > 0 ? Math.round((allowed / accepted) * 100) : 0}% Eligibility
     </div>
   `);
 

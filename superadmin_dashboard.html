@@ -716,38 +716,6 @@
             <div class="num" id="s-subadmins" style="color:var(--purple)">-</div>
             <div class="lbl">Sub-Admins</div>
           </div>
-          <div class="stat" style="border-bottom: 4px solid var(--green);">
-            <div class="num" id="s-voted" style="color:var(--green)">-</div>
-            <div class="lbl">Voted</div>
-          </div>
-          <div class="stat" style="border-bottom: 4px solid var(--gold);">
-            <div class="num" id="s-canvote" style="color:var(--gold)">-</div>
-            <div class="lbl">Can Vote</div>
-          </div>
-        </div>
-
-        <!-- Quick Summary Header Requested by User -->
-        <div id="overview-summary-bar"
-          style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.4rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:2rem; justify-content:center; font-family:var(--font-heading); font-size:1.15rem; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--cyan); font-weight:900;"
-              id="sum-total">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Global
-              Students</span></div>
-          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--gold); font-weight:900;"
-              id="sum-can">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Eligibility</span>
-          </div>
-          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--green); font-weight:900;"
-              id="sum-voted">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Voted</span>
-          </div>
-          <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
-          <div style="display:flex; align-items:center; gap:0.6rem;"><span style="color:var(--red); font-weight:900;"
-              id="sum-not">0</span> <span
-              style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Not
-              Granted</span></div>
         </div>
         <div class="card"
           style="background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(168,85,247,0.1)); border: 1px solid var(--glass-border);">
@@ -1782,17 +1750,9 @@
           const subadmins = instUsers.filter(u => u && u.role === 'subadmin');
           allStudents = students;
 
-          const votedCount = students.filter(u => u.hasVoted == 1).length;
-          const canVoteCount = students.filter(u => u.canVote == 1).length;
-
           setText('s-students', students.length);
           setText('s-admins', admins.length);
           setText('s-subadmins', subadmins.length);
-          setText('s-voted', votedCount);
-
-          // Update Summary Bar
-          setText('sum-total', students.length);
-          setText('sum-voted', votedCount);
 
           loadInstitutionCode();
 
