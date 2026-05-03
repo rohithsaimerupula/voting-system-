@@ -335,7 +335,7 @@ app.post('/api/users/add', async (req, res) => {
             let emailCheckArgs = [u.email, inst];
             
             if (u.role === 'superadmin') {
-                emailCheckSql = "SELECT regNum, institution FROM users WHERE email = ?";
+                emailCheckSql = "SELECT regNum, institution, role FROM users WHERE email = ? AND role != 'developer'";
                 emailCheckArgs = [u.email];
             }
 
