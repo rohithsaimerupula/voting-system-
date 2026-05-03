@@ -534,6 +534,51 @@ app.delete('/api/users/:id', async (req, res) => {
                 await db.execute({ sql: "DELETE FROM globalChat WHERE institution = ?", args: [inst] });
                 await db.execute({ sql: "DELETE FROM system_alerts WHERE institution = ?", args: [inst] });
                 await db.execute({ sql: "DELETE FROM elections WHERE institution = ?", args: [inst] });
+                
+                // Delete all institution-specific config entries (e.g., election settings, registration settings)
+                // We fetch all keys and filter to ensure we only delete those belonging to THIS institution suffix
+                try {
+                    const allConfigRes = await db.execute({ sql: "SELECT key FROM config WHERE key LIKE '%\_%' ESCAPE '\\'", args: [] });
+                    const keysToDelete = allConfigRes.rows
+                        .map(r => r.key)
+                        .filter(k => k.endsWith(`_${inst}`));
+                    
+                    if (keysToDelete.length > 0) {
+                        const placeholders = keysToDelete.map(() => '?').join(',');
+                        await db.execute({ 
+                            sql: `DELETE FROM config WHERE key IN (${placeholders})`, 
+                            args: keysToDelete 
+                        });
+                        console.log(`[OVS] Cleaned up ${keysToDelete.length} config entries for ${inst}`);
+                    }
+                } catch(cfgErr) {
+                    console.error('[OVS] Config cleanup failed:', cfgErr.message);
+                }
+
+                // Automatic Cleanup of Gateway Access Codes
+                try {
+                    const codesResult = await db.execute({ sql: "SELECT value FROM config WHERE key = 'institution_codes'", args: [] });
+                    if (codesResult.rows.length > 0) {
+                        const codeMap = JSON.parse(codesResult.rows[0].value);
+                        let changed = false;
+                        for (const code in codeMap) {
+                            if (codeMap[code] === inst) {
+                                delete codeMap[code];
+                                changed = true;
+                            }
+                        }
+                        if (changed) {
+                            await db.execute({ 
+                                sql: "UPDATE config SET value = ? WHERE key = 'institution_codes'", 
+                                args: [JSON.stringify(codeMap)] 
+                            });
+                            console.log(`[OVS] Automatically removed gateway code for deleted institution: ${inst}`);
+                        }
+                    }
+                } catch(codeErr) {
+                    console.error('[OVS] Failed to clean up gateway codes during institution deletion:', codeErr.message);
+                }
+
                 // Delete all other users of this institution (admins, sub-admins, voters, candidates)
                 await db.execute({ sql: "DELETE FROM users WHERE institution = ? AND regNum != ?", args: [inst, targetId] });
             } else if (role === 'admin') {
@@ -554,7 +599,10 @@ app.delete('/api/users/:id', async (req, res) => {
         await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
         
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[DELETE_USER_ERR]", e);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 app.delete('/api/users/role/:role', async (req, res) => {

@@ -1591,37 +1591,38 @@
     }
 
     async function deleteSuperAdmin(id) {
-      const instCell = [...document.querySelectorAll('#sa-table-body tr')].find(r => r.querySelector('strong')?.textContent === id)?.querySelectorAll('td')[2]?.textContent || 'their institution';
+      const sa = (window.saCache || []).find(s => s.regNum === id);
+      const instName = sa ? sa.institution : '';
       
-      const confirmed = confirm(`⚠️ PERMANENT DELETE — CANNOT BE UNDONE\n\nRemoving Super Admin: ${id}\nInstitution: ${instCell}\n\nThis will AUTOMATICALLY delete:\n• All Admins of this institution\n• All Sub-Admins of this institution\n• All Students/Voters of this institution\n• All Candidates of this institution\n• The institution's election history & config\n• The institution's Gateway Access Code\n\nAre you absolutely sure?`);
-      if (!confirmed) return;
-      try {
-        // Delete the super admin and all associated users
-        await fetch(API + `/users/${encodeURIComponent(id)}?institution=${encodeURIComponent(instCell)}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
-        
-        // Also remove this institution's gateway code from config
-        try {
-            const codesRes = await fetch(API + '/config/institution_codes', { headers: { 'Content-Type': 'application/json' } });
-            if (codesRes.ok) {
-                const codes = await codesRes.json();
-                // Remove any code that maps to this institution
-                let changed = false;
-                for (const key in codes) {
-                    if (codes[key] === instCell) { delete codes[key]; changed = true; }
-                }
-                if (changed) {
-                    await fetch(API + '/config/institution_codes', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ data: codes })
-                    });
-                }
-            }
-        } catch(codeErr) { console.warn('Could not clean up gateway code:', codeErr.message); }
+      if (!instName) {
+          showToast('Could not identify institution for this user.', false);
+          return;
+      }
 
-        showToast(`✅ Super Admin ${id} and institution "${instCell}" fully removed.`);
-        loadConsole();
-      } catch (e) { showToast(e.message, false); }
+      const confirmed = confirm(`⚠️ PERMANENT DELETE — CANNOT BE UNDONE\n\nRemoving Super Admin: ${id}\nInstitution: ${instName}\n\nThis will AUTOMATICALLY delete:\n• All Admins of this institution\n• All Sub-Admins of this institution\n• All Students/Voters of this institution\n• All Candidates of this institution\n• The institution's election history & config\n• The institution's Gateway Access Code\n\nAre you absolutely sure?`);
+      if (!confirmed) return;
+      
+      try {
+        // Show loading state
+        showToast('Initiating permanent deletion...', true);
+        
+        // Delete the super admin and all associated users (cascades on server)
+        const res = await fetch(API + `/users/${encodeURIComponent(id)}?institution=${encodeURIComponent(instName)}`, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' } 
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Deletion failed on server.');
+        }
+
+        showToast(`✅ Successfully deleted ${instName} and all associated data.`);
+        loadConsole(); // Refresh the table and stats
+      } catch (e) { 
+          console.error('[DELETE_FAIL]', e);
+          showToast(e.message, false); 
+      }
     }
 
 
