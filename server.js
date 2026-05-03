@@ -650,13 +650,27 @@ app.patch('/api/users/:id', async (req, res) => {
         const updates = req.body || {};
         const inst = decodeURIComponent(req.query.institution || '');
         const callerRegNum = req.headers['x-ovs-reg-num'];
+        const headerInst = decodeURIComponent(req.headers['x-ovs-institution'] || '');
+        const finalInst = (inst || headerInst || '').trim();
 
-        if (inst && callerRegNum) {
-            const callerRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [callerRegNum, inst] });
+        if (finalInst && callerRegNum) {
+            // Robust role lookup: try with provided institution, fallback to any if that fails (but restricted to the same regNum)
+            let callerRes = await db.execute({ sql: "SELECT role, institution FROM users WHERE regNum = ? AND (institution = ? OR institution = 'Unknown' OR ? = '')", args: [callerRegNum, finalInst, finalInst] });
+            
+            // If still not found, try a broader search just by regNum to see if they exist at all
+            if (callerRes.rows.length === 0) {
+                callerRes = await db.execute({ sql: "SELECT role, institution FROM users WHERE regNum = ?", args: [callerRegNum] });
+            }
+
             const callerRole = callerRes.rows.length > 0 ? callerRes.rows[0].role : null;
+            const callerActualInst = callerRes.rows.length > 0 ? callerRes.rows[0].institution : null;
 
-            // 1. If caller is NOT an admin, prevent them from changing sensitive fields
-            if (!['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
+            // Log for debugging
+            console.log(`[OVS Auth] Caller: ${callerRegNum}, Role: ${callerRole}, CallerInst: ${callerActualInst}, RequestInst: ${finalInst}`);
+
+            // 1. If caller is NOT an admin/developer, prevent them from changing sensitive fields
+            const ADMIN_ROLES = ['superadmin', 'admin', 'subadmin', 'developer'];
+            if (!ADMIN_ROLES.includes(callerRole)) {
                 const SENSITIVE_FIELDS = ['role', 'status', 'canVote', 'hasVoted', 'votedFor', 'votedAt', 'isBanned', 'institution', 'regNum', 'packId', 'packRequest', 'branch', 'year', 'section', 'class'];
                 const forbidden = Object.keys(updates).filter(k => SENSITIVE_FIELDS.includes(k));
                 if (forbidden.length > 0) {
@@ -665,11 +679,12 @@ app.patch('/api/users/:id', async (req, res) => {
             }
 
             // 2. Protect student personal data from admin edits (admins can only change status/permissions)
-            if (callerRegNum !== req.params.id && ['superadmin', 'admin', 'subadmin'].includes(callerRole)) {
-                const targetRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, inst] });
+            // But allow developers to change anything for debugging if needed (or keep them restricted too)
+            if (callerRegNum !== req.params.id && ADMIN_ROLES.includes(callerRole)) {
+                const targetRes = await db.execute({ sql: "SELECT role FROM users WHERE regNum = ? AND institution = ?", args: [req.params.id, finalInst] });
                 const targetRole = targetRes.rows.length > 0 ? targetRes.rows[0].role : null;
 
-                if (['voter', 'contestant'].includes(targetRole)) {
+                if (['voter', 'contestant'].includes(targetRole) && callerRole !== 'developer') {
                     const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'section', 'regNum', 'deviceFingerprint'];
                     const forbidden = Object.keys(updates).filter(k => PROTECTED_STUDENT_FIELDS.includes(k));
                     if (forbidden.length > 0) {
