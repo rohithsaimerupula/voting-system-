@@ -296,8 +296,14 @@ const StorageManager = {
             if (!userData) return null;
 
             if (userData.isBanned || userData.isBanned === 1) throw new Error("This account has been banned by the Administrator.");
-            const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role || "");
-            if (userData.status === 'pending' && isStaffRole) throw new Error("Your account is pending approval.");
+            if (userData.status === 'pending') {
+                const isStaffRole = ['admin','subadmin','superadmin'].includes(userData.role || "");
+                if (isStaffRole) {
+                    throw new Error("Your account is pending approval by the Administrator.");
+                } else {
+                    throw new Error("Your registration is pending approval by your Class Admin. Please wait for them to accept your registration before logging in.");
+                }
+            }
 
             const activeInst = localStorage.getItem('ovs_inst_name');
             if (userData.role !== 'developer' && activeInst && userData.institution !== activeInst) {
