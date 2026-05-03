@@ -560,13 +560,22 @@ app.delete('/api/users/:id', async (req, res) => {
             
             if (role === 'superadmin') {
                 console.log(`[OVS] Cascading deletion for Super Admin: ${targetId} of ${inst}`);
-                // DELETE ALL DATA FOR THIS INSTITUTION (Complete Wipe)
-                await db.execute({ sql: "DELETE FROM auditLogs WHERE institution = ?", args: [inst] });
-                await db.execute({ sql: "DELETE FROM publicLedger WHERE institution = ?", args: [inst] });
-                await db.execute({ sql: "DELETE FROM questions WHERE institution = ?", args: [inst] });
-                await db.execute({ sql: "DELETE FROM globalChat WHERE institution = ?", args: [inst] });
-                await db.execute({ sql: "DELETE FROM system_alerts WHERE institution = ?", args: [inst] });
-                await db.execute({ sql: "DELETE FROM elections WHERE institution = ?", args: [inst] });
+                // Helper to safely delete from auxiliary tables (ignores missing columns/tables)
+                const safeDelete = async (table) => {
+                    try {
+                        await db.execute({ sql: `DELETE FROM ${table} WHERE institution = ?`, args: [inst] });
+                    } catch (e) {
+                        console.warn(`[OVS] Skipped deleting from ${table}:`, e.message);
+                    }
+                };
+
+                // DELETE ALL DATA FOR THIS INSTITUTION (Complete Wipe - Fault Tolerant)
+                await safeDelete('auditLogs');
+                await safeDelete('publicLedger');
+                await safeDelete('questions');
+                await safeDelete('globalChat');
+                await safeDelete('system_alerts');
+                await safeDelete('elections');
                 
                 // Delete all institution-specific config entries
                 try {
