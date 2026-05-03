@@ -313,7 +313,7 @@
         </select>
       </div>
       <div class="card" style="padding:0.5rem;overflow-x:auto;">
-        <table><thead><tr><th>ID Proof</th><th>AI Capture</th><th>Reg No</th><th>Name</th><th>Yr</th><th>Cls</th></tr></thead>
+        <table><thead><tr><th>Reg No</th><th>Name</th><th>Yr</th><th>Cls</th></tr></thead>
         <tbody id="student-table"></tbody></table>
       </div>
     </div>
@@ -670,7 +670,7 @@ function filterStudents(){
         let w='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">N/A</div>';
         if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;
         return `<tr>
-         <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
+         <td><strong>${s.regNum}</strong></td>
          <td>${s.name}</td>
          <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
         </tr>`;
