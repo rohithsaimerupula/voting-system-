@@ -1720,9 +1720,9 @@
       <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.8rem;">
         ${cat.candidates.map((cand, ki) => `
           <div class="cand-row" data-cat="${ci}" data-cand="${ki}" style="display:flex;gap:0.5rem;align-items:center;background:rgba(255,255,255,0.02);padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
-            <input class="cand-name" value="${cand.name}" placeholder="Candidate name*" style="flex:2;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit';outline:none;min-width:0;">
-            <input class="cand-regno" value="${cand.regNum}" placeholder="Reg No (optional)" style="flex:1.5;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit';outline:none;min-width:0;">
-            <input class="cand-symbol" value="${cand.symbol}" placeholder="⭐" maxlength="4" style="width:52px;padding:0.35rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit';outline:none;text-align:center;">
+            <input class="cand-name" value="${cand.name}" placeholder="Full Name *" style="flex:2;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit';outline:none;min-width:0;">
+            <input class="cand-regno" value="${cand.regNum}" placeholder="Student ID *" style="flex:1.5;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(255,42,77,0.3);background:rgba(255,42,77,0.04);color:white;font-family:'Outfit';outline:none;min-width:0;">
+            <input class="cand-symbol" value="${cand.symbol}" placeholder="Symbol *" maxlength="4" style="width:60px;padding:0.35rem 0.5rem;border-radius:6px;border:1px solid rgba(255,42,77,0.3);background:rgba(255,42,77,0.04);color:white;font-family:'Outfit';outline:none;text-align:center;">
             <button onclick="syncCategoryData();removeCandidate(${ci},${ki})" style="padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;flex-shrink:0;">✕</button>
           </div>
         `).join('')}
@@ -1750,7 +1750,11 @@
       for (const cat of myCategories) {
         if (!cat.name.trim()) return toast('All category names must be filled', false);
         if (cat.candidates.length < 2) return toast(`Category "${cat.name}" needs at least 2 candidates`, false);
-        for (const c of cat.candidates) { if (!c.name.trim()) return toast('All candidate names must be filled', false); }
+        for (const c of cat.candidates) {
+          if (!c.name.trim()) return toast(`❌ Candidate name is required in category "${cat.name}"`, false);
+          if (!c.regNum || !c.regNum.trim()) return toast(`❌ Student ID is required for "${c.name || 'a candidate'}" in "${cat.name}"`, false);
+          if (!c.symbol || !c.symbol.trim()) return toast(`❌ Symbol is required for "${c.name}" in "${cat.name}"`, false);
+        }
       }
       try {
         const result = await apiFetch('/elections', { method: 'POST', body: JSON.stringify({ institution: session.institution, name, type: 'class', scope: { class: session.class, branch: session.branch, year: session.year, resultVisibility: resultVis }, startTime: new Date(elecStart).toISOString(), endTime: new Date(elecEnd).toISOString(), createdBy: session.regNum, createdByRole: 'subadmin', categories: myCategories.map(c => c.name) }) });
@@ -1768,8 +1772,12 @@
 
     async function startMyElection() {
       if (!myElection) return;
-      if (!confirm('Start election? Registration will be locked.')) return;
-      try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ isActive: 1, registrationOpen: 0 }) }); toast('Election started!'); loadMyElection(); } catch (e) { toast(e.message, false); }
+      // Block start if registration window is still open
+      if (myElection.registrationOpen == 1) {
+        return toast('❌ Cannot start election while registration is still open. Please stop registration first.', false);
+      }
+      if (!confirm('Start election? Students will now be able to vote.')) return;
+      try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ isActive: 1, registrationOpen: 0 }) }); toast('✅ Election started!'); loadMyElection(); } catch (e) { toast(e.message, false); }
     }
     async function stopMyElection() {
       if (!myElection || !confirm('End this election?')) return;
