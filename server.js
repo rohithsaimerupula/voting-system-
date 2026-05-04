@@ -654,15 +654,18 @@ app.patch('/api/users/:id', async (req, res) => {
         const finalInst = (inst || headerInst || '').trim();
 
         if (finalInst && callerRegNum) {
-            // Robust role lookup: try with provided institution, fallback to any if that fails (but restricted to the same regNum)
-            let callerRes = await db.execute({ sql: "SELECT role, institution FROM users WHERE regNum = ? AND (institution = ? OR institution = 'Unknown' OR ? = '')", args: [callerRegNum, finalInst, finalInst] });
+            // Robust role lookup: use COLLATE NOCASE for regNum to be case-insensitive
+            let callerRes = await db.execute({ 
+                sql: "SELECT role, institution FROM users WHERE regNum = ? COLLATE NOCASE AND (institution = ? OR institution = 'Unknown' OR ? = '')", 
+                args: [callerRegNum, finalInst, finalInst] 
+            });
             
-            // If still not found, try a broader search just by regNum to see if they exist at all
             if (callerRes.rows.length === 0) {
-                callerRes = await db.execute({ sql: "SELECT role, institution FROM users WHERE regNum = ?", args: [callerRegNum] });
+                callerRes = await db.execute({ sql: "SELECT role, institution FROM users WHERE regNum = ? COLLATE NOCASE", args: [callerRegNum] });
             }
 
-            const callerRole = callerRes.rows.length > 0 ? callerRes.rows[0].role : null;
+            const callerRoleRaw = callerRes.rows.length > 0 ? callerRes.rows[0].role : null;
+            const callerRole = callerRoleRaw ? callerRoleRaw.trim().toLowerCase() : null;
             const callerActualInst = callerRes.rows.length > 0 ? callerRes.rows[0].institution : null;
 
             // Log for debugging
@@ -670,7 +673,7 @@ app.patch('/api/users/:id', async (req, res) => {
 
             // 1. If caller is NOT an admin/developer, prevent them from changing sensitive fields
             const ADMIN_ROLES = ['superadmin', 'admin', 'subadmin', 'developer'];
-            if (!ADMIN_ROLES.includes(callerRole)) {
+            if (!callerRole || !ADMIN_ROLES.includes(callerRole)) {
                 const SENSITIVE_FIELDS = ['role', 'status', 'canVote', 'hasVoted', 'votedFor', 'votedAt', 'isBanned', 'institution', 'regNum', 'packId', 'packRequest', 'branch', 'year', 'section', 'class'];
                 const forbidden = Object.keys(updates).filter(k => SENSITIVE_FIELDS.includes(k));
                 if (forbidden.length > 0) {
