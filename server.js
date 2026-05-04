@@ -790,8 +790,9 @@ app.get('/api/voters/my-elections', authGuard, async (req, res) => {
         const voter = userRes.rows[0];
 
         // Fetch all active or completed elections for this institution
+        // Exclude 'class_registration' type — those are admin-only registration windows, not actual elections
         const elecRes = await db.execute({
-            sql: "SELECT * FROM elections WHERE institution = ? AND (isActive = 1 OR isCompleted = 1) ORDER BY createdAt DESC",
+            sql: "SELECT * FROM elections WHERE institution = ? AND (isActive = 1 OR isCompleted = 1) AND type != 'class_registration' ORDER BY createdAt DESC",
             args: [inst]
         });
 
