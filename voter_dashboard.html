@@ -771,7 +771,7 @@
                     return;
                 }
 
-                let html = `<form id="ballot-form" onsubmit="submitVote(event, '${election.id}')">`;
+                let html = `<form id="ballot-form" onsubmit="submitVote(event, '${election.id}'); return false;">`;
                 for (const cat of categories) {
                     const cands = grouped[cat] || [];
                     html += `
@@ -856,7 +856,7 @@
                 setTimeout(() => {
                     closeModal();
                     window.location.reload();
-                }, 3000);
+                }, 4000);
 
             } catch (err) {
                 alert('Vote failed: ' + err.message);
