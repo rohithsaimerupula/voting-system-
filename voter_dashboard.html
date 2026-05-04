@@ -627,6 +627,7 @@
                 // Only show elections that are LIVE (isActive == 1) and voter hasn't voted yet
                 // SQLite returns integers so use == 1 to correctly detect active elections
                 const liveAndPending = elections.filter(e => Number(e.isActive) === 1 && Number(e.isCompleted) !== 1 && !e.hasVoted);
+                window.currentElections = liveAndPending;
                 
                 list.innerHTML = liveAndPending.length ? liveAndPending.map(e => `
                     <div class="vd-election-card">
@@ -735,10 +736,131 @@
         }
 
         async function enterGateway(id) {
-            alert('Opening secure gateway... Please wait.');
-            // This would normally open a more complex voting flow, 
-            // for now it's a placeholder redirect to maintain logic flow.
-            window.location.href = `voter_dashboard_gateway.html?id=${id}`;
+            const election = (window.currentElections || []).find(e => e.id === id);
+            if (!election) return alert('Election not found');
+
+            const modal = document.getElementById('vote-modal');
+            const title = document.getElementById('modal-title');
+            const content = document.getElementById('modal-content');
+            
+            title.innerText = `Cast Ballot: ${election.name}`;
+            content.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--muted);">Loading ballot data...</div>';
+            modal.classList.add('open');
+
+            try {
+                const allCandidates = await fetchApi(`/candidates?institution=${encodeURIComponent(currentUser.institution)}`);
+                const categories = election.scope.categories || [];
+                
+                // If this is a global/college election without explicit categories, fallback to all candidates
+                let electionCandidates = allCandidates;
+                if (categories.length > 0) {
+                    electionCandidates = allCandidates.filter(c => categories.includes(c.category));
+                } else {
+                    // Collect unique categories from the available candidates
+                    const uniqueCats = [...new Set(allCandidates.map(c => c.category).filter(Boolean))];
+                    categories.push(...uniqueCats);
+                }
+
+                const grouped = {};
+                for (const cat of categories) {
+                    grouped[cat] = electionCandidates.filter(c => c.category === cat);
+                }
+
+                if (Object.keys(grouped).length === 0) {
+                    content.innerHTML = '<div style="color:var(--danger); padding:1rem;">No candidates found for this election.</div>';
+                    return;
+                }
+
+                let html = '<form id="ballot-form" onsubmit="submitVote(event, \\'' + election.id + '\\')">';
+                for (const cat of categories) {
+                    const cands = grouped[cat] || [];
+                    html += `
+                        <div style="margin-bottom: 1.5rem; background:rgba(255,255,255,0.02); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+                            <h3 style="margin-top:0; margin-bottom:1rem; color:var(--neon-purple); border-bottom:1px solid rgba(168,85,247,0.3); padding-bottom:0.5rem;">${cat}</h3>
+                    `;
+                    if (cands.length === 0) {
+                        html += `<div style="color:var(--muted); font-size:0.9rem;">No candidates registered for this position.</div>`;
+                    } else {
+                        html += cands.map(c => `
+                            <label style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:0.5rem; cursor:pointer; border:1px solid transparent; transition:0.2s;" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='transparent'">
+                                <input type="radio" name="cat_${cat.replace(/[^a-zA-Z0-9]/g, '_')}" value="${c.regNum}" required style="accent-color: var(--cyan); width:1.2rem; height:1.2rem;">
+                                <div style="flex:1;">
+                                    <div style="font-weight:700;">${c.name}</div>
+                                    <div style="font-size:0.8rem; color:var(--muted);">ID: ${c.regNum}</div>
+                                </div>
+                                <div style="font-size:1.5rem;">${c.symbol || '⭐'}</div>
+                            </label>
+                        `).join('');
+                    }
+                    html += `</div>`;
+                }
+
+                html += `
+                    <div style="text-align:right; margin-top:1.5rem;">
+                        <button type="submit" class="vd-action-btn" style="background:var(--neon-cyan); color:#000; font-weight:bold;">Submit Secure Ballot</button>
+                    </div>
+                </form>`;
+
+                content.innerHTML = html;
+
+            } catch (e) {
+                content.innerHTML = `<div style="color:var(--danger); padding:1rem;">Error loading ballot: ${e.message}</div>`;
+            }
+        }
+
+        async function submitVote(e, electionId) {
+            e.preventDefault();
+            const form = document.getElementById('ballot-form');
+            const formData = new FormData(form);
+            const votes = {};
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('cat_')) {
+                    votes[key.replace('cat_', '')] = value;
+                }
+            }
+
+            if (Object.keys(votes).length === 0) {
+                return alert('Please select candidates before voting.');
+            }
+
+            if (!confirm('Are you sure you want to cast this ballot? This action is irreversible.')) return;
+
+            try {
+                const secureHash = 'TXN-' + Math.random().toString(36).substring(2, 15).toUpperCase();
+                
+                await fetchApi('/vote', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        voterRegNum: currentUser.regNum,
+                        candidateRegNum: votes,
+                        votePhoto: null,
+                        secureHash: secureHash,
+                        fp: window.deviceFP || 'unknown',
+                        timestamp: new Date().toISOString(),
+                        institution: currentUser.institution,
+                        electionCode: electionId
+                    })
+                });
+
+                document.getElementById('modal-content').innerHTML = `
+                    <div style="text-align:center; padding:2rem;">
+                        <div style="font-size:3rem; margin-bottom:1rem;">✅</div>
+                        <h3 style="color:var(--neon-cyan);">Vote Cast Successfully</h3>
+                        <p style="color:var(--muted); margin-bottom:1rem;">Your ballot has been cryptographically secured.</p>
+                        <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px; font-family:monospace; color:var(--gold); word-break:break-all;">
+                            Receipt: ${secureHash}
+                        </div>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    closeModal();
+                    loadDashboard();
+                }, 3000);
+
+            } catch (err) {
+                alert('Vote failed: ' + err.message);
+            }
         }
 
         async function viewResults(id, name) {

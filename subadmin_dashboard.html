@@ -1555,7 +1555,7 @@
       if (activeDiv) activeDiv.style.display = 'block';
       setText('my-elec-code', myElection.electionCode || '------');
 
-      const link = window.location.origin + '/register.html?classCode=' + (myElection.electionCode || '');
+      const link = window.location.origin + '/login.html';
       setText('my-elec-link', link);
       window.myElecLink = link;
 
@@ -1757,13 +1757,34 @@
         }
       }
       try {
-        const result = await apiFetch('/elections', { method: 'POST', body: JSON.stringify({ institution: session.institution, name, type: 'class', scope: { class: session.class, branch: session.branch, year: session.year, resultVisibility: resultVis }, startTime: new Date(elecStart).toISOString(), endTime: new Date(elecEnd).toISOString(), createdBy: session.regNum, createdByRole: 'subadmin', categories: myCategories.map(c => c.name) }) });
-        // Post candidates
+        // Flatten candidates and attach their category
+        const allCandidates = [];
         for (const cat of myCategories) {
           for (const cand of cat.candidates) {
-            try { await apiFetch('/contestants', { method: 'POST', body: JSON.stringify({ institution: session.institution, electionId: result.id || result.electionCode, name: cand.name, regNum: cand.regNum || null, symbol: cand.symbol || '⭐', category: cat.name, createdBy: session.regNum }) }); } catch (ce) { console.warn('Candidate post failed', ce); }
+            allCandidates.push({
+              name: cand.name,
+              regNum: cand.regNum,
+              symbol: cand.symbol || '⭐',
+              category: cat.name
+            });
           }
         }
+
+        const result = await apiFetch('/elections', { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                institution: session.institution, 
+                name, 
+                type: 'class', 
+                scope: { class: session.class, branch: session.branch, year: session.year, resultVisibility: resultVis }, 
+                startTime: new Date(elecStart).toISOString(), 
+                endTime: new Date(elecEnd).toISOString(), 
+                createdBy: session.regNum, 
+                createdByRole: 'subadmin', 
+                categories: myCategories.map(c => c.name),
+                candidates: allCandidates
+            }) 
+        });
         toast(`Election created! Code: ${result.electionCode}`);
         myCategories = [];
         loadMyElection();
