@@ -771,7 +771,7 @@
                     return;
                 }
 
-                let html = '<form id="ballot-form" onsubmit="submitVote(event, \\'' + election.id + '\\')">';
+                let html = `<form id="ballot-form" onsubmit="submitVote(event, '${election.id}')">`;
                 for (const cat of categories) {
                     const cands = grouped[cat] || [];
                     html += `
