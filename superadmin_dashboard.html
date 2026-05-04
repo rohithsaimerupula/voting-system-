@@ -1016,8 +1016,12 @@
               <div style="display:flex; gap:0.75rem;">
                 <button class="btn-sm" style="flex:1; padding:0.55rem 0; background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid rgba(255,255,255,0.12); border-radius:8px; font-size:0.85rem; cursor:pointer;"
                   onclick="toggleScheduleMode(true)">⚙️ Modify Schedule</button>
-                <button class="btn-sm" style="flex:1; padding:0.55rem 0; background:rgba(255,42,77,0.15); color:var(--red); border:1px solid rgba(255,42,77,0.3); border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                <button class="btn-sm" id="v-stop-btn" style="flex:1; padding:0.55rem 0; background:rgba(255,42,77,0.15); color:var(--red); border:1px solid rgba(255,42,77,0.3); border-radius:8px; font-size:0.85rem; cursor:pointer;"
                   onclick="stopElection()">⏹ End Election</button>
+                <button class="btn-sm" id="v-restart-btn" style="flex:1; display:none; padding:0.55rem 0; background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.3); border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                  onclick="restartElection()">🔄 Restart Election</button>
+                <button class="btn-sm" id="v-delete-btn" style="flex:0.5; padding:0.55rem 0; background:rgba(255,42,77,0.1); color:var(--red); border:1px solid rgba(255,42,77,0.2); border-radius:8px; font-size:0.85rem; cursor:pointer;"
+                  onclick="deleteElection()">🗑️</button>
               </div>
             </div>
 
@@ -2392,6 +2396,14 @@
             structCard.style.display     = 'block';
             if (resultsCard) resultsCard.style.display = 'block';
 
+            const stopBtn = document.getElementById('v-stop-btn');
+            const restartBtn = document.getElementById('v-restart-btn');
+            const deleteBtn = document.getElementById('v-delete-btn');
+
+            if (stopBtn) stopBtn.style.display = activeElection.isActive ? 'inline-block' : 'none';
+            if (restartBtn) restartBtn.style.display = activeElection.isCompleted ? 'inline-block' : 'none';
+            if (deleteBtn) deleteBtn.style.display = 'inline-block';
+
             // Update election name pill
             setText('v-election-name-pill', '🗳️ ' + activeElection.name);
             setText('schedule-card-title', '⏳ ' + activeElection.name);
@@ -2496,6 +2508,23 @@
           toast('Election ended & marked as completed!');
           loadVoting();
           loadAll();
+        } catch (e) { toast(e.message, false); }
+      }
+      async function restartElection() {
+        if (!currentElectionConfig || !confirm('Restart this election? All current votes will be deleted.')) return;
+        try {
+          await apiFetch(`/elections/${encodeURIComponent(currentElectionConfig.id)}/reset`, { method: 'POST' });
+          toast('✅ Election restarted and votes reset!');
+          loadVoting();
+        } catch (e) { toast(e.message, false); }
+      }
+      async function deleteElection() {
+        if (!currentElectionConfig || !confirm('Delete this election permanently? All votes and results will be wiped.')) return;
+        try {
+          await apiFetch(`/elections/${encodeURIComponent(currentElectionConfig.id)}`, { method: 'DELETE' });
+          toast('Election deleted');
+          currentElectionConfig = null;
+          loadVoting();
         } catch (e) { toast(e.message, false); }
       }
 

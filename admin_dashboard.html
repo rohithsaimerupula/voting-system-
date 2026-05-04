@@ -323,6 +323,7 @@
           <div style="margin-top:0.8rem; display:flex; justify-content:center; gap:0.75rem;">
             <button class="btn-sm btn-e" onclick="copyBrCode()">📋 Copy</button>
             <button class="btn-sm btn-g" id="br-elec-start-btn" onclick="startBrElection()">▶ Start</button>
+            <button class="btn-sm btn-g" id="br-elec-restart-btn" onclick="restartBrElection()" style="display:none;">🔄 Restart</button>
             <button class="btn-sm btn-d" id="br-elec-stop-btn" onclick="stopBrElection()" style="display:none;">⏹ End</button>
             <button class="btn-sm btn-d" style="background:rgba(239,68,68,0.1);" onclick="deleteBrElection()">🗑 Delete</button>
           </div>
@@ -625,13 +626,18 @@ async function loadBranchElection() {
             setText('br-elec-code', branchElection.electionCode);
             const startBtn = document.getElementById('br-elec-start-btn');
             const stopBtn = document.getElementById('br-elec-stop-btn');
+            const restartBtn = document.getElementById('br-elec-restart-btn');
+
+            if(startBtn) startBtn.style.display='none';
+            if(stopBtn) stopBtn.style.display='none';
+            if(restartBtn) restartBtn.style.display='none';
+
             if(branchElection.isActive){
-                if(startBtn) startBtn.style.display='none';
                 if(stopBtn) stopBtn.style.display='inline-block';
-            }
-            else{
+            } else if(branchElection.isCompleted) {
+                if(restartBtn) restartBtn.style.display='inline-block';
+            } else {
                 if(startBtn) startBtn.style.display='inline-block';
-                if(stopBtn) stopBtn.style.display='none';
             }
 
 
@@ -706,6 +712,7 @@ async function createBranchElection() {
 }
 async function startBrElection(){if(branchElection&&confirm('Start branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:1,registrationOpen:0})});toast('Started');loadBranchElection();}}
 async function stopBrElection(){if(branchElection&&confirm('End branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:0,isCompleted:1})});toast('Ended');loadBranchElection();}}
+async function restartBrElection(){if(branchElection&&confirm('Restart this election? All votes will be reset.')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}/reset`,{method:'POST'});toast('✅ Election restarted and votes reset!');loadBranchElection();}}
 async function deleteBrElection(){if(branchElection&&confirm('Delete branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'DELETE'});toast('Deleted');loadBranchElection();}}
 function copyBrCode(){navigator.clipboard.writeText(branchElection.electionCode).then(()=>toast('Copied'));}
 

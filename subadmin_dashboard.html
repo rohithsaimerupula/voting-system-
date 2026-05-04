@@ -916,8 +916,8 @@
             <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">
 
               <button class="btn-sm btn-g" onclick="startMyElection()" id="my-elec-start-btn">▶ Start Election</button>
-              <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End
-                Election</button>
+              <button class="btn-sm btn-g" onclick="restartMyElection()" id="my-elec-restart-btn" style="display:none;">🔄 Restart Election</button>
+              <button class="btn-sm btn-d" onclick="stopMyElection()" id="my-elec-stop-btn" style="display:none;">⏹ End Election</button>
               <button class="btn-sm"
                 style="background:rgba(255,42,77,0.1);color:var(--red);border:1px solid rgba(255,42,77,0.2);"
                 onclick="deleteMyElection()">🗑️ Delete</button>
@@ -1561,13 +1561,18 @@
 
       const startBtn = document.getElementById('my-elec-start-btn');
       const stopBtn = document.getElementById('my-elec-stop-btn');
+      const restartBtn = document.getElementById('my-elec-restart-btn');
+
+      if (startBtn) startBtn.style.display = 'none';
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (restartBtn) restartBtn.style.display = 'none';
 
       if (myElection.isActive) {
-        if (startBtn) startBtn.style.display = 'none';
         if (stopBtn) stopBtn.style.display = 'inline-block';
+      } else if (myElection.isCompleted) {
+        if (restartBtn) restartBtn.style.display = 'inline-block';
       } else {
         if (startBtn) startBtn.style.display = 'inline-block';
-        if (stopBtn) stopBtn.style.display = 'none';
       }
 
 
@@ -1803,6 +1808,14 @@
     async function stopMyElection() {
       if (!myElection || !confirm('End this election?')) return;
       try { await apiFetch(`/elections/${encodeURIComponent(myElection.id)}`, { method: 'PATCH', body: JSON.stringify({ isActive: 0, isCompleted: 1 }) }); toast('Election ended!'); loadMyElection(); } catch (e) { toast(e.message, false); }
+    }
+    async function restartMyElection() {
+      if (!myElection || !confirm('Restart this election? All current votes will be deleted, and students will have to vote again.')) return;
+      try {
+        await apiFetch(`/elections/${encodeURIComponent(myElection.id)}/reset`, { method: 'POST' });
+        toast('✅ Election restarted and votes reset!');
+        loadMyElection();
+      } catch (e) { toast(e.message, false); }
     }
     async function deleteMyElection() {
       if (!myElection || !confirm('Delete this election permanently?')) return;

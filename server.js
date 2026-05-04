@@ -935,6 +935,20 @@ app.post('/api/election/reset', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/elections/:id/reset', authGuard, async (req, res) => {
+    try {
+        const elec = await db.execute({ sql: 'SELECT electionCode FROM elections WHERE id = ?', args: [req.params.id] });
+        if (elec.rows.length === 0) return res.status(404).json({ error: 'Election not found' });
+        const eCode = elec.rows[0].electionCode;
+
+        await db.batch([
+            { sql: "DELETE FROM publicLedger WHERE electionCode = ? OR electionCode = ?", args: [req.params.id, eCode] },
+            { sql: "UPDATE elections SET isActive = 1, isCompleted = 0 WHERE id = ?", args: [req.params.id] }
+        ], "write");
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/voters/eligible', async (req, res) => {
     try {
         const elections = await db.execute({ sql: "SELECT * FROM elections WHERE institution = ? AND isActive = 1", args: [req.query.institution] });
@@ -1049,6 +1063,11 @@ app.patch('/api/elections/:id', authGuard, async (req, res) => {
 
 app.delete('/api/elections/:id', authGuard, async (req, res) => {
     try {
+        const elec = await db.execute({ sql: 'SELECT electionCode FROM elections WHERE id = ?', args: [req.params.id] });
+        if (elec.rows.length > 0) {
+            const eCode = elec.rows[0].electionCode;
+            await db.execute({ sql: 'DELETE FROM publicLedger WHERE electionCode = ? OR electionCode = ?', args: [req.params.id, eCode] });
+        }
         await db.execute({ sql: 'DELETE FROM elections WHERE id = ?', args: [req.params.id] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
