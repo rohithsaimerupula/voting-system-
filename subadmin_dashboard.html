@@ -952,8 +952,25 @@
             </div>
           </div>
 
-          <!-- Class Students Election Access (Added) -->
-
+          <!-- Class Students Election Access -->
+          <div class="card" id="my-elec-students-card" style="margin-top:1.5rem; padding:0; overflow:hidden;">
+            <div style="padding:1rem 1.5rem; background:rgba(168,85,247,0.05); border-bottom:1px solid rgba(168,85,247,0.2); display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0; color:var(--purple);">🎓 Eligible Voters</h3>
+              <span id="my-elec-voter-count" style="font-size:0.8rem; color:var(--muted);">0 students</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:20%;">Reg No</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="my-elec-student-table"></tbody>
+              </table>
+            </div>
+          </div>
 
 
 
@@ -1941,6 +1958,22 @@
       }
       tick();
       collegeCountdownInterval = setInterval(tick, 1000);
+    }
+
+    function renderMyElecStudents(list) {
+      const tbody = document.getElementById('my-elec-student-table');
+      const countEl = document.getElementById('my-elec-voter-count');
+      if (countEl) countEl.textContent = list.length + ' student' + (list.length !== 1 ? 's' : '');
+      if (!tbody) return;
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty">No approved students in class yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(s => `<tr>
+        <td><strong>${s.regNum}</strong></td>
+        <td>${s.name}<div style="font-size:0.78rem;color:var(--muted);">${s.email || ''}</div></td>
+        <td><span style="color:#22c55e;font-weight:700;font-size:0.8rem;">✅ Eligible</span></td>
+      </tr>`).join('');
     }
 
     function renderBranchStudents(list) {

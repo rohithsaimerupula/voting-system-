@@ -604,7 +604,8 @@
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
                 const voted = elections.filter(e => e.hasVoted).length;
-                const active = elections.filter(e => e.isActive && !e.hasVoted).length;
+                // Use Number() to correctly compare SQLite integer fields
+                const active = elections.filter(e => Number(e.isActive) === 1 && Number(e.isCompleted) !== 1 && !e.hasVoted).length;
                 
                 document.getElementById('stat-voted').innerText = voted;
                 document.getElementById('stat-active').innerText = active;
@@ -627,18 +628,20 @@
             list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Scanning for ballots...</div>';
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
-                const pending = elections.filter(e => !e.isCompleted && !e.hasVoted);
+                // Only show elections that are LIVE (isActive == 1) and voter hasn't voted yet
+                // SQLite returns integers so use == 1 to correctly detect active elections
+                const liveAndPending = elections.filter(e => Number(e.isActive) === 1 && Number(e.isCompleted) !== 1 && !e.hasVoted);
                 
-                list.innerHTML = pending.length ? pending.map(e => `
+                list.innerHTML = liveAndPending.length ? liveAndPending.map(e => `
                     <div class="vd-election-card">
-                        <span class="vd-status-pill ${e.isActive?'vd-pill-live':'vd-pill-soon'}">${e.isActive?'Live':'Verification Soon'}</span>
+                        <span class="vd-status-pill vd-pill-live">Live</span>
                         <h3 class="vd-election-name">${e.name}</h3>
                         <p class="vd-election-info">Access your digital ballot gateway to cast your vote for this session.</p>
-                        <button class="vd-action-btn" onclick="enterGateway('${e.id}')" ${!e.isActive?'disabled':''}>
-                            ${e.isActive?'Enter Gateway ➔':'Awaiting Sync'}
+                        <button class="vd-action-btn" onclick="enterGateway('${e.id}')">
+                            Enter Gateway ➔
                         </button>
                     </div>
-                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No pending elections found for your profile.</div>';
+                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No live elections available for your profile right now.</div>';
             } catch(e) { 
                 list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--danger);">⚠️ Error loading voting center: ${e.message}</div>`; 
             }
@@ -649,7 +652,7 @@
             list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Fetching official counts...</div>';
             try {
                 const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
-                const completed = elections.filter(e => e.isCompleted);
+                const completed = elections.filter(e => Number(e.isCompleted) === 1);
                 
                 list.innerHTML = completed.length ? completed.map(e => `
                     <div class="vd-election-card">
