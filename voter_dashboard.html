@@ -541,12 +541,8 @@
             // Role Guard: Staff members must not access the student portal
             const STAFF_ROLES = ['admin', 'subadmin', 'superadmin', 'developer'];
             if (STAFF_ROLES.includes(currentUser.role)) {
-                // Redirect to appropriate dashboard
-                if (currentUser.role === 'superadmin') window.location.href = 'superadmin_dashboard.html';
-                else if (currentUser.role === 'admin') window.location.href = 'admin_dashboard.html';
-                else if (currentUser.role === 'subadmin') window.location.href = 'subadmin_dashboard.html';
-                else if (currentUser.role === 'developer') window.location.href = 'developer.html';
-                else window.location.href = 'login.html?admin=true';
+                StorageManager.logout();
+                window.location.href = 'login.html';
             }
         }
 

@@ -808,8 +808,12 @@ app.get('/api/voters/my-elections', authGuard, async (req, res) => {
             // Check if user is in the ORIGINAL scope of the election
             let inScope = true;
             if (e.type === 'branch' && voter && scope.branch && scope.branch !== voter.branch) inScope = false;
-            if (e.type === 'class' && voter && scope.classes && scope.classes.length > 0) {
-                if (!scope.classes.includes(voter.class)) inScope = false;
+            if (e.type === 'class' && voter) {
+                if (scope.classes && scope.classes.length > 0) {
+                    if (!scope.classes.includes(voter.class)) inScope = false;
+                } else if (scope.class) {
+                    if (scope.class !== voter.class) inScope = false;
+                }
             }
 
             // If the election is completed
@@ -817,7 +821,10 @@ app.get('/api/voters/my-elections', authGuard, async (req, res) => {
                 let canSeeResults = false;
                 if (visibility === 'all') canSeeResults = true;
                 else if (visibility === 'branch' && voter && voter.branch === scope.branch) canSeeResults = true;
-                else if (visibility === 'class' && voter && scope.classes && scope.classes.includes(voter.class)) canSeeResults = true;
+                else if (visibility === 'class' && voter) {
+                    if (scope.classes && scope.classes.includes(voter.class)) canSeeResults = true;
+                    else if (scope.class && scope.class === voter.class) canSeeResults = true;
+                }
                 else if (visibility === 'voters_only' && inScope) canSeeResults = true;
 
                 if (!canSeeResults) continue;

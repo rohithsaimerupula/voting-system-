@@ -1773,7 +1773,7 @@
     async function startMyElection() {
       if (!myElection) return;
       // Block start if registration window is still open
-      if (myElection.registrationOpen == 1) {
+      if (classRegistrationConfig && classRegistrationConfig.registrationOpen == 1) {
         return toast('❌ Cannot start election while registration is still open. Please stop registration first.', false);
       }
       if (!confirm('Start election? Students will now be able to vote.')) return;
