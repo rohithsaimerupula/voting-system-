@@ -1127,10 +1127,11 @@
         const role = s && s.role ? s.role.trim().toLowerCase() : '';
         if (role === 'subadmin') {
           session = s;
-          setText('class-label', (s.year || '') + ' ' + (s.class || '-'));
-          setText('class-sub', 'Managing ' + (s.year || '') + ' ' + (s.class || '') + ' — ' + (s.branch || '') + ' — ' + (s.institution || ''));
-          setText('class-students-sub', 'Students in ' + (s.year || '') + ' ' + (s.class || ''));
-          try { loadAll(); } catch (e) { console.error('loadAll:', e); }
+          setText('class-label', `Class Authority — ${session.class}`);
+          loadAll().then(() => {
+            const lastPage = sessionStorage.getItem('ovs_last_page');
+            if (lastPage) showPage(lastPage);
+          });
         } else {
           // If not subadmin, redirect to main login
           window.location.href = 'login.html?admin=true';
@@ -1158,15 +1159,27 @@
     function showPage(id, navEl) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('page-' + id).classList.add('active');
+      const pg = document.getElementById('page-' + id);
+      if (pg) pg.classList.add('active');
       if (navEl) navEl.classList.add('active');
+      else {
+        // If no navEl provided, try to find it by id (for restored sessions)
+        const nav = document.getElementById('nav-' + id) || document.getElementById('nav-voting-' + id.replace('voting-',''));
+        if(nav) nav.classList.add('active');
+      }
+      
+      sessionStorage.setItem('ovs_last_page', id);
+
       if (id === 'voting-my') loadMyElection();
       if (id === 'voting-branch') loadBranchElectionPage();
       if (id === 'voting-college') loadCollegeElectionPage();
       if (id === 'registrations') loadClassRegistration();
     }
 
-    async function refreshAll() { toast('🔄 Refreshing...'); await loadAll(); toast('Data refreshed!'); }
+    async function refreshAll() { 
+      toast('🔄 Refreshing Page...'); 
+      setTimeout(() => location.reload(), 500);
+    }
 
     async function loadAll() {
       try {

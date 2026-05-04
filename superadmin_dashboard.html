@@ -1480,7 +1480,10 @@
           if (layout) layout.style.display = 'flex';
           setText('sa-inst-label', saSession.institution || 'Super Admin');
           setText('inst-name-sub', saSession.institution || '');
-          loadAll();
+          loadAll().then(() => {
+              const lastPage = sessionStorage.getItem('ovs_last_page_super');
+              if(lastPage) showPage(lastPage);
+          });
         }
 
         // Listen for remote session updates (e.g. from developer approval)
@@ -1692,37 +1695,31 @@
       }
 
       function showPage(id, ev) {
-        const targetPage = document.getElementById('page-' + id);
-        if (!targetPage) return console.error("Page not found: " + id);
-
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.nav-item, .nav-sub-item').forEach(n => n.classList.remove('active'));
+
+        const targetPage = document.getElementById('page-' + id);
+        if (!targetPage) return;
         
         targetPage.classList.add('active');
         if (ev && ev.currentTarget) {
           ev.currentTarget.classList.add('active');
-        } else if (id === 'overview') {
-          // Fallback for initial load
-          const overviewNav = document.querySelector('.nav-item[onclick*="overview"]');
-          if (overviewNav) overviewNav.classList.add('active');
+        } else {
+          const nav = document.querySelector(`.nav-item[onclick*="${id}"], .nav-sub-item[onclick*="${id}"]`);
+          if (nav) nav.classList.add('active');
         }
+
+        sessionStorage.setItem('ovs_last_page_super', id);
 
         if (id === 'students') renderStudents(allStudents);
         if (id === 'voting') loadVoting();
-        if (id === 'audit') {
-            console.log("Loading Audit Log...");
-            loadAudit();
-        }
-        if (id === 'health') {
-            console.log("Loading System Health...");
-            loadSystemHealth();
-        }
+        if (id === 'audit') loadAudit();
+        if (id === 'health') loadSystemHealth();
       }
 
-      async function refreshAll() {
-        toast('🔄 Refreshing data...');
-        await loadAll();
-        toast('✅ Data refreshed!');
+      async function refreshAll() { 
+        toast('🔄 Refreshing Page...'); 
+        setTimeout(() => location.reload(), 500); 
       }
 
       async function loadAll() {
