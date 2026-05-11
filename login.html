@@ -317,12 +317,15 @@
             <h2 style="font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Biometric Login</h2>
             <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Please verify your identity to access the dashboard.</p>
             
-            <div style="background:black; border-radius:12px; overflow:hidden; position:relative; border:1px solid var(--glass-border); height:240px; margin-bottom:1.5rem;">
+            <div style="background:black; border-radius:12px; overflow:hidden; position:relative; border:1px solid var(--glass-border); height:240px; margin-bottom:1rem;">
                 <video id="login-webcam" autoplay playsinline style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
                 <div id="face-scan-overlay" style="position:absolute; inset:0; border:2px dashed rgba(6,182,212,0.5); border-radius:12px; display:flex; align-items:center; justify-content:center; pointer-events:none;">
                     <div class="spinner hidden" id="face-spinner" style="width:40px; height:40px; border:3px solid rgba(6,182,212,0.2); border-top-color:#06b6d4; border-radius:50%; animation:spin 1s linear infinite;"></div>
                 </div>
             </div>
+
+            <!-- Liveness status banner (shown after camera starts) -->
+            <div id="login-liveness-msg" style="display:none; margin-bottom:1rem; padding:0.6rem 1rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:10px; color:#f59e0b; font-size:0.85rem; font-weight:600;">👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...</div>
 
             <div id="face-auth-status" style="margin-bottom:1.5rem; font-size:0.9rem; font-weight:600; color:var(--text); min-height:1.2rem;">Position your face clearly in the camera.</div>
 
@@ -684,6 +687,77 @@
         let loginWebcamStream = null;
         let baseFaceDescriptor = null;
 
+        // --- LIVENESS DETECTION (Login) ---
+        let loginLivenessVerified = false;
+        let loginLivenessInterval = null;
+        let loginBlinkFrameCount = 0;
+        const LOGIN_EAR_CLOSE = 0.21;
+        const LOGIN_EAR_FRAMES = 2;
+
+        function loginCalcEAR(eye) {
+            const v1 = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+            const v2 = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
+            const h  = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
+            return h === 0 ? 0 : (v1 + v2) / (2 * h);
+        }
+
+        function stopLoginLivenessScan() {
+            if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
+        }
+
+        function startLoginLivenessScan(videoEl, onBlink) {
+            if (!faceModelsLoaded) return;
+            loginBlinkFrameCount = 0;
+            loginLivenessVerified = false;
+
+            const livenessMsg = document.getElementById('login-liveness-msg');
+            if (livenessMsg) {
+                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally...';
+                livenessMsg.style.background = 'rgba(245,158,11,0.12)';
+                livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                livenessMsg.style.color = '#f59e0b';
+                livenessMsg.style.display = 'block';
+            }
+            const captureBtn = document.getElementById('face-auth-btn');
+            if (captureBtn) { captureBtn.disabled = true; captureBtn.style.opacity = '0.5'; captureBtn.innerText = 'Waiting for Blink...'; }
+
+            async function tick() {
+                if (!videoEl || videoEl.paused || videoEl.ended) return;
+                try {
+                    const det = await faceapi
+                        .detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+                        .withFaceLandmarks();
+                    if (!det) { loginLivenessInterval = setTimeout(tick, 150); return; }
+
+                    const pts = det.landmarks.positions;
+                    const leftEye  = [pts[36],pts[37],pts[38],pts[39],pts[40],pts[41]];
+                    const rightEye = [pts[42],pts[43],pts[44],pts[45],pts[46],pts[47]];
+                    const ear = (loginCalcEAR(leftEye) + loginCalcEAR(rightEye)) / 2;
+
+                    if (ear < LOGIN_EAR_CLOSE) {
+                        loginBlinkFrameCount++;
+                    } else if (loginBlinkFrameCount >= LOGIN_EAR_FRAMES) {
+                        clearTimeout(loginLivenessInterval);
+                        loginLivenessInterval = null;
+                        loginLivenessVerified = true;
+                        if (livenessMsg) {
+                            livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Now capture to verify.';
+                            livenessMsg.style.background = 'rgba(34,197,94,0.1)';
+                            livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
+                            livenessMsg.style.color = '#22c55e';
+                        }
+                        if (captureBtn) { captureBtn.disabled = false; captureBtn.style.opacity = '1'; captureBtn.innerText = 'Capture & Verify'; }
+                        onBlink();
+                        return;
+                    } else {
+                        loginBlinkFrameCount = 0;
+                    }
+                } catch(_) {}
+                loginLivenessInterval = setTimeout(tick, 120);
+            }
+            loginLivenessInterval = setTimeout(tick, 300);
+        }
+
         async function loadFaceModels() {
             if (typeof faceapi === 'undefined') return setTimeout(loadFaceModels, 500);
             try {
@@ -756,6 +830,14 @@
                 statusEl.innerText = "Position your face clearly in the camera.";
                 statusEl.style.color = "var(--text)";
 
+                // Start liveness blink detection
+                loginLivenessVerified = false;
+                startLoginLivenessScan(video, () => {
+                    // onBlink callback — liveness confirmed, enable capture
+                    statusEl.innerText = "Liveness confirmed ✅ — Click 'Capture & Verify' now.";
+                    statusEl.style.color = "#22c55e";
+                });
+
             } catch(e) {
                 console.error("[Login AI]", e);
                 statusEl.innerText = "Error extracting data: " + e.message;
@@ -764,6 +846,15 @@
         }
 
         async function captureAndVerifyFace() {
+            // Liveness guard — must blink before capture
+            if (!loginLivenessVerified) {
+                const statusEl = document.getElementById('face-auth-status');
+                statusEl.innerText = "⚠️ Please BLINK naturally first to pass the liveness check.";
+                statusEl.style.color = "#f59e0b";
+                return;
+            }
+            stopLoginLivenessScan();
+
             if (!baseFaceDescriptor) return;
             const video = document.getElementById('login-webcam');
             const statusEl = document.getElementById('face-auth-status');
@@ -818,10 +909,16 @@
         }
 
         function cancelFaceAuth() {
+            stopLoginLivenessScan();
+            loginLivenessVerified = false;
             if (loginWebcamStream) {
                 loginWebcamStream.getTracks().forEach(t => t.stop());
                 loginWebcamStream = null;
             }
+            const livenessMsg = document.getElementById('login-liveness-msg');
+            if (livenessMsg) livenessMsg.style.display = 'none';
+            const captureBtn = document.getElementById('face-auth-btn');
+            if (captureBtn) { captureBtn.disabled = false; captureBtn.style.opacity = '1'; captureBtn.innerText = 'Capture & Verify'; }
             document.getElementById('face-auth-modal').classList.add('hidden');
             tempVerifiedUser = null;
             setText('login-btn', "Secure Login");

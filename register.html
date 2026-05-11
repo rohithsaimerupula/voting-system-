@@ -509,6 +509,16 @@
         let liveFaceDescriptor = null;
         let idFaceImg = null;
 
+        // --- LIVENESS DETECTION VARIABLES ---
+        let livenessVerified = false;      // true once a genuine blink is detected
+        let livenessStream = null;         // the active webcam stream for liveness scan
+        let livenessInterval = null;       // requestAnimationFrame / interval handle
+        let prevEarLeft = null;            // previous frame EAR for blink detection
+        let prevEarRight = null;
+        let blinkFrameCount = 0;           // consecutive low-EAR frames (eye closed)
+        const EAR_CLOSE_THRESHOLD = 0.21; // EAR below this → eye is closed
+        const EAR_BLINK_FRAMES   = 2;     // minimum frames eye must stay closed
+
         // Safe DOM Utilities
         function setText(id, val) {
             const el = document.getElementById(id);
@@ -906,6 +916,67 @@
         }
         loadFaceModels();
 
+        // ─── LIVENESS: Eye-Aspect-Ratio helper ────────────────────────────────
+        function calcEAR(eye) {
+            // eye = array of 6 {x,y} landmark points (standard 68-point model)
+            // Vertical distances
+            const v1 = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+            const v2 = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
+            // Horizontal distance
+            const h  = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
+            return h === 0 ? 0 : (v1 + v2) / (2 * h);
+        }
+
+        // Start continuous liveness scan on the video element.
+        // Calls onBlink() once a genuine blink is confirmed.
+        async function startLivenessScan(videoEl, statusEl, onBlink) {
+            if (!faceModelsLoaded) return;
+            prevEarLeft = null; prevEarRight = null; blinkFrameCount = 0;
+
+            async function tick() {
+                if (!videoEl || videoEl.paused || videoEl.ended) return;
+                try {
+                    // Detect landmarks on the live video frame (fast — no descriptor needed)
+                    const det = await faceapi
+                        .detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+                        .withFaceLandmarks();
+
+                    if (!det) {
+                        livenessInterval = setTimeout(tick, 150);
+                        return;
+                    }
+
+                    const pts = det.landmarks.positions;
+                    // face-api 68-point model:
+                    //   left eye:  pts[36..41]   right eye: pts[42..47]
+                    const leftEye  = [pts[36],pts[37],pts[38],pts[39],pts[40],pts[41]];
+                    const rightEye = [pts[42],pts[43],pts[44],pts[45],pts[46],pts[47]];
+
+                    const earL = calcEAR(leftEye);
+                    const earR = calcEAR(rightEye);
+                    const ear  = (earL + earR) / 2;
+
+                    if (ear < EAR_CLOSE_THRESHOLD) {
+                        blinkFrameCount++;
+                    } else if (blinkFrameCount >= EAR_BLINK_FRAMES) {
+                        // Eye was closed for enough frames, then opened → genuine blink
+                        clearTimeout(livenessInterval);
+                        livenessInterval = null;
+                        onBlink();
+                        return;
+                    } else {
+                        blinkFrameCount = 0;
+                    }
+                } catch(_) {}
+                livenessInterval = setTimeout(tick, 120);
+            }
+            livenessInterval = setTimeout(tick, 300);
+        }
+
+        function stopLivenessScan() {
+            if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
+        }
+
         // --- AI FACE VERIFICATION LOGIC ---
         async function handleIdUpload(input) {
             if (!input.files.length) return;
@@ -925,6 +996,19 @@
             
             idFaceDescriptor = null;
             idFaceImg = null;
+            // Reset AI match state so re-upload forces fresh comparison
+            aiVerified = false;
+            aiConfidence = 0;
+            liveFaceDescriptor = null;
+            livenessVerified = false;
+            webcamPhoto = null;
+            // Reset webcam UI to force a new capture
+            document.getElementById('webcam-preview').classList.add('hidden');
+            document.getElementById('webcam-video').classList.remove('hidden');
+            document.getElementById('retake-btn').classList.add('hidden');
+            document.getElementById('capture-btn').classList.remove('hidden');
+            document.getElementById('ai-status-card').classList.add('hidden');
+            checkSubmitStatus();
 
             try {
                 if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
@@ -1136,18 +1220,59 @@
         async function startWebcam() {
             const video = document.getElementById('webcam-video');
             try {
-                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false });
                 video.srcObject = webcamStream;
                 document.getElementById('start-cam-btn').classList.add('hidden');
                 document.getElementById('capture-btn').classList.remove('hidden');
                 document.getElementById('webcam-video').classList.remove('hidden');
                 document.getElementById('webcam-preview').classList.add('hidden');
+
+                // ─── LIVENESS: show blink prompt and begin scanning ───
+                livenessVerified = false;
+                stopLivenessScan();
+                blinkFrameCount = 0;
+
+                // Show blink instruction overlay
+                let livenessMsg = document.getElementById('liveness-msg');
+                if (!livenessMsg) {
+                    livenessMsg = document.createElement('div');
+                    livenessMsg.id = 'liveness-msg';
+                    livenessMsg.style.cssText = 'margin-top:0.6rem; padding:0.6rem 1rem; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:10px; color:#f59e0b; font-size:0.85rem; font-weight:600; text-align:center;';
+                    video.parentElement.parentElement.insertBefore(livenessMsg, video.parentElement.nextSibling);
+                }
+                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
+                livenessMsg.style.display = 'block';
+
+                // Capture button disabled until blink confirmed
+                const captureBtn = document.getElementById('capture-btn');
+                captureBtn.disabled = true;
+                captureBtn.innerText = 'Waiting for Blink...';
+                captureBtn.style.opacity = '0.5';
+
+                startLivenessScan(video, livenessMsg, () => {
+                    livenessVerified = true;
+                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> You may now capture your photo.';
+                    livenessMsg.style.background = 'rgba(34,197,94,0.1)';
+                    livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
+                    livenessMsg.style.color = '#22c55e';
+                    captureBtn.disabled = false;
+                    captureBtn.innerText = 'Capture Photo';
+                    captureBtn.style.opacity = '1';
+                });
+
             } catch (err) {
                 showError("Webcam Access Denied: " + err.message);
             }
         }
 
         async function captureWebcam() {
+            // ─── LIVENESS GUARD ──────────────────────────────────────────────────
+            if (!livenessVerified) {
+                showError('⚠️ Liveness check not yet passed. Please BLINK naturally in front of the camera first.');
+                return;
+            }
+            stopLivenessScan(); // Stop continuous scan once we capture
+
             const video = document.getElementById('webcam-video');
             const canvas = document.getElementById('webcam-canvas');
             const context = canvas.getContext('2d');
@@ -1165,6 +1290,7 @@
             // Blank photo detection
             if (isImageBlank(canvas)) {
                 webcamPhoto = null;
+                livenessVerified = false; // Force re-blink on retake
                 showError('Webcam capture appears blank or dark. Please check your camera, ensure it is not covered, and try again.');
                 // Reset webcam state
                 document.getElementById('webcam-preview').classList.add('hidden');
@@ -1218,6 +1344,9 @@
             liveFaceDescriptor = null;
             aiConfidence = 0;
             aiVerified = false;
+            livenessVerified = false; // Force blink again on retake
+            blinkFrameCount = 0;
+            stopLivenessScan();
             
             const rb = document.getElementById('retake-btn');
             if(rb) {
@@ -1228,10 +1357,39 @@
             document.getElementById('webcam-preview').classList.add('hidden');
             document.getElementById('webcam-video').classList.remove('hidden');
             document.getElementById('retake-btn').classList.add('hidden');
-            document.getElementById('capture-btn').classList.remove('hidden');
             document.getElementById('ai-status-card').classList.add('hidden');
-            
-            // Re-detect on ID if needed? No, just clear live.
+
+            // Reset capture button and restart liveness
+            const captureBtn = document.getElementById('capture-btn');
+            captureBtn.classList.remove('hidden');
+            captureBtn.disabled = true;
+            captureBtn.innerText = 'Waiting for Blink...';
+            captureBtn.style.opacity = '0.5';
+
+            // Re-show blink prompt
+            const livenessMsg = document.getElementById('liveness-msg');
+            if (livenessMsg) {
+                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
+                livenessMsg.style.background = 'rgba(245,158,11,0.12)';
+                livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                livenessMsg.style.color = '#f59e0b';
+                livenessMsg.style.display = 'block';
+            }
+
+            const video = document.getElementById('webcam-video');
+            startLivenessScan(video, livenessMsg, () => {
+                livenessVerified = true;
+                if (livenessMsg) {
+                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> You may now capture your photo.';
+                    livenessMsg.style.background = 'rgba(34,197,94,0.1)';
+                    livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
+                    livenessMsg.style.color = '#22c55e';
+                }
+                captureBtn.disabled = false;
+                captureBtn.innerText = 'Capture Photo';
+                captureBtn.style.opacity = '1';
+            });
+
             checkSubmitStatus();
         }
 
@@ -1250,8 +1408,9 @@
             }
         }
 
-        // Stop webcam if user navigates away
+        // Stop webcam and liveness scan if user navigates away
         window.addEventListener('beforeunload', () => {
+            stopLivenessScan();
             if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); }
         });
 
