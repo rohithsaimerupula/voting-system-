@@ -711,14 +711,19 @@
 
         // Reliable setTimeout-based liveness scan for login.
         // 30-second override ensures user is never permanently blocked.
+        // Liveness scan for login. Blink is MANDATORY — no bypasses, no overrides.
         function startLoginLivenessScan(videoEl, onBlink) {
             if (!faceModelsLoaded) {
-                loginLivenessVerified = true;
+                // Block completely — no bypass allowed
                 const livenessMsg = document.getElementById('login-liveness-msg');
-                if (livenessMsg) { livenessMsg.style.display = 'none'; }
-                const captureBtn = document.getElementById('face-auth-btn');
-                if (captureBtn) { captureBtn.disabled = false; captureBtn.style.opacity = '1'; captureBtn.innerText = 'Capture & Verify'; }
-                onBlink();
+                if (livenessMsg) {
+                    livenessMsg.innerHTML = '❌ AI Face Engine not loaded. Please refresh and try again.';
+                    livenessMsg.style.background = 'rgba(239,68,68,0.12)';
+                    livenessMsg.style.borderColor = 'rgba(239,68,68,0.4)';
+                    livenessMsg.style.color = '#ff2a4d';
+                    livenessMsg.style.display = 'block';
+                }
+                // Do NOT enable capture button — do NOT call onBlink()
                 return;
             }
             loginBlinkFrameCount = 0;
@@ -742,22 +747,6 @@
             const detectorOpts = useTiny
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
-
-            // 20-second failsafe
-            const overrideTimer = setTimeout(() => {
-                if (!scanActive) return;
-                scanActive = false;
-                if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
-                loginLivenessVerified = true;
-                if (livenessMsg) {
-                    livenessMsg.innerHTML = '⏱️ Liveness timed out. Click Capture & Verify to proceed.';
-                    livenessMsg.style.background = 'rgba(99,102,241,0.12)';
-                    livenessMsg.style.borderColor = 'rgba(99,102,241,0.4)';
-                    livenessMsg.style.color = '#818cf8';
-                }
-                if (captureBtn) { captureBtn.disabled = false; captureBtn.style.opacity = '1'; captureBtn.innerText = 'Capture & Verify'; }
-                onBlink();
-            }, 20000);
 
             async function tick() {
                 if (!scanActive) return;
@@ -795,8 +784,8 @@
                     if (ear < LOGIN_EAR_CLOSE) {
                         loginBlinkFrameCount++;
                     } else if (loginBlinkFrameCount >= LOGIN_EAR_FRAMES) {
+                        // Genuine blink confirmed
                         scanActive = false;
-                        clearTimeout(overrideTimer);
                         if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
                         loginLivenessVerified = true;
                         if (livenessMsg) {

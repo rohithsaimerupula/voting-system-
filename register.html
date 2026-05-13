@@ -943,11 +943,19 @@
         // --- Liveness Scan (reliable async setTimeout loop) ---
         let livenessRafId = null; // kept for compat
 
-        // Start continuous liveness scan. Calls onBlink() once blink confirmed.
+        // Start continuous liveness scan. Calls onBlink() ONLY after genuine blink.
+        // Blink is MANDATORY — no bypasses, no overrides.
         function startLivenessScan(videoEl, statusEl, onBlink) {
             if (!faceModelsLoaded) {
-                if (statusEl) { statusEl.innerHTML = '⚠️ AI not ready. Liveness skipped — you may capture manually.'; statusEl.style.display = 'block'; }
-                onBlink();
+                // Block completely if AI not ready — no bypass allowed
+                if (statusEl) {
+                    statusEl.innerHTML = '❌ AI Face Engine not loaded. Please refresh the page and try again.';
+                    statusEl.style.background = 'rgba(239,68,68,0.12)';
+                    statusEl.style.borderColor = 'rgba(239,68,68,0.4)';
+                    statusEl.style.color = '#ff2a4d';
+                    statusEl.style.display = 'block';
+                }
+                // Keep capture button hidden/disabled — do NOT call onBlink()
                 return;
             }
             blinkFrameCount = 0;
@@ -959,20 +967,6 @@
             const detectorOpts = useTiny
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
-
-            // 20-second failsafe
-            const overrideTimer = setTimeout(() => {
-                if (!scanActive) return;
-                scanActive = false;
-                if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
-                if (statusEl) {
-                    statusEl.innerHTML = '⏱️ Liveness timed out. You may capture manually.';
-                    statusEl.style.background = 'rgba(99,102,241,0.12)';
-                    statusEl.style.borderColor = 'rgba(99,102,241,0.4)';
-                    statusEl.style.color = '#818cf8';
-                }
-                onBlink();
-            }, 20000);
 
             async function tick() {
                 if (!scanActive) return;
@@ -1010,8 +1004,8 @@
                     if (ear < EAR_CLOSE_THRESHOLD) {
                         blinkFrameCount++;
                     } else if (blinkFrameCount >= EAR_BLINK_FRAMES) {
+                        // Genuine blink confirmed
                         scanActive = false;
-                        clearTimeout(overrideTimer);
                         if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
                         onBlink();
                         return;
@@ -1023,7 +1017,6 @@
                 }
                 livenessInterval = setTimeout(tick, 50);
             }
-            // Start fast — just 100ms for camera to stabilize
             livenessInterval = setTimeout(tick, 100);
         }
 
