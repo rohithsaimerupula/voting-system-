@@ -748,10 +748,28 @@
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
 
+            // Time-based: 3-second window per attempt
+            const ATTEMPT_WINDOW_MS = 3000;
+            let attemptStartTime = Date.now();
+
             async function tick() {
                 if (!scanActive) return;
+
+                // Check if 3-second window expired — reset and try again
+                if (Date.now() - attemptStartTime >= ATTEMPT_WINDOW_MS) {
+                    attemptStartTime = Date.now();
+                    loginBlinkFrameCount = 0;
+                    noFaceCount = 0;
+                    if (livenessMsg) {
+                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
+                        livenessMsg.style.color = '#f59e0b';
+                        livenessMsg.style.background = 'rgba(245,158,11,0.12)';
+                        livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                    }
+                }
+
                 if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
-                    loginLivenessInterval = setTimeout(tick, 80);
+                    loginLivenessInterval = setTimeout(tick, 50);
                     return;
                 }
                 try {
@@ -762,15 +780,17 @@
                     if (!det) {
                         noFaceCount++;
                         if (livenessMsg && noFaceCount >= 3) {
-                            livenessMsg.innerHTML = '⚠️ No face detected — move closer to camera';
+                            const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
+                            livenessMsg.innerHTML = `⚠️ No face detected — ${secs}s remaining`;
                         }
-                        loginLivenessInterval = setTimeout(tick, 80);
+                        loginLivenessInterval = setTimeout(tick, 50);
                         return;
                     }
 
                     noFaceCount = 0;
-                    if (livenessMsg && livenessMsg.innerHTML.includes('No face')) {
-                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally...';
+                    if (livenessMsg && !livenessMsg.innerHTML.includes('BLINK')) {
+                        const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
+                        livenessMsg.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (${secs}s)`;
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
@@ -784,7 +804,7 @@
                     if (ear < LOGIN_EAR_CLOSE) {
                         loginBlinkFrameCount++;
                     } else if (loginBlinkFrameCount >= LOGIN_EAR_FRAMES) {
-                        // Genuine blink confirmed
+                        // Genuine blink confirmed within 3 seconds!
                         scanActive = false;
                         if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
                         loginLivenessVerified = true;
