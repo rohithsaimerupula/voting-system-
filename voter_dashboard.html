@@ -385,6 +385,7 @@
             .vd-content-wrapper { padding: 1.5rem; }
         }
     </style>
+    <script src="session-guard.js"></script>
 </head>
 <body>
     <div id="tsparticles"></div>
@@ -581,6 +582,16 @@
             if (initialEl) initialEl.innerText = currentUser.name[0];
 
             loadDashboardStats();
+
+            // Single-session guard: auto-logout if another device logs in with same credentials
+            if (typeof startSessionGuard === 'function') {
+                startSessionGuard(currentUser.regNum, currentUser.institution, (reason) => {
+                    if (reason === 'session_replaced') {
+                        alert('⚠️ You have been logged out because your account was logged in from another device.');
+                    }
+                    logout();
+                });
+            }
             
             if (typeof tsParticles !== 'undefined') {
                 tsParticles.load("tsparticles", {
