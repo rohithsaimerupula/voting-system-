@@ -597,9 +597,9 @@ app.delete('/api/users/:id', async (req, res) => {
         console.log(`[OVS] Attempting deletion of user ${targetId} for institution: "${inst}"`);
 
         // Fetch the user to perform cascading deletes
-        const userCheck = await db.execute({ sql: "SELECT role, branch FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
+        const userCheck = await db.execute({ sql: "SELECT role, branch, class, year FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
         if (userCheck.rows.length > 0) {
-            const role = userCheck.rows[0].role;
+            const { role, branch, class: cls, year } = userCheck.rows[0];
             
             if (role === 'superadmin') {
                 console.log(`[OVS] Cascading deletion for Super Admin: ${targetId} of ${inst}`);
@@ -659,17 +659,69 @@ app.delete('/api/users/:id', async (req, res) => {
 
                 // Delete all other users of this institution
                 await db.execute({ sql: "DELETE FROM users WHERE institution = ? AND regNum != ?", args: [inst, targetId] });
-            } else if (role === 'admin') {
-                await db.execute({ sql: "DELETE FROM users WHERE managedBy IN (SELECT regNum FROM users WHERE managedBy = ? AND institution = ?) AND institution = ?", args: [targetId, inst, inst] });
-                await db.execute({ sql: "DELETE FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
-            } else if (role === 'subadmin') {
-                await db.execute({ sql: "DELETE FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
+            } else {
+                // Determine all user IDs to delete
+                let usersToDelete = [targetId];
+
+                if (role === 'admin') {
+                    if (branch) {
+                        const branchUsersRes = await db.execute({ sql: "SELECT regNum FROM users WHERE branch = ? AND institution = ? AND regNum != ?", args: [branch, inst, targetId] });
+                        usersToDelete.push(...branchUsersRes.rows.map(r => r.regNum));
+                    }
+                    // Fallback for legacy explicit managedBy references
+                    const legacyRes1 = await db.execute({ sql: "SELECT regNum FROM users WHERE managedBy IN (SELECT regNum FROM users WHERE managedBy = ? AND institution = ?) AND institution = ?", args: [targetId, inst, inst] });
+                    const legacyRes2 = await db.execute({ sql: "SELECT regNum FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
+                    usersToDelete.push(...legacyRes1.rows.map(r => r.regNum));
+                    usersToDelete.push(...legacyRes2.rows.map(r => r.regNum));
+                } else if (role === 'subadmin') {
+                    if (branch && cls && year) {
+                        const classUsersRes = await db.execute({ sql: "SELECT regNum FROM users WHERE role IN ('voter', 'contestant') AND branch = ? AND class = ? AND year = ? AND institution = ?", args: [branch, cls, year, inst] });
+                        usersToDelete.push(...classUsersRes.rows.map(r => r.regNum));
+                    }
+                    // Fallback for legacy explicit managedBy references
+                    const legacyRes = await db.execute({ sql: "SELECT regNum FROM users WHERE managedBy = ? AND institution = ?", args: [targetId, inst] });
+                    usersToDelete.push(...legacyRes.rows.map(r => r.regNum));
+                }
+
+                // Make array unique
+                usersToDelete = [...new Set(usersToDelete)];
+
+                if (usersToDelete.length > 0) {
+                    const chunkSize = 500;
+                    for (let i = 0; i < usersToDelete.length; i += chunkSize) {
+                        const chunk = usersToDelete.slice(i, i + chunkSize);
+                        const placeholders = chunk.map(() => '?').join(',');
+                        
+                        await db.execute({ sql: `DELETE FROM publicLedger WHERE institution = ? AND voterRegNum IN (${placeholders})`, args: [inst, ...chunk] });
+                        await db.execute({ sql: `DELETE FROM questions WHERE institution = ? AND candidateId IN (${placeholders})`, args: [inst, ...chunk] });
+                        await db.execute({ sql: `DELETE FROM auditLogs WHERE institution = ? AND user IN (${placeholders})`, args: [inst, ...chunk] });
+                        
+                        // Also delete elections created by any of these users, and related ledger entries
+                        const elecRes = await db.execute({ sql: `SELECT id, electionCode FROM elections WHERE institution = ? AND createdBy IN (${placeholders})`, args: [inst, ...chunk] });
+                        if (elecRes.rows.length > 0) {
+                            const elecIds = elecRes.rows.map(r => r.id);
+                            const elecCodes = elecRes.rows.map(r => r.electionCode);
+                            const allElec = [...elecIds, ...elecCodes];
+                            
+                            const elecChunkSize = 500;
+                            for (let j = 0; j < allElec.length; j += elecChunkSize) {
+                                const eChunk = allElec.slice(j, j + elecChunkSize);
+                                const ePlaceholders = eChunk.map(() => '?').join(',');
+                                await db.execute({ sql: `DELETE FROM publicLedger WHERE institution = ? AND electionCode IN (${ePlaceholders})`, args: [inst, ...eChunk] });
+                            }
+                            
+                            const idPlaceholders = elecIds.map(() => '?').join(',');
+                            await db.execute({ sql: `DELETE FROM elections WHERE institution = ? AND id IN (${idPlaceholders})`, args: [inst, ...elecIds] });
+                        }
+
+                        // Delete the actual users
+                        await db.execute({ sql: `DELETE FROM users WHERE institution = ? AND regNum IN (${placeholders})`, args: [inst, ...chunk] });
+                    }
+                }
             }
-            
-            await db.execute({ sql: "DELETE FROM elections WHERE createdBy = ? AND institution = ?", args: [targetId, inst] });
         }
 
-        // Finally delete the user itself
+        // Finally delete the target user itself (in case it wasn't caught above, though it should be)
         const delResult = await db.execute({ sql: "DELETE FROM users WHERE regNum = ? AND institution = ?", args: [targetId, inst] });
         console.log(`[OVS] Primary user deletion result:`, delResult.rowsAffected);
         
@@ -683,7 +735,45 @@ app.delete('/api/users/:id', async (req, res) => {
 app.delete('/api/users/role/:role', async (req, res) => {
     try {
         const inst = decodeURIComponent(req.query.institution || '');
-        await db.execute({ sql: "DELETE FROM users WHERE role = ? AND institution = ?", args: [req.params.role, inst] });
+        const role = req.params.role;
+        
+        // Find users to be deleted
+        const usersRes = await db.execute({ sql: "SELECT regNum FROM users WHERE role = ? AND institution = ?", args: [role, inst] });
+        const usersToDelete = usersRes.rows.map(r => r.regNum);
+        
+        if (usersToDelete.length > 0) {
+            const chunkSize = 500;
+            for (let i = 0; i < usersToDelete.length; i += chunkSize) {
+                const chunk = usersToDelete.slice(i, i + chunkSize);
+                const placeholders = chunk.map(() => '?').join(',');
+                
+                await db.execute({ sql: `DELETE FROM publicLedger WHERE institution = ? AND voterRegNum IN (${placeholders})`, args: [inst, ...chunk] });
+                await db.execute({ sql: `DELETE FROM questions WHERE institution = ? AND candidateId IN (${placeholders})`, args: [inst, ...chunk] });
+                await db.execute({ sql: `DELETE FROM auditLogs WHERE institution = ? AND user IN (${placeholders})`, args: [inst, ...chunk] });
+                
+                // If the role can create elections, delete those too
+                if (role === 'admin' || role === 'subadmin') {
+                    const elecRes = await db.execute({ sql: `SELECT id, electionCode FROM elections WHERE institution = ? AND createdBy IN (${placeholders})`, args: [inst, ...chunk] });
+                    if (elecRes.rows.length > 0) {
+                        const elecIds = elecRes.rows.map(r => r.id);
+                        const elecCodes = elecRes.rows.map(r => r.electionCode);
+                        const allElec = [...elecIds, ...elecCodes];
+                        
+                        const elecChunkSize = 500;
+                        for (let j = 0; j < allElec.length; j += elecChunkSize) {
+                            const eChunk = allElec.slice(j, j + elecChunkSize);
+                            const ePlaceholders = eChunk.map(() => '?').join(',');
+                            await db.execute({ sql: `DELETE FROM publicLedger WHERE institution = ? AND electionCode IN (${ePlaceholders})`, args: [inst, ...eChunk] });
+                        }
+                        
+                        const idPlaceholders = elecIds.map(() => '?').join(',');
+                        await db.execute({ sql: `DELETE FROM elections WHERE institution = ? AND id IN (${idPlaceholders})`, args: [inst, ...elecIds] });
+                    }
+                }
+                
+                await db.execute({ sql: `DELETE FROM users WHERE institution = ? AND regNum IN (${placeholders})`, args: [inst, ...chunk] });
+            }
+        }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
