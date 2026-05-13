@@ -1212,7 +1212,8 @@
 
         setText('s-students', students.length);
 
-        renderStudents(students);
+        const q = (document.getElementById('student-search') || {}).value || '';
+        filterStudentsByTab(q);
       } catch (e) { toast(e.message, false); }
     }
 
