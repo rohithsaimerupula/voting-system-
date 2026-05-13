@@ -1224,14 +1224,10 @@
                     badge.style.background = "rgba(239,68,68,0.15)";
                     badge.style.color = "#ff2a4d";
                 }
-                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Identity match is below the required 40%. <strong>Please retake your live photo</strong> ensuring good lighting and a clear view of your face.`);
+                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Identity match is below 40%. <strong>Re-blink to retake automatically...</strong>`);
                 
-                // Show retake button prominently
-                const retakeBtn = document.getElementById('retake-btn');
-                if(retakeBtn) {
-                    retakeBtn.style.animation = "pulse-badge 1s infinite";
-                    retakeBtn.innerText = "Retake Photo 🔄";
-                }
+                // Auto-retake: restart liveness scan after 1.5s so user re-blinks
+                setTimeout(() => retakeWebcam(), 1500);
             }
         }
 
@@ -1466,8 +1462,9 @@
                         console.warn("[OVS AI] No face detected in webcam capture after retries.");
                         liveFaceDescriptor = null;
                         document.getElementById('ai-status-card').classList.add('hidden');
-                        // Gently prompt user to retake
-                        showError('⚠️ No face detected in your photo. Ensure your face is well-lit and centered, then retake.');
+                        // Auto-retake: restart liveness so user re-blinks
+                        showError('⚠️ No face detected in photo. Re-blinking to retake...');
+                        setTimeout(() => retakeWebcam(), 1500);
                     }
                 } catch(e) { console.error("[OVS AI] Webcam scan failed:", e); }
             }
