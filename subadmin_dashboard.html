@@ -730,7 +730,7 @@
           <input id="student-search"
             style="flex:1; min-width:180px; padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
             placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
-          <select id="student-sort-field" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
+          <select id="student-sort-field" onchange="updateSortDirLabels()"
             style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
             <option value="time">🕒 Sort by Time</option>
             <option value="regnum">🔢 Sort by Reg No</option>
@@ -1251,6 +1251,29 @@
           btnApproved.style.color = '#22c55e';
         }
       }
+      const q = (document.getElementById('student-search') || {}).value || '';
+      filterStudentsByTab(q);
+    }
+
+    function updateSortDirLabels() {
+      const field = (document.getElementById('student-sort-field') || {}).value || 'time';
+      const dirSelect = document.getElementById('student-sort-dir');
+      if (!dirSelect) return;
+
+      if (field === 'regnum') {
+        dirSelect.innerHTML = `
+          <option value="asc">↓ A → Z</option>
+          <option value="desc">↑ Z → A</option>
+        `;
+        dirSelect.value = 'asc'; // default to A-Z
+      } else {
+        dirSelect.innerHTML = `
+          <option value="desc">↓ Newest First</option>
+          <option value="asc">↑ Oldest First</option>
+        `;
+        dirSelect.value = 'desc'; // default to Newest
+      }
+
       const q = (document.getElementById('student-search') || {}).value || '';
       filterStudentsByTab(q);
     }
