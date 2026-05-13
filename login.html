@@ -691,8 +691,8 @@
         let loginLivenessVerified = false;
         let loginLivenessInterval = null;
         let loginBlinkFrameCount = 0;
-        const LOGIN_EAR_CLOSE = 0.19;
-        const LOGIN_EAR_FRAMES = 1; // 1 frame = fastest blink detection
+        const LOGIN_EAR_CLOSE = 0.25;  // Standard blink threshold (0.19 was too low for 128px)
+        const LOGIN_EAR_FRAMES = 2;    // 2 frames = reliable blink detection
 
         function loginCalcEAR(eye) {
             const v1 = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
@@ -745,11 +745,11 @@
             // Use TinyFaceDetector if loaded
             const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
             const detectorOpts = useTiny
-                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
+                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
 
             // Timer starts only when first valid video frame is ready
-            const ATTEMPT_WINDOW_MS = 3000;
+            const ATTEMPT_WINDOW_MS = 5000; // 5 seconds per attempt
             let attemptStartTime = null;
 
             async function tick() {

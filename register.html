@@ -518,8 +518,8 @@
         let prevEarLeft = null;            // previous frame EAR for blink detection
         let prevEarRight = null;
         let blinkFrameCount = 0;           // consecutive low-EAR frames (eye closed)
-        const EAR_CLOSE_THRESHOLD = 0.19;
-        const EAR_BLINK_FRAMES   = 1;     // 1 frame is enough for fast blink detection
+        const EAR_CLOSE_THRESHOLD = 0.25;  // Standard blink threshold (0.19 was too low for 128px)
+        const EAR_BLINK_FRAMES   = 2;      // 2 frames = reliable blink, avoids false positives
 
         // Safe DOM Utilities
         function setText(id, val) {
@@ -962,12 +962,12 @@
             let scanActive = true;
             // Timer starts only when video is confirmed ready (first real detection frame)
             let attemptStartTime = null;
-            const ATTEMPT_WINDOW_MS = 3000;
+            const ATTEMPT_WINDOW_MS = 5000; // 5 seconds per attempt
 
             // Use TinyFaceDetector if loaded
             const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
             const detectorOpts = useTiny
-                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
+                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
 
             function failAttempt() {
