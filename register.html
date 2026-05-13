@@ -960,11 +960,11 @@
             }
             blinkFrameCount = 0;
             let scanActive = true;
-            // Time-based: each attempt = exactly 3 seconds
+            // Timer starts only when video is confirmed ready (first real detection frame)
+            let attemptStartTime = null;
             const ATTEMPT_WINDOW_MS = 3000;
-            let attemptStartTime = Date.now();
 
-            // Use TinyFaceDetector if loaded (3-5x faster than SSD)
+            // Use TinyFaceDetector if loaded
             const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
             const detectorOpts = useTiny
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
@@ -972,68 +972,82 @@
 
             function failAttempt() {
                 livenessFailCount++;
-                console.warn(`[Liveness] Attempt ${livenessFailCount}/3 failed (3s window expired)`);
+                console.warn(`[Liveness] Attempt ${livenessFailCount}/3 failed`);
                 if (livenessFailCount >= 3) {
-                    // 3 attempts exhausted — allow registration with liveness skipped
                     scanActive = false;
                     if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
                     livenessSkippedFlag = true;
                     livenessVerified = true;
                     if (statusEl) {
-                        statusEl.innerHTML = '🚨 <strong>Liveness check skipped after 3 failed attempts.</strong><br><small>Your registration will be flagged for admin review.</small>';
+                        statusEl.innerHTML = '🚨 <strong>Liveness skipped after 3 attempts.</strong><br><small>Your registration will be flagged for admin review.</small>';
                         statusEl.style.background = 'rgba(239,68,68,0.1)';
                         statusEl.style.borderColor = 'rgba(239,68,68,0.4)';
                         statusEl.style.color = '#ff2a4d';
                     }
                     const captureBtn = document.getElementById('capture-btn');
                     if (captureBtn) { captureBtn.classList.remove('hidden'); captureBtn.disabled = false; }
-                    return true; // scan ended
-                } else {
-                    // Reset 3-second window for next attempt
-                    attemptStartTime = Date.now();
-                    blinkFrameCount = 0;
-                    const remaining = 3 - livenessFailCount;
-                    if (statusEl) {
-                        statusEl.innerHTML = `⚠️ Blink not detected — <strong>${remaining} attempt(s) remaining</strong>. Please BLINK now!`;
-                        statusEl.style.background = 'rgba(245,158,11,0.12)';
-                        statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
-                        statusEl.style.color = '#f59e0b';
-                    }
-                    return false; // continue scanning
+                    return true;
                 }
+                // Reset for next 3-second attempt
+                attemptStartTime = Date.now();
+                blinkFrameCount = 0;
+                const remaining = 3 - livenessFailCount;
+                if (statusEl) {
+                    statusEl.innerHTML = `⚠️ No blink — <strong>${remaining} attempt(s) left</strong>. BLINK now! (3s)`;
+                    statusEl.style.background = 'rgba(245,158,11,0.12)';
+                    statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
+                    statusEl.style.color = '#f59e0b';
+                }
+                return false;
             }
 
             async function tick() {
                 if (!scanActive) return;
 
-                // Check if 3-second window has expired
-                if (Date.now() - attemptStartTime >= ATTEMPT_WINDOW_MS) {
+                // Wait for camera to be ready before starting timer
+                if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
+                    livenessInterval = setTimeout(tick, 100);
+                    return;
+                }
+
+                // Start 3s timer on first valid frame
+                if (attemptStartTime === null) {
+                    attemptStartTime = Date.now();
+                    if (statusEl) {
+                        statusEl.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
+                        statusEl.style.color = '#f59e0b';
+                        statusEl.style.background = 'rgba(245,158,11,0.12)';
+                        statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
+                        statusEl.style.display = 'block';
+                    }
+                }
+
+                // Check if 3-second window expired
+                const elapsed = Date.now() - attemptStartTime;
+                if (elapsed >= ATTEMPT_WINDOW_MS) {
                     const ended = failAttempt();
                     if (ended) return;
                 }
 
-                if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
-                    livenessInterval = setTimeout(tick, 50);
-                    return;
-                }
                 try {
                     const det = useTiny
                         ? await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks(true)
                         : await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks();
 
                     if (!det) {
-                        if (statusEl && !statusEl.innerHTML.includes('BLINK now') && !statusEl.innerHTML.includes('remaining')) {
-                            const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
-                            statusEl.innerHTML = `⚠️ No face detected — ${secs}s left in this attempt`;
+                        // Show countdown while no face
+                        if (statusEl) {
+                            const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
+                            statusEl.innerHTML = `⚠️ No face — move closer! (${secsLeft}s)`;
                         }
                         livenessInterval = setTimeout(tick, 50);
                         return;
                     }
 
-                    // Face detected
-                    if (statusEl && !statusEl.innerHTML.includes('BLINK') && !statusEl.innerHTML.includes('remaining')) {
-                        const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
-                        statusEl.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (${secs}s remaining)`;
+                    // Face detected — show blink prompt with countdown
+                    if (statusEl) {
+                        const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
+                        statusEl.innerHTML = `👁️ <strong>BLINK now!</strong> (${secsLeft}s remaining)`;
                         statusEl.style.color = '#f59e0b';
                         statusEl.style.background = 'rgba(245,158,11,0.12)';
                         statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
@@ -1047,10 +1061,16 @@
                     if (ear < EAR_CLOSE_THRESHOLD) {
                         blinkFrameCount++;
                     } else if (blinkFrameCount >= EAR_BLINK_FRAMES) {
-                        // Genuine blink confirmed within 3 seconds!
+                        // ✅ Genuine blink confirmed!
                         scanActive = false;
                         if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
                         livenessSkippedFlag = false;
+                        if (statusEl) {
+                            statusEl.innerHTML = '✅ <strong>Liveness Confirmed!</strong> You may now capture your photo.';
+                            statusEl.style.background = 'rgba(34,197,94,0.1)';
+                            statusEl.style.borderColor = 'rgba(34,197,94,0.4)';
+                            statusEl.style.color = '#22c55e';
+                        }
                         onBlink();
                         return;
                     } else {

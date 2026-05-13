@@ -742,21 +742,39 @@
             const captureBtn = document.getElementById('face-auth-btn');
             if (captureBtn) { captureBtn.disabled = true; captureBtn.style.opacity = '0.5'; captureBtn.innerText = 'Waiting for Blink...'; }
 
-            // Use TinyFaceDetector if loaded (3-5x faster than SSD)
+            // Use TinyFaceDetector if loaded
             const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
             const detectorOpts = useTiny
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
 
-            // Time-based: 3-second window per attempt
+            // Timer starts only when first valid video frame is ready
             const ATTEMPT_WINDOW_MS = 3000;
-            let attemptStartTime = Date.now();
+            let attemptStartTime = null;
 
             async function tick() {
                 if (!scanActive) return;
 
-                // Check if 3-second window expired — reset and try again
-                if (Date.now() - attemptStartTime >= ATTEMPT_WINDOW_MS) {
+                // Wait for camera to be ready
+                if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
+                    loginLivenessInterval = setTimeout(tick, 100);
+                    return;
+                }
+
+                // Start 3s timer on first valid frame
+                if (attemptStartTime === null) {
+                    attemptStartTime = Date.now();
+                    if (livenessMsg) {
+                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
+                        livenessMsg.style.color = '#f59e0b';
+                        livenessMsg.style.background = 'rgba(245,158,11,0.12)';
+                        livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                    }
+                }
+
+                // Check if 3-second window expired — reset and retry (blink mandatory for login)
+                const elapsed = Date.now() - attemptStartTime;
+                if (elapsed >= ATTEMPT_WINDOW_MS) {
                     attemptStartTime = Date.now();
                     loginBlinkFrameCount = 0;
                     noFaceCount = 0;
@@ -768,10 +786,6 @@
                     }
                 }
 
-                if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
-                    loginLivenessInterval = setTimeout(tick, 50);
-                    return;
-                }
                 try {
                     const det = useTiny
                         ? await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks(true)
@@ -780,17 +794,18 @@
                     if (!det) {
                         noFaceCount++;
                         if (livenessMsg && noFaceCount >= 3) {
-                            const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
-                            livenessMsg.innerHTML = `⚠️ No face detected — ${secs}s remaining`;
+                            const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
+                            livenessMsg.innerHTML = `⚠️ No face — move closer! (${secsLeft}s)`;
                         }
                         loginLivenessInterval = setTimeout(tick, 50);
                         return;
                     }
 
+                    // Face detected — show blink countdown
                     noFaceCount = 0;
-                    if (livenessMsg && !livenessMsg.innerHTML.includes('BLINK')) {
-                        const secs = Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000);
-                        livenessMsg.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (${secs}s)`;
+                    if (livenessMsg) {
+                        const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
+                        livenessMsg.innerHTML = `👁️ <strong>BLINK now!</strong> (${secsLeft}s remaining)`;
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
@@ -804,7 +819,7 @@
                     if (ear < LOGIN_EAR_CLOSE) {
                         loginBlinkFrameCount++;
                     } else if (loginBlinkFrameCount >= LOGIN_EAR_FRAMES) {
-                        // Genuine blink confirmed within 3 seconds!
+                        // ✅ Genuine blink confirmed!
                         scanActive = false;
                         if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
                         loginLivenessVerified = true;
