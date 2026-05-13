@@ -984,8 +984,12 @@
                         statusEl.style.borderColor = 'rgba(239,68,68,0.4)';
                         statusEl.style.color = '#ff2a4d';
                     }
-                    const captureBtn = document.getElementById('capture-btn');
-                    if (captureBtn) { captureBtn.classList.remove('hidden'); captureBtn.disabled = false; }
+                    if (captureBtn) {
+                        captureBtn.classList.remove('hidden');
+                        captureBtn.disabled = false;
+                    }
+                    // Auto-capture for skipped-liveness too
+                    setTimeout(() => captureWebcam(), 500);
                     return true;
                 }
                 // Reset for next 3-second attempt
@@ -1377,14 +1381,14 @@
                 livenessMsg.style.display = 'block';
 
                 startLivenessScan(video, livenessMsg, () => {
-                    // Blink confirmed — NOW show the Capture button
+                    // Blink confirmed — auto-capture immediately
                     livenessVerified = true;
-                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> You may now capture your photo.';
+                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
                     livenessMsg.style.background = 'rgba(34,197,94,0.1)';
                     livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
                     livenessMsg.style.color = '#22c55e';
-                    captureBtn.classList.remove('hidden');  // show only now
-                    captureBtn.disabled = false;
+                    // Auto-capture after brief moment so user sees confirmation
+                    setTimeout(() => captureWebcam(), 300);
                 });
 
             } catch (err) {
@@ -1512,14 +1516,13 @@
             startLivenessScan(video, livenessMsg, () => {
                 livenessVerified = true;
                 if (livenessMsg) {
-                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> You may now capture your photo.';
+                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
                     livenessMsg.style.background = 'rgba(34,197,94,0.1)';
                     livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
                     livenessMsg.style.color = '#22c55e';
                 }
-                captureBtn.disabled = false;
-                captureBtn.innerText = 'Capture Photo';
-                captureBtn.style.opacity = '1';
+                // Auto-capture on blink
+                setTimeout(() => captureWebcam(), 300);
             });
 
             checkSubmitStatus();
