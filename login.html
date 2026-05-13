@@ -943,9 +943,20 @@
                 // Start liveness blink detection
                 loginLivenessVerified = false;
                 startLoginLivenessScan(video, () => {
-                    // onBlink callback — liveness confirmed, enable capture
-                    statusEl.innerText = "Liveness confirmed ✅ — Click 'Capture & Verify' now.";
-                    statusEl.style.color = "#22c55e";
+                    // onBlink callback — auto-capture and verify immediately
+                    statusEl.innerText = '✅ Liveness confirmed! Capturing and verifying...';
+                    statusEl.style.color = '#22c55e';
+                    // Wait for video to be ready then capture
+                    const waitAndCapture = (tries) => {
+                        if (video.videoWidth > 0 && video.videoHeight > 0) {
+                            setTimeout(() => captureAndVerifyFace(), 200);
+                        } else if (tries > 0) {
+                            setTimeout(() => waitAndCapture(tries - 1), 200);
+                        } else {
+                            captureAndVerifyFace();
+                        }
+                    };
+                    waitAndCapture(10);
                 });
 
             } catch(e) {

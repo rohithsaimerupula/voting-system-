@@ -790,11 +790,21 @@
           </button>
         </div>
 
-        <!-- Search -->
-        <div style="margin-bottom:1rem;">
+        <!-- Search + Sort -->
+        <div style="margin-bottom:1rem; display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;">
           <input id="student-search"
-            style="width:100%;padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
+            style="flex:1; min-width:180px; padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
             placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
+          <select id="student-sort-field" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
+            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
+            <option value="time">🕒 Sort by Time</option>
+            <option value="regnum">🔢 Sort by Reg No</option>
+          </select>
+          <select id="student-sort-dir" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
+            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
+            <option value="desc">↓ Newest First</option>
+            <option value="asc">↑ Oldest First</option>
+          </select>
         </div>
 
         <!-- Pending Tab -->
@@ -1234,10 +1244,29 @@
       filterStudentsByTab(q);
     }
 
+    function sortStudentList(list) {
+      const field = (document.getElementById('student-sort-field') || {}).value || 'time';
+      const dir   = (document.getElementById('student-sort-dir')   || {}).value || 'desc';
+      return [...list].sort((a, b) => {
+        let va, vb;
+        if (field === 'regnum') {
+          va = (a.regNum || '').toLowerCase();
+          vb = (b.regNum || '').toLowerCase();
+          return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        } else {
+          // time: use createdAt if available, fallback to regNum
+          va = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          vb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dir === 'asc' ? va - vb : vb - va;
+        }
+      });
+    }
+
     function filterStudentsByTab(q) {
       const filtered = classStudents.filter(s => [s.regNum, s.name].join(' ').toLowerCase().includes(q.toLowerCase()));
-      renderPendingStudents(filtered.filter(s => s.status !== 'active'));
-      renderApprovedStudents(filtered.filter(s => s.status === 'active'));
+      const sorted = sortStudentList(filtered);
+      renderPendingStudents(sorted.filter(s => s.status !== 'active'));
+      renderApprovedStudents(sorted.filter(s => s.status === 'active'));
     }
 
     function _makeImgCells(s) {
