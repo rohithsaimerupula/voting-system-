@@ -1397,14 +1397,24 @@
                 livenessMsg.style.display = 'block';
 
                 startLivenessScan(video, livenessMsg, () => {
-                    // Blink confirmed — auto-capture immediately
+                    // Blink confirmed — auto-capture, but wait for video dimensions
                     livenessVerified = true;
                     livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
                     livenessMsg.style.background = 'rgba(34,197,94,0.1)';
                     livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
                     livenessMsg.style.color = '#22c55e';
-                    // Auto-capture after brief moment so user sees confirmation
-                    setTimeout(() => captureWebcam(), 300);
+                    // Wait until video has valid dimensions then capture
+                    const waitAndCapture = (tries) => {
+                        const v = document.getElementById('webcam-video');
+                        if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+                            setTimeout(() => captureWebcam(), 200);
+                        } else if (tries > 0) {
+                            setTimeout(() => waitAndCapture(tries - 1), 200);
+                        } else {
+                            captureWebcam(); // try
+                        }
+                    };
+                    waitAndCapture(10);
                 });
 
             } catch (err) {
@@ -1415,16 +1425,25 @@
         async function captureWebcam() {
             // ─── LIVENESS GUARD ──────────────────────────────────────────────────
             if (!livenessVerified) {
-                showError('⚠️ Liveness check not yet passed. Please BLINK naturally in front of the camera first.');
+                showError('⚠️ Please BLINK naturally in front of the camera first to verify you are live.');
                 return;
             }
-            stopLivenessScan(); // Stop continuous scan once we capture
+            stopLivenessScan();
 
             const video = document.getElementById('webcam-video');
             const canvas = document.getElementById('webcam-canvas');
             const context = canvas.getContext('2d');
 
-            if (!webcamStream) return;
+            // Wait for valid video dimensions (up to 2s) before drawing
+            let waitMs = 0;
+            while ((!video.videoWidth || !video.videoHeight) && waitMs < 2000) {
+                await new Promise(r => setTimeout(r, 100));
+                waitMs += 100;
+            }
+            if (!video.videoWidth || !video.videoHeight) {
+                showError('\u26a0\ufe0f Camera not ready. Please wait a moment and try again.');
+                return;
+            }
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -1437,9 +1456,8 @@
             // Blank photo detection
             if (isImageBlank(canvas)) {
                 webcamPhoto = null;
-                livenessVerified = false; // Force re-blink on retake
-                showError('Webcam capture appears blank or dark. Please check your camera, ensure it is not covered, and try again.');
-                // Reset webcam state
+                livenessVerified = false;
+                showError('Webcam capture appears blank or dark. Please ensure your face is visible and try again.');
                 document.getElementById('webcam-preview').classList.add('hidden');
                 document.getElementById('webcam-video').classList.remove('hidden');
                 document.getElementById('capture-btn').classList.remove('hidden');
