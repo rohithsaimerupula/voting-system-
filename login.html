@@ -691,8 +691,8 @@
         let loginLivenessVerified = false;
         let loginLivenessInterval = null;
         let loginBlinkFrameCount = 0;
-        const LOGIN_EAR_CLOSE = 0.19; // lowered for better blink detection
-        const LOGIN_EAR_FRAMES = 2;
+        const LOGIN_EAR_CLOSE = 0.19;
+        const LOGIN_EAR_FRAMES = 1; // 1 frame = fastest blink detection
 
         function loginCalcEAR(eye) {
             const v1 = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
@@ -713,7 +713,6 @@
         // 30-second override ensures user is never permanently blocked.
         function startLoginLivenessScan(videoEl, onBlink) {
             if (!faceModelsLoaded) {
-                // If models not loaded, skip liveness and let user capture
                 loginLivenessVerified = true;
                 const livenessMsg = document.getElementById('login-liveness-msg');
                 if (livenessMsg) { livenessMsg.style.display = 'none'; }
@@ -738,7 +737,13 @@
             const captureBtn = document.getElementById('face-auth-btn');
             if (captureBtn) { captureBtn.disabled = true; captureBtn.style.opacity = '0.5'; captureBtn.innerText = 'Waiting for Blink...'; }
 
-            // 30-second failsafe — never trap user
+            // Use TinyFaceDetector if loaded (3-5x faster than SSD)
+            const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
+            const detectorOpts = useTiny
+                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
+                : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+
+            // 20-second failsafe
             const overrideTimer = setTimeout(() => {
                 if (!scanActive) return;
                 scanActive = false;
@@ -752,25 +757,25 @@
                 }
                 if (captureBtn) { captureBtn.disabled = false; captureBtn.style.opacity = '1'; captureBtn.innerText = 'Capture & Verify'; }
                 onBlink();
-            }, 30000);
+            }, 20000);
 
             async function tick() {
                 if (!scanActive) return;
                 if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
-                    loginLivenessInterval = setTimeout(tick, 200);
+                    loginLivenessInterval = setTimeout(tick, 80);
                     return;
                 }
                 try {
-                    const det = await faceapi
-                        .detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-                        .withFaceLandmarks();
+                    const det = useTiny
+                        ? await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks(true)
+                        : await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks();
 
                     if (!det) {
                         noFaceCount++;
                         if (livenessMsg && noFaceCount >= 3) {
                             livenessMsg.innerHTML = '⚠️ No face detected — move closer to camera';
                         }
-                        loginLivenessInterval = setTimeout(tick, 200);
+                        loginLivenessInterval = setTimeout(tick, 80);
                         return;
                     }
 
@@ -790,7 +795,6 @@
                     if (ear < LOGIN_EAR_CLOSE) {
                         loginBlinkFrameCount++;
                     } else if (loginBlinkFrameCount >= LOGIN_EAR_FRAMES) {
-                        // Genuine blink!
                         scanActive = false;
                         clearTimeout(overrideTimer);
                         if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
@@ -810,9 +814,9 @@
                 } catch(e) {
                     console.warn('[Login Liveness]', e.message);
                 }
-                loginLivenessInterval = setTimeout(tick, 120);
+                loginLivenessInterval = setTimeout(tick, 50);
             }
-            loginLivenessInterval = setTimeout(tick, 800);
+            loginLivenessInterval = setTimeout(tick, 100);
         }
 
         async function loadFaceModels() {

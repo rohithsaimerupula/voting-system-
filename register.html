@@ -516,8 +516,8 @@
         let prevEarLeft = null;            // previous frame EAR for blink detection
         let prevEarRight = null;
         let blinkFrameCount = 0;           // consecutive low-EAR frames (eye closed)
-        const EAR_CLOSE_THRESHOLD = 0.19; // EAR below this → eye is closed (lowered for better detection)
-        const EAR_BLINK_FRAMES   = 2;     // minimum frames eye must stay closed
+        const EAR_CLOSE_THRESHOLD = 0.19;
+        const EAR_BLINK_FRAMES   = 1;     // 1 frame is enough for fast blink detection
 
         // Safe DOM Utilities
         function setText(id, val) {
@@ -944,10 +944,8 @@
         let livenessRafId = null; // kept for compat
 
         // Start continuous liveness scan. Calls onBlink() once blink confirmed.
-        // Falls back to manual override after 30 seconds so user is never stuck.
         function startLivenessScan(videoEl, statusEl, onBlink) {
             if (!faceModelsLoaded) {
-                // Models not ready — skip liveness, enable capture directly
                 if (statusEl) { statusEl.innerHTML = '⚠️ AI not ready. Liveness skipped — you may capture manually.'; statusEl.style.display = 'block'; }
                 onBlink();
                 return;
@@ -956,7 +954,13 @@
             let scanActive = true;
             let noFaceCount = 0;
 
-            // 30-second manual override — never trap the user
+            // Use TinyFaceDetector if loaded (3-5x faster than SSD)
+            const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
+            const detectorOpts = useTiny
+                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
+                : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+
+            // 20-second failsafe
             const overrideTimer = setTimeout(() => {
                 if (!scanActive) return;
                 scanActive = false;
@@ -968,30 +972,29 @@
                     statusEl.style.color = '#818cf8';
                 }
                 onBlink();
-            }, 30000);
+            }, 20000);
 
             async function tick() {
                 if (!scanActive) return;
                 if (!videoEl || videoEl.paused || videoEl.ended || videoEl.readyState < 2) {
-                    livenessInterval = setTimeout(tick, 200);
+                    livenessInterval = setTimeout(tick, 80);
                     return;
                 }
                 try {
-                    const det = await faceapi
-                        .detectSingleFace(videoEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-                        .withFaceLandmarks();
+                    const det = useTiny
+                        ? await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks(true)
+                        : await faceapi.detectSingleFace(videoEl, detectorOpts).withFaceLandmarks();
 
                     if (!det) {
                         noFaceCount++;
                         if (statusEl && noFaceCount >= 3) {
                             statusEl.innerHTML = '⚠️ No face detected — move closer or improve lighting';
                         }
-                        livenessInterval = setTimeout(tick, 200);
+                        livenessInterval = setTimeout(tick, 80);
                         return;
                     }
 
                     noFaceCount = 0;
-                    // Restore blink prompt if it was showing no-face message
                     if (statusEl && statusEl.innerHTML.includes('No face')) {
                         statusEl.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
                         statusEl.style.color = '#f59e0b';
@@ -1007,7 +1010,6 @@
                     if (ear < EAR_CLOSE_THRESHOLD) {
                         blinkFrameCount++;
                     } else if (blinkFrameCount >= EAR_BLINK_FRAMES) {
-                        // Genuine blink detected!
                         scanActive = false;
                         clearTimeout(overrideTimer);
                         if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
@@ -1019,11 +1021,10 @@
                 } catch(e) {
                     console.warn('[Liveness]', e.message);
                 }
-                livenessInterval = setTimeout(tick, 120);
+                livenessInterval = setTimeout(tick, 50);
             }
-
-            // Small delay so video stream is stable before first scan
-            livenessInterval = setTimeout(tick, 800);
+            // Start fast — just 100ms for camera to stabilize
+            livenessInterval = setTimeout(tick, 100);
         }
 
         function stopLivenessScan() {
