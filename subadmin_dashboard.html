@@ -725,6 +725,23 @@
           </div>
         </div>
 
+        <!-- Search + Sort for Registrations -->
+        <div style="margin-bottom:1rem; margin-top:1.5rem; display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;">
+          <input id="student-search"
+            style="flex:1; min-width:180px; padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
+            placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
+          <select id="student-sort-field" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
+            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
+            <option value="time">🕒 Sort by Time</option>
+            <option value="regnum">🔢 Sort by Reg No</option>
+          </select>
+          <select id="student-sort-dir" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
+            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
+            <option value="desc">↓ Newest First</option>
+            <option value="asc">↑ Oldest First</option>
+          </select>
+        </div>
+
         <!-- Registration Management Tables -->
         <div id="pending-registrations-card" class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
           <div style="padding:1rem 1.5rem; background:rgba(255,42,77,0.05); border-bottom:1px solid rgba(255,42,77,0.15); display:flex; justify-content:space-between; align-items:center;">
@@ -791,22 +808,7 @@
           </button>
         </div>
 
-        <!-- Search + Sort -->
-        <div style="margin-bottom:1rem; display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;">
-          <input id="student-search"
-            style="flex:1; min-width:180px; padding:0.7rem 1rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;"
-            placeholder="🔍 Search by name or reg no..." oninput="filterStudentsByTab(this.value)">
-          <select id="student-sort-field" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
-            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
-            <option value="time">🕒 Sort by Time</option>
-            <option value="regnum">🔢 Sort by Reg No</option>
-          </select>
-          <select id="student-sort-dir" onchange="filterStudentsByTab(document.getElementById('student-search').value)"
-            style="padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:white;font-family:'Outfit',sans-serif;cursor:pointer;outline:none;">
-            <option value="desc">↓ Newest First</option>
-            <option value="asc">↑ Oldest First</option>
-          </select>
-        </div>
+        <!-- Search + Sort moved to page-registrations -->
 
         <!-- Pending Tab -->
         <div id="tab-content-pending">
