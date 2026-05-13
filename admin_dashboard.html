@@ -199,6 +199,7 @@
     <div class="role-tag" id="branch-label">Branch Authority</div>
     <div class="nav-item active" id="nav-overview" onclick="showPage('overview',this)"><span class="nav-icon">📊</span> Overview</div>
     <div class="nav-item" id="nav-students" onclick="showPage('students',this)"><span class="nav-icon">🎓</span> My Branch Students</div>
+    <div class="nav-item" id="nav-ca-approvals" onclick="showPage('ca-approvals',this)"><span class="nav-icon">✅</span> Class Admin Approvals</div>
     <div class="nav-item" id="nav-subadmins" onclick="showPage('subadmins',this)"><span class="nav-icon">👥</span> Manage Sub-Admins</div>
     <div class="nav-group-label">🗳️ Voting</div>
     <div class="nav-sub-item" id="nav-voting-my" onclick="showPage('voting-my',this)"><span class="nav-icon">🏢</span> My Election</div>
@@ -236,6 +237,14 @@
 
 
     </div>
+
+    <!-- CLASS ADMIN APPROVALS -->
+    <div class="page" id="page-ca-approvals">
+      <div class="page-title">✅ Class Admin Approved Students</div>
+      <div class="page-sub">Students approved by each Class Admin (Sub-Admin) in your branch</div>
+      <div id="ca-approvals-list"><p style="color:var(--muted);text-align:center;padding:2rem;">Loading...</p></div>
+    </div>
+
     <!-- STUDENTS -->
     <div class="page" id="page-students">
       <div class="page-title">🎓 My Branch Students</div>
@@ -484,6 +493,7 @@ function showPage(id,el){
   
   sessionStorage.setItem('ovs_last_page_admin', id);
 
+  if(id==='ca-approvals') loadClassAdminApprovals();
   if(id==='voting-my')loadBranchElection();
   if(id==='voting-college')loadCollegeElection();
 }
@@ -523,12 +533,103 @@ function filterStudents(){
         }
         let w='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">N/A</div>';
         if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;
+        const lb = s.livenessSkipped == 1
+          ? '<span style="font-size:0.7rem;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:4px;padding:1px 5px;">⚠️Skip</span>'
+          : '';
         return `<tr>
          <td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td>
-         <td>${s.name}</td>
+         <td>${s.name} ${lb}</td>
          <td>${s.year||'-'}</td><td>${s.class||'-'}</td>
         </tr>`;
     }).join(''));
+}
+
+// === CLASS ADMIN APPROVALS ===
+async function loadClassAdminApprovals() {
+    try {
+        const container = document.getElementById('ca-approvals-list');
+        if(container) container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem;">Loading...</p>';
+
+        // Get all subadmins in this branch
+        const sas = branchSAs.length > 0 ? branchSAs : await apiFetch(`/staff/branch/${encodeURIComponent(session.branch)}?institution=${encodeURIComponent(session.institution)}`);
+        // Get all active students in this branch
+        const approved = branchStudents.filter(s => s.status === 'active');
+
+        if (!approved.length) {
+            if(container) container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem;">No approved students yet in this branch.</p>';
+            return;
+        }
+
+        // Group students by their managedBy (subadmin regNum)
+        const groups = {};
+        const unassigned = [];
+        approved.forEach(s => {
+            if(s.managedBy) {
+                if(!groups[s.managedBy]) groups[s.managedBy] = [];
+                groups[s.managedBy].push(s);
+            } else {
+                unassigned.push(s);
+            }
+        });
+
+        let html = '';
+
+        // Render each subadmin group
+        for(const saRegNum of Object.keys(groups)) {
+            const sa = sas.find(x => x.regNum === saRegNum);
+            const saName = sa ? sa.name : saRegNum;
+            const saClass = sa ? (sa.class || 'Unknown Class') : 'Unknown Class';
+            const students = groups[saRegNum];
+            const livenessSkippedCount = students.filter(s => s.livenessSkipped == 1).length;
+
+            html += `
+            <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.5rem;">
+              <div style="padding:1rem 1.5rem;background:rgba(168,85,247,0.07);border-bottom:1px solid rgba(168,85,247,0.2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+                <div>
+                  <div style="font-weight:700;color:#c084fc;font-size:1rem;">👤 ${saName}</div>
+                  <div style="font-size:0.8rem;color:var(--muted);">Class Admin · ${saClass} · ID: ${saRegNum}</div>
+                </div>
+                <div style="display:flex;gap:0.6rem;align-items:center;">
+                  <span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:0.2rem 0.7rem;font-size:0.8rem;font-weight:700;">${students.length} Approved</span>
+                  ${livenessSkippedCount > 0 ? `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:0.2rem 0.7rem;font-size:0.8rem;font-weight:700;">⚠️ ${livenessSkippedCount} Liveness Skipped</span>` : ''}
+                </div>
+              </div>
+              <div style="overflow-x:auto;">
+                <table>
+                  <thead><tr><th>ID Proof</th><th>Webcam</th><th>Reg No</th><th>Name</th><th>Class</th><th>Liveness</th></tr></thead>
+                  <tbody>
+                    ${students.map(s => {
+                        let p='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">None</div>';
+                        if(s.portrait && s.portrait.startsWith('data:image')) p=`<img src="${s.portrait}" onclick="showP('${s.portrait}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;">`;                        
+                        let w='<div style="width:30px;height:30px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;">N/A</div>';
+                        if(s.webcamReg) w=`<img src="${s.webcamReg}" onclick="showP('${s.webcamReg}')" style="width:30px;height:30px;border-radius:4px;object-fit:cover;cursor:pointer;border:1px solid #06b6d4;">`;                        
+                        const lb = s.livenessSkipped == 1
+                            ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-weight:700;">⚠️ Skipped</span>'
+                            : '<span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-weight:700;">✅ Verified</span>';
+                        return `<tr><td>${p}</td><td>${w}</td><td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.class||'-'}</td><td>${lb}</td></tr>`;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>`;
+        }
+
+        // Unassigned students (registered directly without a class admin)
+        if(unassigned.length) {
+            html += `
+            <div class="card" style="padding:0;overflow:hidden;">
+              <div style="padding:1rem 1.5rem;background:rgba(100,116,139,0.07);border-bottom:1px solid rgba(100,116,139,0.2);">
+                <div style="font-weight:700;color:var(--muted);">📂 Unassigned (No Class Admin)</div>
+                <div style="font-size:0.8rem;color:var(--muted);">These students registered without a class admin code</div>
+              </div>
+              <div style="overflow-x:auto;"><table><thead><tr><th>Reg No</th><th>Name</th><th>Class</th></tr></thead><tbody>
+                ${unassigned.map(s=>`<tr><td><strong>${s.regNum}</strong></td><td>${s.name}</td><td>${s.class||'-'}</td></tr>`).join('')}
+              </tbody></table></div>
+            </div>`;
+        }
+
+        if(container) container.innerHTML = html;
+    } catch(e) { toast(e.message, false); }
 }
 
 function renderSAs(sas){

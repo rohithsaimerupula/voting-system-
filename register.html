@@ -511,6 +511,8 @@
 
         // --- LIVENESS DETECTION VARIABLES ---
         let livenessVerified = false;      // true once a genuine blink is detected
+        let livenessSkippedFlag = false;   // true if liveness was skipped after 3 failed attempts
+        let livenessFailCount = 0;         // number of failed scan attempts (no-face detected)
         let livenessStream = null;         // the active webcam stream for liveness scan
         let livenessInterval = null;       // requestAnimationFrame / interval handle
         let prevEarLeft = null;            // previous frame EAR for blink detection
@@ -944,10 +946,9 @@
         let livenessRafId = null; // kept for compat
 
         // Start continuous liveness scan. Calls onBlink() ONLY after genuine blink.
-        // Blink is MANDATORY — no bypasses, no overrides.
+        // After 3 failed face-detection attempts, allows proceed with livenessSkipped=true.
         function startLivenessScan(videoEl, statusEl, onBlink) {
             if (!faceModelsLoaded) {
-                // Block completely if AI not ready — no bypass allowed
                 if (statusEl) {
                     statusEl.innerHTML = '❌ AI Face Engine not loaded. Please refresh the page and try again.';
                     statusEl.style.background = 'rgba(239,68,68,0.12)';
@@ -955,18 +956,29 @@
                     statusEl.style.color = '#ff2a4d';
                     statusEl.style.display = 'block';
                 }
-                // Keep capture button hidden/disabled — do NOT call onBlink()
                 return;
             }
             blinkFrameCount = 0;
             let scanActive = true;
-            let noFaceCount = 0;
+            let noFaceCount = 0; // frames with no face detected
+            // Each "attempt" = 5 seconds of failed face detection (~40 ticks at 120ms)
+            const NO_FACE_TICKS_PER_ATTEMPT = 42;
 
             // Use TinyFaceDetector if loaded (3-5x faster than SSD)
             const useTiny = faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded;
             const detectorOpts = useTiny
                 ? new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.3 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+
+            function updateAttemptStatus(statusEl) {
+                const remaining = 3 - livenessFailCount;
+                if (statusEl) {
+                    statusEl.innerHTML = `⚠️ No face detected — ${remaining} attempt(s) remaining before skip`;
+                    statusEl.style.background = 'rgba(245,158,11,0.12)';
+                    statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
+                    statusEl.style.color = '#f59e0b';
+                }
+            }
 
             async function tick() {
                 if (!scanActive) return;
@@ -981,15 +993,47 @@
 
                     if (!det) {
                         noFaceCount++;
-                        if (statusEl && noFaceCount >= 3) {
-                            statusEl.innerHTML = '⚠️ No face detected — move closer or improve lighting';
+                        // Check if this no-face streak constitutes a failed attempt
+                        if (noFaceCount % NO_FACE_TICKS_PER_ATTEMPT === 0) {
+                            livenessFailCount++;
+                            console.warn(`[Liveness] Attempt ${livenessFailCount}/3 failed (no face detected)`);
+
+                            if (livenessFailCount >= 3) {
+                                // 3 attempts exhausted — allow registration with liveness skipped
+                                scanActive = false;
+                                if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
+                                livenessSkippedFlag = true;
+                                livenessVerified = true; // allow capture to proceed
+                                if (statusEl) {
+                                    statusEl.innerHTML = '🚨 <strong>Liveness check skipped after 3 failed attempts.</strong><br><small>Your registration will be flagged for admin review. Please ensure good lighting and face the camera clearly.</small>';
+                                    statusEl.style.background = 'rgba(239,68,68,0.1)';
+                                    statusEl.style.borderColor = 'rgba(239,68,68,0.4)';
+                                    statusEl.style.color = '#ff2a4d';
+                                }
+                                // Show capture button
+                                const captureBtn = document.getElementById('capture-btn');
+                                if (captureBtn) {
+                                    captureBtn.classList.remove('hidden');
+                                    captureBtn.disabled = false;
+                                }
+                                return;
+                            } else {
+                                updateAttemptStatus(statusEl);
+                            }
+                        } else if (noFaceCount >= 8) {
+                            // Show "no face" warning after 8 consecutive no-face ticks (~1 sec)
+                            if (statusEl) {
+                                const remaining = 3 - livenessFailCount;
+                                statusEl.innerHTML = `⚠️ No face detected — move closer. ${remaining} attempt(s) left before skip`;
+                            }
                         }
                         livenessInterval = setTimeout(tick, 80);
                         return;
                     }
 
+                    // Face detected — reset no-face counter
                     noFaceCount = 0;
-                    if (statusEl && statusEl.innerHTML.includes('No face')) {
+                    if (statusEl && (statusEl.innerHTML.includes('No face') || statusEl.innerHTML.includes('attempt'))) {
                         statusEl.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
                         statusEl.style.color = '#f59e0b';
                         statusEl.style.background = 'rgba(245,158,11,0.12)';
@@ -1007,6 +1051,7 @@
                         // Genuine blink confirmed
                         scanActive = false;
                         if (livenessInterval) { clearTimeout(livenessInterval); livenessInterval = null; }
+                        livenessSkippedFlag = false;
                         onBlink();
                         return;
                     } else {
@@ -1294,8 +1339,10 @@
                 captureBtn.innerText = 'Capture Photo';
                 captureBtn.style.opacity = '1';
 
-                // ─── LIVENESS: show blink prompt and begin scanning ───
+                // Reset liveness state on every new camera open
                 livenessVerified = false;
+                livenessSkippedFlag = false;
+                livenessFailCount = 0;
                 stopLivenessScan();
                 blinkFrameCount = 0;
 
@@ -1654,6 +1701,7 @@
                 webcamReg: webcamPhoto, aiVerified,
                 faceDescriptor: (typeof liveFaceDescriptor !== 'undefined' && liveFaceDescriptor) ? JSON.stringify(Array.from(liveFaceDescriptor)) : null,
                 status: aiVerified ? 'active' : 'pending',
+                livenessSkipped: livenessSkippedFlag ? 1 : 0,
                 category: null,
                 campaignPoints: 0,
                 createdAt: new Date().toISOString()

@@ -85,6 +85,7 @@ async function runMigrations() {
         { sql: "ALTER TABLE users ADD COLUMN year TEXT", label: "users.year" },
         { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" },
         { sql: "ALTER TABLE users ADD COLUMN section TEXT", label: "users.section" },
+        { sql: "ALTER TABLE users ADD COLUMN livenessSkipped INTEGER DEFAULT 0", label: "users.livenessSkipped" },
         { sql: "ALTER TABLE auditLogs ADD COLUMN institution TEXT", label: "auditLogs.institution" },
         { sql: "ALTER TABLE publicLedger ADD COLUMN institution TEXT", label: "publicLedger.institution" },
         { sql: "ALTER TABLE questions ADD COLUMN institution TEXT", label: "questions.institution" },
@@ -373,14 +374,15 @@ app.post('/api/users/add', async (req, res) => {
         }
 
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId, faceDescriptor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId, faceDescriptor, livenessSkipped) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', 
                 boolInt(u.hasVoted), boolInt(u.isBanned), 
                 u.portrait || null, u.webcamReg || null, u.deviceFingerprint || null, 
                 u.branch || null, u.class || null, u.year || null, u.managedBy || null, 
                 boolInt(u.canVote), u.category || null, u.packId || null,
-                u.faceDescriptor || null
+                u.faceDescriptor || null,
+                boolInt(u.livenessSkipped)
             ]
         });
         res.json({ success: true });
