@@ -508,6 +508,7 @@
         let idFaceDescriptor = null;
         let liveFaceDescriptor = null;
         let idFaceImg = null;
+        let faceMatchFailCount = 0; // tracks consecutive AI match failures
 
         // --- LIVENESS DETECTION VARIABLES ---
         let livenessVerified = false;      // true once a genuine blink is detected
@@ -1218,16 +1219,35 @@
                 setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`);
             } else {
                 aiVerified = false;
+                faceMatchFailCount++;
                 if(progress) progress.style.background = "#ff2a4d";
                 setText('ai-badge', "Match Low ⚠️");
                 if(badge) {
                     badge.style.background = "rgba(239,68,68,0.15)";
                     badge.style.color = "#ff2a4d";
                 }
-                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Identity match is below 40%. <strong>Re-blink to retake automatically...</strong>`);
-                
-                // Auto-retake: restart liveness scan after 1.5s so user re-blinks
-                setTimeout(() => retakeWebcam(), 1500);
+
+                if (faceMatchFailCount < 3) {
+                    // Attempts 1-2: require re-blink on retake
+                    setHTML('ai-msg', `<strong>Confidence: ${score}%</strong> &mdash; Attempt ${faceMatchFailCount}/3<br>Face doesn't match. <strong>Click Retake to re-blink and capture again.</strong>`);
+                    const retakeBtn = document.getElementById('retake-btn');
+                    if (retakeBtn) {
+                        retakeBtn.classList.remove('hidden');
+                        retakeBtn.innerText = '🔄 Retake & Re-blink';
+                        retakeBtn.style.animation = 'pulse-badge 1s infinite';
+                        retakeBtn.onclick = () => retakeWebcam();
+                    }
+                } else {
+                    // 3+ failures: blink no longer required, capture directly
+                    setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>🚨 Face match failed 3 times. <strong>Blink verification disabled.</strong><br>Click “Capture Directly” to take a photo without blink check. AI will still verify the match.`);
+                    const retakeBtn = document.getElementById('retake-btn');
+                    if (retakeBtn) {
+                        retakeBtn.classList.remove('hidden');
+                        retakeBtn.innerText = '📸 Capture Directly (No Blink)';
+                        retakeBtn.style.animation = 'pulse-badge 1s infinite';
+                        retakeBtn.onclick = () => captureDirectly();
+                    }
+                }
             }
         }
 
@@ -1462,9 +1482,15 @@
                         console.warn("[OVS AI] No face detected in webcam capture after retries.");
                         liveFaceDescriptor = null;
                         document.getElementById('ai-status-card').classList.add('hidden');
-                        // Auto-retake: restart liveness so user re-blinks
-                        showError('⚠️ No face detected in photo. Re-blinking to retake...');
-                        setTimeout(() => retakeWebcam(), 1500);
+                        faceMatchFailCount++;
+                        const rb2 = document.getElementById('retake-btn');
+                        if (faceMatchFailCount >= 3) {
+                            showError('No face in photo — 3 attempts done. Blink disabled, capture directly.');
+                            if (rb2) { rb2.classList.remove('hidden'); rb2.innerText = '\ud83d\udcf8 Capture Directly (No Blink)'; rb2.style.animation = 'pulse-badge 1s infinite'; rb2.onclick = () => captureDirectly(); }
+                        } else {
+                            showError('No face in photo — attempt ' + faceMatchFailCount + '/3. Click Retake to re-blink.');
+                            if (rb2) { rb2.classList.remove('hidden'); rb2.innerText = '\ud83d\udd04 Retake & Re-blink'; rb2.style.animation = 'pulse-badge 1s infinite'; rb2.onclick = () => retakeWebcam(); }
+                        }
                     }
                 } catch(e) { console.error("[OVS AI] Webcam scan failed:", e); }
             }
@@ -1472,55 +1498,108 @@
             checkSubmitStatus();
         }
 
-        function retakeWebcam() {
+        // captureDirectly: skip liveness, just capture and run AI check (after 3 failed matches)
+        async function captureDirectly() {
+            livenessVerified = true;      // bypass liveness guard
+            livenessSkippedFlag = true;   // flag as skipped for audit
+            stopLivenessScan();
+
+            // Reset UI to show camera
             webcamPhoto = null;
             liveFaceDescriptor = null;
             aiConfidence = 0;
             aiVerified = false;
-            livenessVerified = false; // Force blink again on retake
-            blinkFrameCount = 0;
-            stopLivenessScan();
-            
-            const rb = document.getElementById('retake-btn');
-            if(rb) {
-                rb.style.animation = "";
-                rb.innerText = "Retake";
-            }
 
             document.getElementById('webcam-preview').classList.add('hidden');
             document.getElementById('webcam-video').classList.remove('hidden');
             document.getElementById('retake-btn').classList.add('hidden');
             document.getElementById('ai-status-card').classList.add('hidden');
 
-            // Reset capture button and restart liveness
-            const captureBtn = document.getElementById('capture-btn');
-            captureBtn.classList.remove('hidden');
-            captureBtn.disabled = true;
-            captureBtn.innerText = 'Waiting for Blink...';
-            captureBtn.style.opacity = '0.5';
-
-            // Re-show blink prompt
             const livenessMsg = document.getElementById('liveness-msg');
             if (livenessMsg) {
-                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
-                livenessMsg.style.background = 'rgba(245,158,11,0.12)';
-                livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
-                livenessMsg.style.color = '#f59e0b';
+                livenessMsg.innerHTML = '📸 Blink check disabled. <strong>Position your face and click Capture.</strong>';
+                livenessMsg.style.background = 'rgba(99,102,241,0.1)';
+                livenessMsg.style.borderColor = 'rgba(99,102,241,0.4)';
+                livenessMsg.style.color = '#818cf8';
                 livenessMsg.style.display = 'block';
             }
 
+            // Show capture button for manual click (no blink needed)
+            const captureBtn = document.getElementById('capture-btn');
+            if (captureBtn) {
+                captureBtn.classList.remove('hidden');
+                captureBtn.disabled = false;
+                captureBtn.innerText = '📸 Capture Photo';
+                captureBtn.style.opacity = '1';
+            }
+        }
+
+        function retakeWebcam() {
+            webcamPhoto = null;
+            liveFaceDescriptor = null;
+            aiConfidence = 0;
+            aiVerified = false;
+            stopLivenessScan();
+
+            const rb = document.getElementById('retake-btn');
+            if (rb) { rb.classList.add('hidden'); rb.style.animation = ''; rb.innerText = 'Retake'; }
+
+            document.getElementById('webcam-preview').classList.add('hidden');
+            document.getElementById('webcam-video').classList.remove('hidden');
+            document.getElementById('ai-status-card').classList.add('hidden');
+
+            const captureBtn = document.getElementById('capture-btn');
+            const livenessMsg = document.getElementById('liveness-msg');
             const video = document.getElementById('webcam-video');
-            startLivenessScan(video, livenessMsg, () => {
+
+            if (faceMatchFailCount >= 3) {
+                // Blink permanently disabled after 3 failures — show direct capture
                 livenessVerified = true;
+                livenessSkippedFlag = true;
                 if (livenessMsg) {
-                    livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
-                    livenessMsg.style.background = 'rgba(34,197,94,0.1)';
-                    livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
-                    livenessMsg.style.color = '#22c55e';
+                    livenessMsg.innerHTML = '📸 Blink check disabled. <strong>Position your face and click Capture.</strong>';
+                    livenessMsg.style.background = 'rgba(99,102,241,0.1)';
+                    livenessMsg.style.borderColor = 'rgba(99,102,241,0.4)';
+                    livenessMsg.style.color = '#818cf8';
+                    livenessMsg.style.display = 'block';
                 }
-                // Auto-capture on blink
-                setTimeout(() => captureWebcam(), 300);
-            });
+                if (captureBtn) {
+                    captureBtn.classList.remove('hidden');
+                    captureBtn.disabled = false;
+                    captureBtn.innerText = '📸 Capture Photo';
+                    captureBtn.style.opacity = '1';
+                }
+            } else {
+                // Blink still required — restart liveness scan
+                livenessVerified = false;
+                blinkFrameCount = 0;
+                livenessFailCount = 0;
+                livenessSkippedFlag = false;
+
+                if (captureBtn) {
+                    captureBtn.classList.remove('hidden');
+                    captureBtn.disabled = true;
+                    captureBtn.innerText = 'Waiting for Blink...';
+                    captureBtn.style.opacity = '0.5';
+                }
+                if (livenessMsg) {
+                    livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally to prove you are live...';
+                    livenessMsg.style.background = 'rgba(245,158,11,0.12)';
+                    livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                    livenessMsg.style.color = '#f59e0b';
+                    livenessMsg.style.display = 'block';
+                }
+                startLivenessScan(video, livenessMsg, () => {
+                    livenessVerified = true;
+                    if (livenessMsg) {
+                        livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
+                        livenessMsg.style.background = 'rgba(34,197,94,0.1)';
+                        livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
+                        livenessMsg.style.color = '#22c55e';
+                    }
+                    setTimeout(() => captureWebcam(), 300);
+                });
+            }
 
             checkSubmitStatus();
         }
