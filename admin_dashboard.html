@@ -178,6 +178,7 @@
     .pill-pending{background:rgba(245,158,11,0.15);color:var(--gold);border:1px solid rgba(245,158,11,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
     .pill-completed{background:rgba(100,116,139,0.15);color:#64748b;border:1px solid rgba(100,116,139,0.3);padding:0.25rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;}
   </style>
+    <script src="session-guard.js"></script>
 </head>
 <body>
   <script src="storage.js"></script>
@@ -445,16 +446,25 @@ function toggleAuthPass() {
   if (eye) eye.textContent = inp.type === 'password' ? '👁️' : '🕑';
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  if(session&&session.role==='admin'){
+document.addEventListener('DOMContentLoaded', () => {
+  if (session && session.role === 'admin') {
     setText('branch-label', `Branch Admin (${session.branch})`);
     setText('branch-sub', `Managing ${session.branch} — ${session.institution}`);
     loadAll().then(() => {
         const lastPage = sessionStorage.getItem('ovs_last_page_admin');
-        if(lastPage) showPage(lastPage);
+        if (lastPage) showPage(lastPage);
     });
-  }else{
-    window.location.href='login.html?admin=true';
+    // Single-session guard: auto-logout if another device logs in
+    if (typeof startSessionGuard === 'function') {
+      startSessionGuard(session.regNum, session.institution, (reason) => {
+        if (reason === 'session_replaced') {
+          alert('⚠️ You have been logged out because your account was logged in from another device.');
+        }
+        adminLogout();
+      });
+    }
+  } else {
+    window.location.href = 'login.html?admin=true';
   }
 });
 

@@ -605,6 +605,7 @@
       font-weight: 700;
     }
   </style>
+    <script src="session-guard.js"></script>
 </head>
 
 <body>
@@ -1142,8 +1143,16 @@
             const lastPage = sessionStorage.getItem('ovs_last_page');
             if (lastPage) showPage(lastPage);
           });
+          // Start single-session guard: auto-logout if another device takes over
+          if (typeof startSessionGuard === 'function') {
+            startSessionGuard(session.regNum, session.institution, (reason) => {
+              if (reason === 'session_replaced') {
+                alert('⚠️ You have been logged out because your account was logged in from another device.');
+              }
+              saLogout();
+            });
+          }
         } else {
-          // If not subadmin, redirect to main login
           window.location.href = 'login.html?admin=true';
         }
       } catch (e) {

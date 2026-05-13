@@ -132,6 +132,7 @@
         .cd-txt { font-size: 0.6rem; color: var(--text-dim); margin-top: 0.3rem; font-weight: 600; }
         .cd-sep { font-size: 1.2rem; color: rgba(255, 255, 255, 0.1); margin-top: -0.2rem; }
     </style>
+    <script src="session-guard.js"></script>
 </head>
 
 <body>
@@ -905,6 +906,8 @@
                 // If user registered without photo (legacy), just let them in? Or block?
                 // We'll let them in if no photo exists in db, but log a warning.
                 console.warn("[Login AI] No biometric data found for this user. Bypassing check.");
+                await registerSession(user.regNum, user.institution, 'student');
+                localStorage.setItem('ovs_currentUser', JSON.stringify(user));
                 window.location.href = 'voter_dashboard.html';
                 return;
             }
@@ -1026,9 +1029,10 @@
                     statusEl.innerText = `✅ Verified (${score}% Match) — Redirecting...`;
                     statusEl.style.color = "#22c55e";
                     spinner.classList.add('hidden');
-                    setTimeout(() => {
-                        window.location.href = 'voter_dashboard.html';
-                    }, 800);
+                    // Register session BEFORE redirect so dashboard guard has token
+                    await registerSession(user.regNum, user.institution, 'student');
+                    localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+                    setTimeout(() => { window.location.href = 'voter_dashboard.html'; }, 800);
                 } else if (score >= 25) {
                     // Borderline — give user a hint instead of hard deny
                     spinner.classList.add('hidden');

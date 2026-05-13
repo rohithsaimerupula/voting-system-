@@ -86,6 +86,7 @@ async function runMigrations() {
         { sql: "ALTER TABLE users ADD COLUMN faceDescriptor TEXT", label: "users.faceDescriptor" },
         { sql: "ALTER TABLE users ADD COLUMN section TEXT", label: "users.section" },
         { sql: "ALTER TABLE users ADD COLUMN livenessSkipped INTEGER DEFAULT 0", label: "users.livenessSkipped" },
+        { sql: "ALTER TABLE users ADD COLUMN sessionToken TEXT", label: "users.sessionToken" },
         { sql: "ALTER TABLE auditLogs ADD COLUMN institution TEXT", label: "auditLogs.institution" },
         { sql: "ALTER TABLE publicLedger ADD COLUMN institution TEXT", label: "publicLedger.institution" },
         { sql: "ALTER TABLE questions ADD COLUMN institution TEXT", label: "questions.institution" },
@@ -152,6 +153,46 @@ app.delete('/api/auditLogs', async (req, res) => {
         await db.execute({ sql: "DELETE FROM auditLogs WHERE institution = ?", args: [inst] });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── SINGLE DEVICE SESSION ENFORCEMENT ────────────────────────────────────────
+// Called on every login — generates a new token, invalidates all other sessions
+app.post('/api/session/login', async (req, res) => {
+    try {
+        const { regNum, institution, portal } = req.body;
+        if (!regNum || !institution) return res.status(400).json({ error: 'regNum and institution required' });
+        // Generate a unique session token
+        const token = require('crypto').randomUUID();
+        await db.execute({
+            sql: 'UPDATE users SET sessionToken = ? WHERE regNum = ? AND institution = ?',
+            args: [token, regNum, institution]
+        });
+        res.json({ sessionToken: token });
+    } catch (e) {
+        console.error('[Session/Login]', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Called every 30s by dashboards — verifies this token is still the active one
+app.get('/api/session/verify', async (req, res) => {
+    try {
+        const regNum = req.headers['x-ovs-reg-num'];
+        const institution = decodeURIComponent(req.headers['x-ovs-institution'] || '');
+        const token = req.headers['x-ovs-session-token'];
+        if (!regNum || !institution || !token) return res.status(401).json({ valid: false, reason: 'missing_params' });
+        const result = await db.execute({
+            sql: 'SELECT sessionToken FROM users WHERE regNum = ? AND institution = ?',
+            args: [regNum, institution]
+        });
+        if (!result.rows.length) return res.status(401).json({ valid: false, reason: 'user_not_found' });
+        const storedToken = result.rows[0].sessionToken;
+        if (storedToken !== token) return res.status(401).json({ valid: false, reason: 'session_replaced' });
+        res.json({ valid: true });
+    } catch (e) {
+        console.error('[Session/Verify]', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/institutions/verify', async (req, res) => {
