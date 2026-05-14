@@ -732,12 +732,11 @@
             loginLivenessVerified = false;
             let scanActive = true;
             let noFaceCount = 0;
-
+            let loginLivenessFailCount = 0;
             const livenessMsg = document.getElementById('login-liveness-msg');
+            
             if (livenessMsg) {
-                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> naturally...';
-                livenessMsg.style.background = 'rgba(245,158,11,0.12)';
-                livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (Attempt 1/3)';
                 livenessMsg.style.color = '#f59e0b';
                 livenessMsg.style.display = 'block';
             }
@@ -763,25 +762,45 @@
                     return;
                 }
 
-                // Start 3s timer on first valid frame
+                // Start timer on first valid frame
                 if (attemptStartTime === null) {
                     attemptStartTime = Date.now();
                     if (livenessMsg) {
-                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
+                        livenessMsg.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (Attempt ${loginLivenessFailCount + 1}/3)`;
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
                     }
                 }
 
-                // Check if 3-second window expired — reset and retry (blink mandatory for login)
+                // Check if 5-second window expired
                 const elapsed = Date.now() - attemptStartTime;
                 if (elapsed >= ATTEMPT_WINDOW_MS) {
+                    loginLivenessFailCount++;
+                    if (loginLivenessFailCount >= 3) {
+                        scanActive = false;
+                        if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
+                        loginLivenessVerified = true; // Bypass liveness
+                        if (livenessMsg) {
+                            livenessMsg.innerHTML = '📷 <strong>Blink detection is not working.</strong><br><small>Blink check bypassed. Please click capture manually.</small>';
+                            livenessMsg.style.background = 'rgba(245,158,11,0.1)';
+                            livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
+                            livenessMsg.style.color = '#f59e0b';
+                        }
+                        if (captureBtn) {
+                            captureBtn.disabled = false;
+                            captureBtn.style.opacity = '1';
+                            captureBtn.innerText = '📸 Capture Directly';
+                            captureBtn.style.background = '#ef4444'; // Red button for manual
+                        }
+                        return;
+                    }
+
                     attemptStartTime = Date.now();
                     loginBlinkFrameCount = 0;
                     noFaceCount = 0;
                     if (livenessMsg) {
-                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
+                        livenessMsg.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (Attempt ${loginLivenessFailCount + 1}/3)`;
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
@@ -797,7 +816,7 @@
                         noFaceCount++;
                         if (livenessMsg && noFaceCount >= 3) {
                             const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
-                            livenessMsg.innerHTML = `⚠️ No face — move closer! (${secsLeft}s)`;
+                            livenessMsg.innerHTML = `⚠️ No face — move closer! (Attempt ${loginLivenessFailCount + 1}/3 - ${secsLeft}s)`;
                         }
                         loginLivenessInterval = setTimeout(tick, 50);
                         return;
@@ -807,7 +826,7 @@
                     noFaceCount = 0;
                     if (livenessMsg) {
                         const secsLeft = Math.max(1, Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - attemptStartTime)) / 1000));
-                        livenessMsg.innerHTML = `👁️ <strong>BLINK now!</strong> (${secsLeft}s remaining)`;
+                        livenessMsg.innerHTML = `👁️ <strong>BLINK now!</strong> (Attempt ${loginLivenessFailCount + 1}/3 - ${secsLeft}s remaining)`;
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
