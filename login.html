@@ -1031,8 +1031,8 @@
                     statusEl.style.color = "#22c55e";
                     spinner.classList.add('hidden');
                     // Register session BEFORE redirect so dashboard guard has token
-                    await registerSession(user.regNum, user.institution, 'student');
-                    localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+                    await registerSession(tempVerifiedUser.regNum, tempVerifiedUser.institution, 'student');
+                    localStorage.setItem('ovs_currentUser', JSON.stringify(tempVerifiedUser));
                     setTimeout(() => { window.location.href = 'voter_dashboard.html'; }, 800);
                 } else if (score >= 25) {
                     // Borderline — give user a hint instead of hard deny
