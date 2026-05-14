@@ -677,8 +677,22 @@
             }
         }
 
-        function loadProfile() {
+        async function loadProfile() {
             const area = document.getElementById('profile-fields');
+            area.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;">Loading profile...</div>';
+
+            // Derive section: use student's own section first, then fall back to Class Admin's class
+            let displaySection = currentUser.section || '';
+            if (!displaySection && currentUser.managedBy) {
+                try {
+                    const adminData = await fetchApi(`/api/users/${currentUser.managedBy}?institution=${encodeURIComponent(currentUser.institution)}`);
+                    if (adminData && adminData.class) {
+                        displaySection = adminData.class;
+                    }
+                } catch(e) { /* couldn't fetch admin, leave blank */ }
+            }
+            const sectionLabel = displaySection || 'Not Assigned';
+
             area.innerHTML = `
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Full Name</label>
@@ -700,7 +714,7 @@
                 </div>
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Section (Locked)</label>
-                    <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.section || 'Not Assigned'}</div>
+                    <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${sectionLabel}</div>
                 </div>
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Registration Number (Locked)</label>
