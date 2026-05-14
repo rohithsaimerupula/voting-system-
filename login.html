@@ -906,8 +906,12 @@
                 // If user registered without photo (legacy), just let them in? Or block?
                 // We'll let them in if no photo exists in db, but log a warning.
                 console.warn("[Login AI] No biometric data found for this user. Bypassing check.");
-                await registerSession(user.regNum, user.institution, 'student');
-                localStorage.setItem('ovs_currentUser', JSON.stringify(user));
+                try {
+                    if (typeof registerSession === 'function') {
+                        await registerSession(tempVerifiedUser.regNum, tempVerifiedUser.institution, 'student');
+                    }
+                } catch(err) { console.warn('Session register skipped:', err); }
+                localStorage.setItem('ovs_currentUser', JSON.stringify(tempVerifiedUser));
                 window.location.href = 'voter_dashboard.html';
                 return;
             }
@@ -1029,8 +1033,13 @@
                     statusEl.innerText = `✅ Verified (${score}% Match) — Redirecting...`;
                     statusEl.style.color = "#22c55e";
                     spinner.classList.add('hidden');
-                    // Register session BEFORE redirect so dashboard guard has token
-                    await registerSession(tempVerifiedUser.regNum, tempVerifiedUser.institution, 'student');
+                    // Register session safely BEFORE redirect so dashboard guard has token
+                    try {
+                        if (typeof registerSession === 'function') {
+                            await registerSession(tempVerifiedUser.regNum, tempVerifiedUser.institution, 'student');
+                        }
+                    } catch(err) { console.warn('Session register skipped:', err); }
+                    
                     localStorage.setItem('ovs_currentUser', JSON.stringify(tempVerifiedUser));
                     setTimeout(() => { window.location.href = 'voter_dashboard.html'; }, 800);
                 } else if (score >= 25) {
