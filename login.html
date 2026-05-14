@@ -365,7 +365,7 @@
         </div>
     </div>
 
-    <script src="session-guard.js"></script>
+    <script src="session-guard.js?v=2"></script>
     <script src="storage.js?v=4"></script>
     <script>
         console.log("[OVS] Login System Initializing...");
@@ -773,34 +773,14 @@
                     }
                 }
 
-                // Check if 5-second window expired
+                // Check if 3-second window expired — reset and retry (blink mandatory for login)
                 const elapsed = Date.now() - attemptStartTime;
                 if (elapsed >= ATTEMPT_WINDOW_MS) {
-                    loginLivenessFailCount++;
-                    if (loginLivenessFailCount >= 3) {
-                        scanActive = false;
-                        if (loginLivenessInterval) { clearTimeout(loginLivenessInterval); loginLivenessInterval = null; }
-                        loginLivenessVerified = true; // Bypass liveness
-                        if (livenessMsg) {
-                            livenessMsg.innerHTML = '📷 <strong>Blink detection is not working.</strong><br><small>Blink check bypassed. Please click capture manually.</small>';
-                            livenessMsg.style.background = 'rgba(245,158,11,0.1)';
-                            livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
-                            livenessMsg.style.color = '#f59e0b';
-                        }
-                        if (captureBtn) {
-                            captureBtn.disabled = false;
-                            captureBtn.style.opacity = '1';
-                            captureBtn.innerText = '📸 Capture Directly';
-                            captureBtn.style.background = '#ef4444'; // Red button for manual
-                        }
-                        return;
-                    }
-
                     attemptStartTime = Date.now();
                     loginBlinkFrameCount = 0;
                     noFaceCount = 0;
                     if (livenessMsg) {
-                        livenessMsg.innerHTML = `👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (Attempt ${loginLivenessFailCount + 1}/3)`;
+                        livenessMsg.innerHTML = '👁️ <strong>Liveness Check:</strong> Please <u>BLINK</u> now! (3s)';
                         livenessMsg.style.color = '#f59e0b';
                         livenessMsg.style.background = 'rgba(245,158,11,0.12)';
                         livenessMsg.style.borderColor = 'rgba(245,158,11,0.4)';
