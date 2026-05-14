@@ -460,7 +460,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (reason === 'session_replaced') {
           alert('⚠️ You have been logged out because your account was logged in from another device.');
         }
-        adminLogout();
+        localStorage.removeItem('ovs_admin_session');
+        localStorage.removeItem('ovs_currentUser');
+        const instCode = localStorage.getItem('ovs_inst_code') || '';
+        window.location.href = instCode ? `index.html?inst_code=${encodeURIComponent(instCode)}` : 'index.html';
       });
     }
   } else {

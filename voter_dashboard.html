@@ -589,7 +589,9 @@
                     if (reason === 'session_replaced') {
                         alert('⚠️ You have been logged out because your account was logged in from another device.');
                     }
-                    logout();
+                    StorageManager.logout();
+                    const instCode = localStorage.getItem('ovs_inst_code') || '';
+                    window.location.href = instCode ? `index.html?inst_code=${encodeURIComponent(instCode)}` : 'index.html';
                 });
             }
             
