@@ -1326,7 +1326,7 @@
         const { portraitHtml, faceHtml } = _makeImgCells(s);
         const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
         const livenessBadge = s.livenessSkipped == 1
-          ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">⚠️ Liveness Skipped</span>'
+          ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">📷 No Blink — Manual Photo</span>'
           : '<span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">✅ Blink Verified</span>';
         return `<tr>
       <td>${portraitHtml}</td><td>${faceHtml}</td>
@@ -1357,7 +1357,7 @@
         const { portraitHtml, faceHtml } = _makeImgCells(s);
         const roleBadge = s.role === 'contestant' ? '<span class="badge" style="color:#c084fc;">Candidate</span>' : '<span class="badge" style="color:#cbd5e1;">Voter</span>';
         const livenessBadge = s.livenessSkipped == 1
-          ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">⚠️ Liveness Skipped</span>'
+          ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">📷 No Blink — Manual Photo</span>'
           : '<span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:2px 7px;font-size:0.72rem;font-weight:700;">✅ Blink Verified</span>';
         return `<tr>
       <td>${portraitHtml}</td><td>${faceHtml}</td>

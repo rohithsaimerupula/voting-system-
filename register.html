@@ -980,10 +980,10 @@
                     livenessSkippedFlag = true;
                     livenessVerified = true;
                     if (statusEl) {
-                        statusEl.innerHTML = '🚨 <strong>Liveness skipped after 3 attempts.</strong><br><small>Your registration will be flagged for admin review.</small>';
-                        statusEl.style.background = 'rgba(239,68,68,0.1)';
-                        statusEl.style.borderColor = 'rgba(239,68,68,0.4)';
-                        statusEl.style.color = '#ff2a4d';
+                        statusEl.innerHTML = '📷 <strong>Blink detection is not working after 3 tries.</strong><br><small>No worries — please <u>take your photo now</u> to complete your registration. Your class admin will be notified that no blink was detected.</small>';
+                        statusEl.style.background = 'rgba(245,158,11,0.1)';
+                        statusEl.style.borderColor = 'rgba(245,158,11,0.4)';
+                        statusEl.style.color = '#f59e0b';
                     }
                     if (captureBtn) {
                         captureBtn.classList.remove('hidden');
