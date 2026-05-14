@@ -415,12 +415,12 @@ app.post('/api/users/add', async (req, res) => {
         }
 
         await db.execute({
-            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, managedBy, canVote, category, packId, faceDescriptor, livenessSkipped) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            sql: `INSERT INTO users (regNum, institution, password, role, name, email, status, hasVoted, isBanned, portrait, webcamReg, deviceFingerprint, branch, class, year, section, managedBy, canVote, category, packId, faceDescriptor, livenessSkipped) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 u.regNum, inst, u.password, u.role, u.name || '', u.email || '', u.status || 'pending', 
                 boolInt(u.hasVoted), boolInt(u.isBanned), 
                 u.portrait || null, u.webcamReg || null, u.deviceFingerprint || null, 
-                u.branch || null, u.class || null, u.year || null, u.managedBy || null, 
+                u.branch || null, u.class || null, u.year || null, u.section || null, u.managedBy || null, 
                 boolInt(u.canVote), u.category || null, u.packId || null,
                 u.faceDescriptor || null,
                 boolInt(u.livenessSkipped)
@@ -821,7 +821,7 @@ app.patch('/api/users/:id', async (req, res) => {
                 const targetRole = targetRes.rows.length > 0 ? targetRes.rows[0].role : null;
 
                 if (['voter', 'contestant'].includes(targetRole) && callerRole !== 'developer') {
-                    const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'section', 'regNum', 'deviceFingerprint'];
+                    const PROTECTED_STUDENT_FIELDS = ['name', 'email', 'password', 'portrait', 'webcamReg', 'faceDescriptor', 'branch', 'class', 'year', 'regNum', 'deviceFingerprint'];
                     const forbidden = Object.keys(updates).filter(k => PROTECTED_STUDENT_FIELDS.includes(k));
                     if (forbidden.length > 0) {
                         return res.status(403).json({ error: `Admins cannot modify student personal details (${forbidden.join(', ')}). Only status and voting permissions may be changed.` });
