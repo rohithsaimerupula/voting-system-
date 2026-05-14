@@ -1238,10 +1238,13 @@
                     badge.style.background = "rgba(34,197,94,0.15)";
                     badge.style.color = "#22c55e";
                 }
-                setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`);
+                if (livenessSkippedFlag) {
+                     setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. However, since blink detection was skipped, your account will be <strong>flagged for Admin Review</strong>.`);
+                } else {
+                     setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>AI has confirmed a match. Your account will be <strong>activated instantly</strong> upon completion.`);
+                }
             } else {
                 aiVerified = false;
-                faceMatchFailCount++;
                 if(progress) progress.style.background = "#ff2a4d";
                 setText('ai-badge', "Match Low ⚠️");
                 if(badge) {
@@ -1249,25 +1252,38 @@
                     badge.style.color = "#ff2a4d";
                 }
 
-                if (faceMatchFailCount < 3) {
-                    // Attempts 1-2: require re-blink on retake
-                    setHTML('ai-msg', `<strong>Confidence: ${score}%</strong> &mdash; Attempt ${faceMatchFailCount}/3<br>Face doesn't match. <strong>Click Retake to re-blink and capture again.</strong>`);
+                if (livenessSkippedFlag) {
+                    // They already bypassed blinking. Let them retake infinitely without blinking until >40%.
+                    setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>Face match must be at least 40% to continue. <strong>Please retake your photo (No Blink required).</strong>`);
                     const retakeBtn = document.getElementById('retake-btn');
                     if (retakeBtn) {
                         retakeBtn.classList.remove('hidden');
-                        retakeBtn.innerText = '🔄 Retake & Re-blink';
-                        retakeBtn.style.animation = 'pulse-badge 1s infinite';
-                        retakeBtn.onclick = () => retakeWebcam();
-                    }
-                } else {
-                    // 3+ failures: blink no longer required, capture directly
-                    setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>🚨 Face match failed 3 times. <strong>Blink verification disabled.</strong><br>Click “Capture Directly” to take a photo without blink check. AI will still verify the match.`);
-                    const retakeBtn = document.getElementById('retake-btn');
-                    if (retakeBtn) {
-                        retakeBtn.classList.remove('hidden');
-                        retakeBtn.innerText = '📸 Capture Directly (No Blink)';
+                        retakeBtn.innerText = '📸 Retake Photo (No Blink)';
                         retakeBtn.style.animation = 'pulse-badge 1s infinite';
                         retakeBtn.onclick = () => captureDirectly();
+                    }
+                } else {
+                    faceMatchFailCount++;
+                    if (faceMatchFailCount < 3) {
+                        // Attempts 1-2: require re-blink on retake
+                        setHTML('ai-msg', `<strong>Confidence: ${score}%</strong> &mdash; Attempt ${faceMatchFailCount}/3<br>Face doesn't match. <strong>Click Retake to re-blink and capture again.</strong>`);
+                        const retakeBtn = document.getElementById('retake-btn');
+                        if (retakeBtn) {
+                            retakeBtn.classList.remove('hidden');
+                            retakeBtn.innerText = '🔄 Retake & Re-blink';
+                            retakeBtn.style.animation = 'pulse-badge 1s infinite';
+                            retakeBtn.onclick = () => retakeWebcam();
+                        }
+                    } else {
+                        // 3+ failures: blink no longer required, capture directly
+                        setHTML('ai-msg', `<strong>Confidence: ${score}%</strong><br>🚨 Face match failed 3 times. <strong>Blink check is now disabled.</strong><br>Please manually capture your photo to submit your registration for admin review.`);
+                        const retakeBtn = document.getElementById('retake-btn');
+                        if (retakeBtn) {
+                            retakeBtn.classList.remove('hidden');
+                            retakeBtn.innerText = '📸 Capture Directly (No Blink)';
+                            retakeBtn.style.animation = 'pulse-badge 1s infinite';
+                            retakeBtn.onclick = () => captureDirectly();
+                        }
                     }
                 }
             }
@@ -1648,7 +1664,17 @@
             const btn = document.getElementById('final-submit-btn');
             if (otpVerified && webcamPhoto && aiConfidence >= 40) {
                 btn.disabled = false;
-                btn.innerText = "Complete Registration";
+                if (livenessSkippedFlag) {
+                    btn.innerText = "Submit for Admin Review (No Blink)";
+                    btn.style.background = "#f59e0b"; // Orange
+                    btn.style.color = "#000";
+                    btn.style.borderColor = "#d97706";
+                } else {
+                    btn.innerText = "Complete Registration";
+                    btn.style.background = ""; // Default
+                    btn.style.color = "";
+                    btn.style.borderColor = "";
+                }
             } else {
                 btn.disabled = true;
                 let missing = [];
@@ -1656,6 +1682,9 @@
                 if (!webcamPhoto) missing.push("Face Capture");
                 if (webcamPhoto && aiConfidence < 40) missing.push("AI Match > 40%");
                 btn.innerText = missing.length > 0 ? "Complete " + missing.join(" & ") + " to enable" : "Complete Registration";
+                btn.style.background = "";
+                btn.style.color = "";
+                btn.style.borderColor = "";
             }
         }
 
