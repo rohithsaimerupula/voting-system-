@@ -1435,24 +1435,27 @@
                 livenessMsg.style.display = 'block';
 
                 startLivenessScan(video, livenessMsg, () => {
-                    // Blink confirmed — auto-capture, but wait for video dimensions
+                    // Blink confirmed — wait for eyes to OPEN again before capturing
+                    // This avoids capturing a mid-blink (closed-eye) frame
                     livenessVerified = true;
                     livenessMsg.innerHTML = '✅ <strong>Liveness Confirmed!</strong> Capturing your photo...';
                     livenessMsg.style.background = 'rgba(34,197,94,0.1)';
                     livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
                     livenessMsg.style.color = '#22c55e';
-                    // Wait until video has valid dimensions then capture
-                    const waitAndCapture = (tries) => {
-                        const v = document.getElementById('webcam-video');
-                        if (v && v.videoWidth > 0 && v.videoHeight > 0) {
-                            setTimeout(() => captureWebcam(), 200);
-                        } else if (tries > 0) {
-                            setTimeout(() => waitAndCapture(tries - 1), 200);
-                        } else {
-                            captureWebcam(); // try
-                        }
-                    };
-                    waitAndCapture(10);
+                    // Wait 600ms for eyes to fully open after blink, then wait for valid dimensions
+                    setTimeout(() => {
+                        const waitAndCapture = (tries) => {
+                            const v = document.getElementById('webcam-video');
+                            if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+                                captureWebcam();
+                            } else if (tries > 0) {
+                                setTimeout(() => waitAndCapture(tries - 1), 150);
+                            } else {
+                                captureWebcam(); // last resort
+                            }
+                        };
+                        waitAndCapture(10);
+                    }, 600);
                 });
 
             } catch (err) {
@@ -1517,7 +1520,7 @@
             aiConfidence = 0;
             aiVerified = false;
 
-            // --- Real-time AI check with retry ---
+            // --- Real-time AI check with multi-model retry ---
             if (faceModelsLoaded) {
                 try {
                     const detectImg = await new Promise((resolve, reject) => {
@@ -1526,29 +1529,73 @@
                         el.onerror = () => reject(new Error('Failed to load webcam capture for face detection.'));
                         el.src = webcamPhoto;
                     });
-                    // Retry up to 2 times
+
                     let detection = null;
-                    for (let attempt = 0; attempt < 2 && !detection; attempt++) {
-                        detection = await faceapi.detectSingleFace(detectImg).withFaceLandmarks().withFaceDescriptor();
+
+                    // Attempt 1: TinyFaceDetector (fast, works well for webcam)
+                    if (!detection && faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded) {
+                        try {
+                            detection = await faceapi
+                                .detectSingleFace(detectImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 }))
+                                .withFaceLandmarks(true)
+                                .withFaceDescriptor();
+                        } catch(e1) { console.warn('[OVS AI] TinyDetector attempt failed:', e1.message); }
                     }
+
+                    // Attempt 2: SSD MobileNet with lower confidence threshold
+                    if (!detection && faceapi.nets.ssdMobilenetv1 && faceapi.nets.ssdMobilenetv1.isLoaded) {
+                        try {
+                            detection = await faceapi
+                                .detectSingleFace(detectImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.25 }))
+                                .withFaceLandmarks()
+                                .withFaceDescriptor();
+                        } catch(e2) { console.warn('[OVS AI] SSD attempt failed:', e2.message); }
+                    }
+
+                    // Attempt 3: TinyFaceDetector with even lower threshold (last resort)
+                    if (!detection && faceapi.nets.tinyFaceDetector && faceapi.nets.tinyFaceDetector.isLoaded) {
+                        try {
+                            detection = await faceapi
+                                .detectSingleFace(detectImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.2 }))
+                                .withFaceLandmarks(true)
+                                .withFaceDescriptor();
+                        } catch(e3) { console.warn('[OVS AI] Final TinyDetector attempt failed:', e3.message); }
+                    }
+
                     if (detection) {
                         liveFaceDescriptor = detection.descriptor;
-                        if (idFaceDescriptor) runFaceComparison();
+                        if (idFaceDescriptor) {
+                            runFaceComparison();
+                        } else {
+                            // ID not yet uploaded — store descriptor for later comparison
+                            console.log('[OVS AI] Live face captured. Waiting for ID upload to compare.');
+                        }
                     } else {
-                        console.warn("[OVS AI] No face detected in webcam capture after retries.");
+                        console.warn("[OVS AI] No face detected in webcam capture after all attempts.");
                         liveFaceDescriptor = null;
                         document.getElementById('ai-status-card').classList.add('hidden');
                         faceMatchFailCount++;
                         const rb2 = document.getElementById('retake-btn');
                         if (faceMatchFailCount >= 3) {
-                            showError('No face in photo — 3 attempts done. Blink disabled, capture directly.');
-                            if (rb2) { rb2.classList.remove('hidden'); rb2.innerText = '\ud83d\udcf8 Capture Directly (No Blink)'; rb2.style.animation = 'pulse-badge 1s infinite'; rb2.onclick = () => captureDirectly(); }
+                            showError('⚠️ No face detected in photo after 3 attempts. Blink check disabled — please capture your photo manually for admin review.');
+                            livenessSkippedFlag = true;
+                            if (rb2) {
+                                rb2.classList.remove('hidden');
+                                rb2.innerText = '📸 Capture Directly (No Blink)';
+                                rb2.style.animation = 'pulse-badge 1s infinite';
+                                rb2.onclick = () => captureDirectly();
+                            }
                         } else {
-                            showError('No face in photo — attempt ' + faceMatchFailCount + '/3. Click Retake to re-blink.');
-                            if (rb2) { rb2.classList.remove('hidden'); rb2.innerText = '\ud83d\udd04 Retake & Re-blink'; rb2.style.animation = 'pulse-badge 1s infinite'; rb2.onclick = () => retakeWebcam(); }
+                            showError('⚠️ No face detected in photo — attempt ' + faceMatchFailCount + '/3. Ensure your face is well-lit and centered, then click Retake.');
+                            if (rb2) {
+                                rb2.classList.remove('hidden');
+                                rb2.innerText = '🔄 Retake & Re-blink';
+                                rb2.style.animation = 'pulse-badge 1s infinite';
+                                rb2.onclick = () => retakeWebcam();
+                            }
                         }
                     }
-                } catch(e) { console.error("[OVS AI] Webcam scan failed:", e); }
+                } catch(e) { console.error("[OVS AI] Webcam scan failed:", e); showError('⚠️ Face analysis error: ' + e.message + ' — Please retake your photo.'); }
             }
 
             checkSubmitStatus();
@@ -1653,7 +1700,8 @@
                         livenessMsg.style.borderColor = 'rgba(34,197,94,0.4)';
                         livenessMsg.style.color = '#22c55e';
                     }
-                    setTimeout(() => captureWebcam(), 300);
+                    // Wait 600ms for eyes to fully open after blink before capturing
+                    setTimeout(() => captureWebcam(), 600);
                 });
             }
 
