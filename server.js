@@ -325,6 +325,7 @@ app.post('/api/users/add', async (req, res) => {
                         const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'voter'", args: [inst] });
                         if (cnt.rows[0].c >= pack.maxStudents) return res.status(403).json({ error: `Student capacity full for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxStudents}). Registration is closed until capacity is upgraded.` });
                     }
+                    // contestants are a free candidate pool — no pack limit applied
                 }
             }
         }
@@ -1190,16 +1191,43 @@ app.patch('/api/elections/:id', authGuard, async (req, res) => {
         const values = keys.map(k => typeof updates[k] === 'boolean' ? boolInt(updates[k]) : updates[k]);
         values.push(req.params.id);
         await db.execute({ sql: `UPDATE elections SET ${setClause} WHERE id = ?`, args: values });
+
+        // If election is being marked as completed, auto-purge non-registered contestants
+        if (updates.isCompleted == 1 || updates.isCompleted === true) {
+            try {
+                const elec = await db.execute({ sql: 'SELECT institution FROM elections WHERE id = ?', args: [req.params.id] });
+                if (elec.rows.length > 0) {
+                    const inst = elec.rows[0].institution;
+                    await db.execute({
+                        sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant' AND status = 'active'
+                              AND regNum NOT IN (SELECT regNum FROM users WHERE institution = ? AND role = 'voter')`,
+                        args: [inst, inst]
+                    });
+                    console.log(`[OVS] Auto-purged non-registered contestants on election completion in ${inst}`);
+                }
+            } catch (purgeErr) { console.warn('[OVS] Contestant purge on complete skipped:', purgeErr.message); }
+        }
+
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/elections/:id', authGuard, async (req, res) => {
     try {
-        const elec = await db.execute({ sql: 'SELECT electionCode FROM elections WHERE id = ?', args: [req.params.id] });
+        const elec = await db.execute({ sql: 'SELECT electionCode, institution FROM elections WHERE id = ?', args: [req.params.id] });
         if (elec.rows.length > 0) {
             const eCode = elec.rows[0].electionCode;
+            const inst = elec.rows[0].institution;
             await db.execute({ sql: 'DELETE FROM publicLedger WHERE electionCode = ? OR electionCode = ?', args: [req.params.id, eCode] });
+            // Auto-purge contestants who are NOT registered voters (non-registered candidate pool)
+            try {
+                await db.execute({
+                    sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant' AND status = 'active'
+                          AND regNum NOT IN (SELECT regNum FROM users WHERE institution = ? AND role = 'voter')`,
+                    args: [inst, inst]
+                });
+                console.log(`[OVS] Auto-purged non-registered contestants for election ${req.params.id} in ${inst}`);
+            } catch (purgeErr) { console.warn('[OVS] Contestant purge on delete skipped:', purgeErr.message); }
         }
         await db.execute({ sql: 'DELETE FROM elections WHERE id = ?', args: [req.params.id] });
         res.json({ success: true });
