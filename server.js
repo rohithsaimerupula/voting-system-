@@ -1192,20 +1192,28 @@ app.patch('/api/elections/:id', authGuard, async (req, res) => {
         values.push(req.params.id);
         await db.execute({ sql: `UPDATE elections SET ${setClause} WHERE id = ?`, args: values });
 
-        // If election is being marked as completed, auto-purge non-registered contestants
+        // If election is being marked as completed, clean up contestants
         if (updates.isCompleted == 1 || updates.isCompleted === true) {
             try {
                 const elec = await db.execute({ sql: 'SELECT institution FROM elections WHERE id = ?', args: [req.params.id] });
                 if (elec.rows.length > 0) {
                     const inst = elec.rows[0].institution;
+                    // 1) Revert registered students (who have a password) back to 'voter'
                     await db.execute({
-                        sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant' AND status = 'active'
-                              AND regNum NOT IN (SELECT regNum FROM users WHERE institution = ? AND role = 'voter')`,
-                        args: [inst, inst]
+                        sql: `UPDATE users SET role = 'voter', category = NULL, symbol = NULL
+                              WHERE institution = ? AND role = 'contestant'
+                              AND password IS NOT NULL AND password != ''`,
+                        args: [inst]
                     });
-                    console.log(`[OVS] Auto-purged non-registered contestants on election completion in ${inst}`);
+                    // 2) Delete non-registered contestants (no password — entered manually as candidate pool)
+                    await db.execute({
+                        sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant'
+                              AND (password IS NULL OR password = '')`,
+                        args: [inst]
+                    });
+                    console.log(`[OVS] Post-election cleanup done for ${inst}: registered contestants reverted to voter, non-registered deleted.`);
                 }
-            } catch (purgeErr) { console.warn('[OVS] Contestant purge on complete skipped:', purgeErr.message); }
+            } catch (purgeErr) { console.warn('[OVS] Post-election cleanup skipped:', purgeErr.message); }
         }
 
         res.json({ success: true });
@@ -1219,15 +1227,23 @@ app.delete('/api/elections/:id', authGuard, async (req, res) => {
             const eCode = elec.rows[0].electionCode;
             const inst = elec.rows[0].institution;
             await db.execute({ sql: 'DELETE FROM publicLedger WHERE electionCode = ? OR electionCode = ?', args: [req.params.id, eCode] });
-            // Auto-purge contestants who are NOT registered voters (non-registered candidate pool)
+            // Post-election contestant cleanup
             try {
+                // 1) Revert registered students (have a password) back to 'voter'
                 await db.execute({
-                    sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant' AND status = 'active'
-                          AND regNum NOT IN (SELECT regNum FROM users WHERE institution = ? AND role = 'voter')`,
-                    args: [inst, inst]
+                    sql: `UPDATE users SET role = 'voter', category = NULL, symbol = NULL
+                          WHERE institution = ? AND role = 'contestant'
+                          AND password IS NOT NULL AND password != ''`,
+                    args: [inst]
                 });
-                console.log(`[OVS] Auto-purged non-registered contestants for election ${req.params.id} in ${inst}`);
-            } catch (purgeErr) { console.warn('[OVS] Contestant purge on delete skipped:', purgeErr.message); }
+                // 2) Delete non-registered contestants (no password — added manually as candidate pool)
+                await db.execute({
+                    sql: `DELETE FROM users WHERE institution = ? AND role = 'contestant'
+                          AND (password IS NULL OR password = '')`,
+                    args: [inst]
+                });
+                console.log(`[OVS] Post-delete cleanup done for ${inst}: registered contestants reverted to voter, non-registered deleted.`);
+            } catch (purgeErr) { console.warn('[OVS] Post-delete cleanup skipped:', purgeErr.message); }
         }
         await db.execute({ sql: 'DELETE FROM elections WHERE id = ?', args: [req.params.id] });
         res.json({ success: true });
