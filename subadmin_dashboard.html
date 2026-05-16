@@ -1213,7 +1213,7 @@
         studentMap = {}; students.forEach(s => { studentMap[s.regNum] = s; });
         // counts removed as they are redundant with status-based truth
 
-        setText('s-students', students.length);
+        setText('s-students', students.filter(s => s.role === 'voter').length);
 
         const q = (document.getElementById('student-search') || {}).value || '';
         filterStudentsByTab(q);

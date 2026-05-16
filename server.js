@@ -321,8 +321,8 @@ app.post('/api/users/add', async (req, res) => {
                     } else if (u.role === 'subadmin') {
                         const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'subadmin'", args: [inst] });
                         if (cnt.rows[0].c >= pack.maxSubAdmins) return res.status(403).json({ error: `Sub-Admin limit reached for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxSubAdmins}). Upgrade your pack to add more sub-admins.` });
-                    } else if (u.role === 'voter' || u.role === 'contestant') {
-                        const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role IN ('voter','contestant')", args: [inst] });
+                    } else if (u.role === 'voter') {
+                        const cnt = await db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'voter'", args: [inst] });
                         if (cnt.rows[0].c >= pack.maxStudents) return res.status(403).json({ error: `Student capacity full for your plan "${pack.name}" (${cnt.rows[0].c}/${pack.maxStudents}). Registration is closed until capacity is upgraded.` });
                     }
                 }
@@ -483,7 +483,7 @@ app.get('/api/institutions/pack-usage', async (req, res) => {
             db.execute({ sql: "SELECT * FROM packs WHERE id = ?", args: [packId] }),
             db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'admin'", args: [inst] }),
             db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'subadmin'", args: [inst] }),
-            db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role IN ('voter','contestant')", args: [inst] })
+            db.execute({ sql: "SELECT COUNT(*) as c FROM users WHERE institution = ? AND role = 'voter'", args: [inst] })
         ]);
         const pack = packRes.rows[0];
         res.json({
@@ -544,7 +544,7 @@ app.get('/api/dev/stats', async (req, res) => {
             const stats = {
                 admins: userCounts.find(r => r.role === 'admin')?.count || 0,
                 subadmins: userCounts.find(r => r.role === 'subadmin')?.count || 0,
-                voters: (userCounts.find(r => r.role === 'voter')?.count || 0) + (userCounts.find(r => r.role === 'contestant')?.count || 0)
+                voters: (userCounts.find(r => r.role === 'voter')?.count || 0)
             };
             return {
                 name,

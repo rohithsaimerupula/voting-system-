@@ -1732,7 +1732,7 @@
           // Filter strictly by institution
           const instUsers = allUsers.filter(u => u && u.institution === saSession.institution);
           const STAFF_ROLES = ['admin', 'subadmin', 'superadmin', 'developer'];
-          const students = instUsers.filter(u => u && ['voter', 'contestant'].includes(u.role) && !STAFF_ROLES.includes(u.role));
+          const students = instUsers.filter(u => u && u.role === 'voter' && !STAFF_ROLES.includes(u.role));
           const admins = instUsers.filter(u => u && u.role === 'admin');
           const subadmins = instUsers.filter(u => u && u.role === 'subadmin');
           allStudents = students;
@@ -1928,7 +1928,7 @@
 
       function renderStudents(list) {
         // Safety: never render staff roles in the student table
-        const safeList = (list || []).filter(s => s && ['voter','contestant'].includes(s.role));
+        const safeList = (list || []).filter(s => s && s.role === 'voter');
         if (!safeList.length) { setHTML('student-table', '<tr><td colspan="6" class="empty">No students found</td></tr>'); return; }
         setHTML('student-table', safeList.map((s, index) => `<tr>
     <td><span class="badge" style="background:rgba(255,255,255,0.05);color:var(--gold);">#${index + 1}</span></td>
