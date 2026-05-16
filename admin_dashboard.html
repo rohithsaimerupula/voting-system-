@@ -795,7 +795,7 @@ async function loadBranchElection() {
                         <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid ${isWin ? 'var(--gold)' : 'var(--border)'}; position:relative; overflow:hidden;">
                             ${isWin ? '<div style="position:absolute; top:0; right:0; background:var(--gold); color:black; font-size:0.6rem; font-weight:bold; padding:2px 8px; border-bottom-left-radius:8px;">LEADING</div>' : ''}
                             <div style="display:flex; align-items:center; gap:1rem;">
-                                <img src="${r.portrait || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--border);">
+                                <div style="width:40px; height:40px; border-radius:50%; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0;">${r.symbol || '⭐'}</div>
                                 <div style="flex:1;">
                                     <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
                                         <span style="font-weight:700; font-size:0.9rem;">${r.name} <span style="font-size:1.2rem; margin-left:0.5rem;">${r.symbol}</span></span>
