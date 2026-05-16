@@ -323,6 +323,20 @@
         </div>
 
         <button class="btn btn-cyan" onclick="createBranchElection()">🚀 Create Branch Election</button>
+
+        <!-- Categories & Candidates Builder -->
+        <div style="border-top:1px solid var(--border); padding-top:1.5rem; margin-top:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; font-size:1rem;">📂 Categories &amp; Candidates</h3>
+            <button class="btn-sm" onclick="brAddCategory()" style="background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);color:var(--cyan);padding:0.4rem 0.9rem;border-radius:8px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.85rem;font-weight:600;">+ Add Category</button>
+          </div>
+          <div id="br-category-builder">
+            <div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;">
+              <p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:var(--cyan);">+ Add Category</strong> to add your first.</p>
+            </div>
+          </div>
+          <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--muted);">ℹ️ Min 1 category · Min 2 candidates per category. Enter a Student ID to auto-fill from registered students, or type any name for non-registered candidates.</div>
+        </div>
       </div>
 
       <!-- Active Election -->
@@ -807,33 +821,125 @@ async function loadBranchElection() {
     }catch(e){toast(e.message,false);}
 }
 
+// === BRANCH ADMIN CATEGORY BUILDER ===
+let brCategories = [];
+
+function brAddCategory() {
+  brCategories.push({ name: '', candidates: [{ name: '', regNum: '', symbol: '⭐' }, { name: '', regNum: '', symbol: '🔥' }] });
+  brRenderCategories();
+}
+function brRemoveCategory(idx) {
+  brCategories.splice(idx, 1);
+  brRenderCategories();
+}
+function brAddCandidate(catIdx) {
+  const syms = ['💎','🎯','🌈','⚡','🍀','🏆','🚀','👑'];
+  brCategories[catIdx].candidates.push({ name: '', regNum: '', symbol: syms[brCategories[catIdx].candidates.length % syms.length] });
+  brRenderCategories();
+}
+function brRemoveCandidate(catIdx, candIdx) {
+  brCategories[catIdx].candidates.splice(candIdx, 1);
+  brRenderCategories();
+}
+function brAutoFill(catIdx, candIdx) {
+  const reg = brCategories[catIdx].candidates[candIdx].regNum;
+  const student = branchStudents.find(s => s.regNum === reg);
+  if (student) {
+    brCategories[catIdx].candidates[candIdx].name = student.name;
+    const nameEl = document.getElementById(`br-cn-${catIdx}-${candIdx}`);
+    if (nameEl) nameEl.value = student.name;
+    const previewEl = document.getElementById(`br-cp-${catIdx}-${candIdx}`);
+    if (previewEl && student.portrait) previewEl.innerHTML = `<img src="${student.portrait}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  }
+}
+function brSyncData() {
+  document.querySelectorAll('.br-cat-name').forEach((inp, i) => {
+    if (brCategories[i]) brCategories[i].name = inp.value;
+  });
+  document.querySelectorAll('.br-cand-row').forEach(row => {
+    const ci = parseInt(row.dataset.cat); const ki = parseInt(row.dataset.cand);
+    if (brCategories[ci] && brCategories[ci].candidates[ki]) {
+      brCategories[ci].candidates[ki].name   = row.querySelector('.br-cn').value;
+      brCategories[ci].candidates[ki].regNum = row.querySelector('.br-cr').value;
+      brCategories[ci].candidates[ki].symbol = row.querySelector('.br-cs').value || '⭐';
+    }
+  });
+}
+function brRenderCategories() {
+  const container = document.getElementById('br-category-builder');
+  if (!container) return;
+  if (brCategories.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:1.5rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;"><p style="color:var(--muted);font-size:0.85rem;">No categories yet. Click <strong style="color:var(--cyan);">+ Add Category</strong> to add your first.</p></div>';
+    return;
+  }
+  container.innerHTML = brCategories.map((cat, ci) => `
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(6,182,212,0.2);border-radius:12px;padding:1.2rem;margin-bottom:1rem;">
+      <div style="display:flex;gap:0.8rem;align-items:center;margin-bottom:1rem;">
+        <input class="br-cat-name" value="${cat.name}" placeholder="Category name (e.g. President)" style="flex:1;padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(6,182,212,0.3);background:rgba(6,182,212,0.05);color:white;font-family:'Outfit';outline:none;">
+        <button onclick="brSyncData();brRemoveCategory(${ci})" style="padding:0.4rem 0.7rem;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.8rem;">🗑️</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.8rem;">
+        ${cat.candidates.map((cand, ki) => `
+          <div class="br-cand-row" data-cat="${ci}" data-cand="${ki}" style="display:flex;gap:0.5rem;align-items:center;background:rgba(255,255,255,0.02);padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
+            <div id="br-cp-${ci}-${ki}" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--muted);">?</div>
+            <input class="br-cr" value="${cand.regNum}" placeholder="Student ID" oninput="brCategories[${ci}].candidates[${ki}].regNum=this.value.toUpperCase();this.value=this.value.toUpperCase();brAutoFill(${ci},${ki})" style="width:110px;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(6,182,212,0.3);background:rgba(6,182,212,0.04);color:white;font-family:'Outfit';outline:none;min-width:0;">
+            <input id="br-cn-${ci}-${ki}" class="br-cn" value="${cand.name}" placeholder="Candidate Name *" oninput="brCategories[${ci}].candidates[${ki}].name=this.value" style="flex:2;padding:0.35rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-family:'Outfit';outline:none;min-width:0;">
+            <input class="br-cs" value="${cand.symbol}" placeholder="Sym" maxlength="4" oninput="brCategories[${ci}].candidates[${ki}].symbol=this.value" style="width:55px;padding:0.35rem 0.5rem;border-radius:6px;border:1px solid rgba(6,182,212,0.3);background:rgba(6,182,212,0.04);color:white;font-family:'Outfit';outline:none;text-align:center;">
+            ${ki > 1 ? `<button onclick="brSyncData();brRemoveCandidate(${ci},${ki})" style="padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;flex-shrink:0;">✕</button>` : ''}
+          </div>
+        `).join('')}
+        ${cat.candidates.length < 2 ? '<div style="font-size:0.75rem;color:#f59e0b;padding:0.3rem 0;">⚠️ Need at least 2 candidates</div>' : ''}
+      </div>
+      <button onclick="brSyncData();brAddCandidate(${ci})" style="padding:0.35rem 0.8rem;border-radius:6px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:#22c55e;cursor:pointer;font-size:0.82rem;">+ Add Candidate</button>
+    </div>
+  `).join('');
+}
+
 async function createBranchElection() {
+    brSyncData();
     const nm = document.getElementById('br-elec-name').value.trim();
+    const startVal = document.getElementById('br-elec-start').value;
+    const endVal = document.getElementById('br-elec-end').value;
     const resultVis = document.getElementById('br-elec-visibility') ? document.getElementById('br-elec-visibility').value : 'branch';
-    if(!nm) return toast('Name required',false);
-    
+    if (!nm) return toast('Election name required', false);
+    if (!startVal || !endVal) return toast('Start and end time required', false);
+
+    // Validate categories
+    if (brCategories.length === 0) return toast('Add at least 1 category', false);
+    const categories = [];
+    const allCandidates = [];
+    for (const cat of brCategories) {
+        if (!cat.name.trim()) return toast('All category names must be filled', false);
+        if (cat.candidates.length < 2) return toast(`Category "${cat.name}" needs at least 2 candidates`, false);
+        for (const c of cat.candidates) {
+            if (!c.name.trim()) return toast(`Candidate name required in "${cat.name}"`, false);
+            if (!c.regNum.trim()) return toast(`Student ID required for "${c.name || 'a candidate'}" in "${cat.name}"`, false);
+            if (!c.symbol.trim()) return toast(`Symbol required for "${c.name}" in "${cat.name}"`, false);
+        }
+        categories.push(cat.name.trim());
+        cat.candidates.forEach(c => allCandidates.push({ name: c.name, regNum: c.regNum, symbol: c.symbol || '⭐', category: cat.name.trim() }));
+    }
+
     const scopeAll = document.getElementById('br-scope-all').checked;
     let selectedClasses = [];
-    if(!scopeAll) {
-        document.querySelectorAll('.cb-class').forEach(cb => { if(cb.checked) selectedClasses.push(cb.getAttribute('data-class')); });
+    if (!scopeAll) {
+        document.querySelectorAll('.cb-class').forEach(cb => { if (cb.checked) selectedClasses.push(cb.getAttribute('data-class')); });
     }
-    
-    const scopeData = {
-        branch: session.branch,
-        classes: selectedClasses,
-        resultVisibility: resultVis
-    };
-    
-    try{
-        await apiFetch('/elections',{method:'POST',body:JSON.stringify({
-            institution:session.institution, name:nm, type:'branch', scope:scopeData,
-            startTime:document.getElementById('br-elec-start').value||null,
-            endTime:document.getElementById('br-elec-end').value||null,
-            createdBy:session.regNum, createdByRole:'admin'
+    const scopeData = { branch: session.branch, classes: selectedClasses, resultVisibility: resultVis };
+
+    try {
+        toast('Creating election...');
+        await apiFetch('/elections', { method: 'POST', body: JSON.stringify({
+            institution: session.institution, name: nm, type: 'branch', scope: scopeData,
+            startTime: new Date(startVal).toISOString(),
+            endTime: new Date(endVal).toISOString(),
+            createdBy: session.regNum, createdByRole: 'admin',
+            categories, candidates: allCandidates
         })});
-        toast('Branch Election Created!');
+        toast('✅ Branch Election Created!');
+        brCategories = [];
         loadBranchElection();
-    }catch(e){toast(e.message,false);}
+    } catch(e) { toast(e.message, false); }
 }
 async function startBrElection(){if(branchElection&&confirm('Start branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:1,registrationOpen:0})});toast('Started');loadBranchElection();}}
 async function stopBrElection(){if(branchElection&&confirm('End branch election?')){await apiFetch(`/elections/${encodeURIComponent(branchElection.id)}`,{method:'PATCH',body:JSON.stringify({isActive:0,isCompleted:1})});toast('Ended');loadBranchElection();}}
