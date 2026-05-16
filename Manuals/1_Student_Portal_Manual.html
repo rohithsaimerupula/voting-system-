@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Student / Voter Portal Manual</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1e293b; max-width: 900px; margin: 0 auto; padding: 40px; background: #fff; }
+        h1 { color: #4c1d95; border-bottom: 3px solid #8b5cf6; padding-bottom: 10px; font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #6d28d9; margin-top: 40px; font-size: 1.8em; }
+        h3 { color: #334155; }
+        p.desc { font-size: 1.1em; color: #475569; margin-bottom: 30px; }
+        .step { background: #f8fafc; border-left: 5px solid #8b5cf6; padding: 20px; margin-bottom: 25px; border-radius: 0 8px 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .step h3 { margin-top: 0; color: #4338ca; }
+        .mermaid { margin: 30px 0; display: flex; justify-content: center; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        @media print {
+            body { max-width: 100%; padding: 0; }
+            .step, .mermaid { page-break-inside: avoid; }
+            h2 { page-break-after: avoid; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#f3e8ff', primaryBorderColor: '#8b5cf6', primaryTextColor: '#1e293b', lineColor: '#64748b' } });
+        window.addEventListener('load', () => { setTimeout(() => { window.mermaidRendered = true; }, 1500); });
+    </script>
+</head>
+<body>
+<h1>Student / Voter Portal Manual</h1>
+<p class="desc">This manual provides a detailed, step-by-step workflow for students and voters using the Online Voting System (OVS).</p>
+<h2>1. Registration Workflow</h2>
+<div class="mermaid">
+graph TD
+    A[Visit Home Page] --> B[Click Registration]
+    B --> C[Enter Class Code]
+    C --> D[Fill Details & Get OTP via Email]
+    D --> E[Verify OTP]
+    E --> F[Upload Student ID Card]
+    F --> G[Liveness Check: Blink Detection]
+    G --> H[Live Photo Capture]
+    H --> I{AI Match > 40%?}
+    I -->|Yes| J[Submit for Admin Approval]
+    I -->|No| K[Retake / Manual Review Flag]
+</div>
+<div class="step">
+    <h3>Step 1: Access Registration</h3>
+    <p>Navigate to the Home Gateway and select the <strong>Registration</strong> portal. You will be prompted to enter the unique <code>Class Code</code> provided by your Class Admin.</p>
+</div>
+<div class="step">
+    <h3>Step 2: OTP Verification</h3>
+    <p>Fill out your basic details (Name, Registration Number). Enter your College Email and click <strong>Get OTP</strong>. Enter the 6-digit code received in your email to verify your identity.</p>
+</div>
+<div class="step">
+    <h3>Step 3: Biometric Verification & ID Scan</h3>
+    <p>Upload a clear photo of your Student ID Card. The AI will extract your face. Next, open your webcam. The system will perform a <strong>Liveness Check</strong>—you must blink naturally. Once liveness is confirmed, the system will capture your photo and compare it against your ID card. A match of >40% is required.</p>
+</div>
+<div class="step">
+    <h3>Step 4: Submission</h3>
+    <p>Click <strong>Complete Registration</strong>. Your account will be created with a status of <em>Pending</em> until your Class Admin approves it.</p>
+</div>
+<h2>2. Login & Voting Workflow</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Student
+    participant Portal
+    participant AI
+    participant Blockchain Ledger
+    
+    Student->>Portal: Enter Student ID & Password
+    Portal->>AI: Trigger Webcam Login
+    AI-->>Portal: Face Match Verified
+    Portal-->>Student: Access Granted to Dashboard
+    Student->>Portal: View Live Elections
+    Student->>Portal: Select Candidate & Cast Vote
+    Portal->>Blockchain Ledger: Encrypt & Store Vote
+    Blockchain Ledger-->>Student: Vote Confirmation Receipt
+</div>
+<div class="step">
+    <h3>Step 1: Secure Biometric Login</h3>
+    <p>Go to the Login portal. Enter your Registration Number and Password. You will be prompted to scan your face via the webcam. The AI ensures the person logging in matches the registered profile.</p>
+</div>
+<div class="step">
+    <h3>Step 2: Casting a Vote</h3>
+    <p>Once inside the Student Dashboard, navigate to the <strong>Live Elections</strong> tab. Select your preferred candidate and click <strong>Vote</strong>. The system will cryptographically secure your vote and ensure you cannot vote twice.</p>
+</div>
+</body>
+</html>

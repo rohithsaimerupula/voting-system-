@@ -1,0 +1,374 @@
+
+        const currentUser = StorageManager.getCurrentUser();
+        if (!currentUser) { 
+            window.location.href = 'login.html'; 
+        } else {
+            console.log("[Vanguard] Logged in as:", currentUser.role, currentUser.regNum);
+
+            // Pending Guard: Block students whose registration has not been approved yet
+            if (currentUser.status === 'pending') {
+                StorageManager.logout();
+                alert('⏳ Access Denied\n\nYour registration is still pending approval by your Class Admin. Please wait for them to review and accept your registration before logging in.');
+                window.location.href = 'login.html';
+            }
+
+            // Role Guard: Staff members must not access the student portal
+            const STAFF_ROLES = ['admin', 'subadmin', 'superadmin', 'developer'];
+            if (STAFF_ROLES.includes(currentUser.role)) {
+                StorageManager.logout();
+                window.location.href = 'login.html';
+            }
+        }
+
+        // --- Sidebar Logic ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            sidebar.classList.toggle('collapsed');
+            btn.classList.toggle('active');
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.vd-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.vd-nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if(btn) btn.classList.add('active');
+            
+            if(tabId === 'voting') loadVotingCenter();
+            if(tabId === 'results') loadResults();
+            if(tabId === 'profile') loadProfile();
+        }
+
+        // --- Initialization ---
+        async function init() {
+            if (!currentUser) return;
+
+            const nameEl = document.getElementById('sidebar-user-name');
+            const idEl = document.getElementById('sidebar-user-id');
+            const welcomeEl = document.getElementById('welcome-name');
+            const initialEl = document.getElementById('user-initial');
+
+            if (nameEl) nameEl.innerText = currentUser.name;
+            if (idEl) idEl.innerText = `ID: ${currentUser.regNum}`;
+            if (welcomeEl) welcomeEl.innerText = currentUser.name.split(' ')[0];
+            if (initialEl) initialEl.innerText = currentUser.name[0];
+
+            loadDashboardStats();
+            
+            if (typeof tsParticles !== 'undefined') {
+                tsParticles.load("tsparticles", {
+                    fpsLimit: 60,
+                    particles: {
+                        number: { value: 30, density: { enable: true, value_area: 800 } },
+                        color: { value: "#06b6d4" },
+                        links: { enable: true, opacity: 0.1, color: "#fff" },
+                        move: { enable: true, speed: 0.5 }
+                    }
+                });
+            }
+        }
+
+        async function loadDashboardStats() {
+            const list = document.getElementById('activity-list');
+            try {
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                const voted = elections.filter(e => e.hasVoted).length;
+                // Use Number() to correctly compare SQLite integer fields
+                const active = elections.filter(e => Number(e.isActive) === 1 && Number(e.isCompleted) !== 1 && !e.hasVoted).length;
+                
+                document.getElementById('stat-voted').innerText = voted;
+                document.getElementById('stat-active').innerText = active;
+                
+                const activityHtml = elections.map(e => `
+                    <div style="padding:1rem 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                        <span>${e.name}</span>
+                        <span style="font-weight:700; color:${e.hasVoted?'#22c55e':'#f59e0b'}">${e.hasVoted?'Completed':'Pending'}</span>
+                    </div>
+                `).join('');
+                list.innerHTML = activityHtml || '<div style="text-align:center; padding:1rem; opacity:0.5;">No recent activity recorded.</div>';
+            } catch(e) { 
+                console.error(e); 
+                list.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--danger);">⚠️ Failed to sync activity: ${e.message}</div>`;
+            }
+        }
+
+        async function loadVotingCenter() {
+            const list = document.getElementById('election-list');
+            list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Scanning for ballots...</div>';
+            try {
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                // Only show elections that are LIVE (isActive == 1) and voter hasn't voted yet
+                // SQLite returns integers so use == 1 to correctly detect active elections
+                const liveAndPending = elections.filter(e => Number(e.isActive) === 1 && Number(e.isCompleted) !== 1 && !e.hasVoted);
+                window.currentElections = liveAndPending;
+                
+                list.innerHTML = liveAndPending.length ? liveAndPending.map(e => `
+                    <div class="vd-election-card">
+                        <span class="vd-status-pill vd-pill-live">Live</span>
+                        <h3 class="vd-election-name">${e.name}</h3>
+                        <p class="vd-election-info">Access your digital ballot gateway to cast your vote for this session.</p>
+                        <button class="vd-action-btn" onclick="enterGateway('${e.id}')">
+                            Enter Gateway ➔
+                        </button>
+                    </div>
+                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No live elections available for your profile right now.</div>';
+            } catch(e) { 
+                list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--danger);">⚠️ Error loading voting center: ${e.message}</div>`; 
+            }
+        }
+
+        async function loadResults() {
+            const list = document.getElementById('results-list');
+            list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">Fetching official counts...</div>';
+            try {
+                const elections = await fetchApi(`/voters/my-elections?regNum=${currentUser.regNum}&institution=${currentUser.institution}`);
+                const completed = elections.filter(e => Number(e.isCompleted) === 1);
+                
+                list.innerHTML = completed.length ? completed.map(e => `
+                    <div class="vd-election-card">
+                        <span class="vd-status-pill vd-pill-ended">Official Results</span>
+                        <h3 class="vd-election-name">${e.name}</h3>
+                        <p class="vd-election-info">View the verified digital tally for this concluded election.</p>
+                        <button class="vd-action-btn" style="background:rgba(6,182,212,0.1); color:#06b6d4; border:1px solid rgba(6,182,212,0.3);" onclick="viewResults('${e.id}', '${e.name}')">
+                            View Verified Tally 📈
+                        </button>
+                    </div>
+                `).join('') : '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#94a3b8;">No official results published yet.</div>';
+            } catch(e) { 
+                list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--danger);">⚠️ Error loading results: ${e.message}</div>`; 
+            }
+        }
+
+        function loadProfile() {
+            const area = document.getElementById('profile-fields');
+            area.innerHTML = `
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Full Name</label>
+                    <input type="text" id="edit-name" value="${currentUser.name}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Email Address</label>
+                    <input type="email" id="edit-email" value="${currentUser.email || ''}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+                    <div>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Branch (Locked)</label>
+                        <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.branch}</div>
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Year (Locked)</label>
+                        <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.year}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Section (Locked)</label>
+                    <div style="padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#64748b;">${currentUser.section || 'Not Assigned'}</div>
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Registration Number (Locked)</label>
+                    <div style="font-size:1rem; font-weight:700; color:var(--neon-cyan); padding:0.8rem; background:rgba(255,255,255,0.03); border-radius:12px;">${currentUser.regNum}</div>
+                </div>
+                <div style="margin-bottom:1.5rem; border-top:1px solid var(--glass-border); padding-top:1.5rem;">
+                    <label style="display:block; color:var(--gold); font-size:0.75rem; margin-bottom:0.5rem; text-transform:uppercase;">Change Password</label>
+                    <input type="password" id="edit-pass" placeholder="Enter new password to change" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); border-radius:12px; color:white; font-family:inherit;">
+                </div>
+            `;
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const msg = document.getElementById('profile-msg');
+            msg.innerText = 'Syncing changes...';
+            msg.style.color = 'var(--neon-cyan)';
+            
+            // Removed local variable assignments for locked fields
+            
+            // Only send fields that students are allowed to change
+            const updates = {
+                name: document.getElementById('edit-name').value,
+                email: document.getElementById('edit-email').value
+            };
+
+            const newPass = document.getElementById('edit-pass').value;
+            if (newPass) {
+                updates.password = await StorageManager.hashPassword(newPass);
+            }
+
+            try {
+                // We use updateUserDetails because it handles partial updates better
+                await StorageManager.updateUserDetails(currentUser.regNum, updates);
+                msg.innerText = 'Profile Updated Successfully! ✅';
+                msg.style.color = 'var(--success)';
+                // Update local session
+                localStorage.setItem('ovs_currentUser', JSON.stringify({ ...currentUser, ...updates }));
+                setTimeout(() => location.reload(), 1500);
+            } catch(err) {
+                msg.innerText = 'Failed to update profile: ' + err.message;
+                msg.style.color = 'var(--danger)';
+            }
+        }
+
+        async function enterGateway(id) {
+            const election = (window.currentElections || []).find(e => e.id === id);
+            if (!election) return alert('Election not found');
+
+            const modal = document.getElementById('vote-modal');
+            const title = document.getElementById('modal-title');
+            const content = document.getElementById('modal-content');
+            
+            title.innerText = `Cast Ballot: ${election.name}`;
+            content.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--muted);">Loading ballot data...</div>';
+            modal.classList.add('open');
+
+            try {
+                const allCandidates = await fetchApi(`/candidates?institution=${encodeURIComponent(currentUser.institution)}`);
+                const categories = election.scope.categories || [];
+                
+                // If this is a global/college election without explicit categories, fallback to all candidates
+                let electionCandidates = allCandidates;
+                if (categories.length > 0) {
+                    electionCandidates = allCandidates.filter(c => categories.includes(c.category));
+                } else {
+                    // Collect unique categories from the available candidates
+                    const uniqueCats = [...new Set(allCandidates.map(c => c.category).filter(Boolean))];
+                    categories.push(...uniqueCats);
+                }
+
+                const grouped = {};
+                for (const cat of categories) {
+                    grouped[cat] = electionCandidates.filter(c => c.category === cat);
+                }
+
+                if (Object.keys(grouped).length === 0) {
+                    content.innerHTML = '<div style="color:var(--danger); padding:1rem;">No candidates found for this election.</div>';
+                    return;
+                }
+
+                let html = `<form id="ballot-form" onsubmit="submitVote(event, '${election.id}')">`;
+                for (const cat of categories) {
+                    const cands = grouped[cat] || [];
+                    html += `
+                        <div style="margin-bottom: 1.5rem; background:rgba(255,255,255,0.02); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+                            <h3 style="margin-top:0; margin-bottom:1rem; color:var(--neon-purple); border-bottom:1px solid rgba(168,85,247,0.3); padding-bottom:0.5rem;">${cat}</h3>
+                    `;
+                    if (cands.length === 0) {
+                        html += `<div style="color:var(--muted); font-size:0.9rem;">No candidates registered for this position.</div>`;
+                    } else {
+                        html += cands.map(c => `
+                            <label style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:0.5rem; cursor:pointer; border:1px solid transparent; transition:0.2s;" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='transparent'">
+                                <input type="radio" name="cat_${cat.replace(/[^a-zA-Z0-9]/g, '_')}" value="${c.regNum}" required style="accent-color: var(--cyan); width:1.2rem; height:1.2rem;">
+                                <div style="flex:1;">
+                                    <div style="font-weight:700;">${c.name}</div>
+                                    <div style="font-size:0.8rem; color:var(--muted);">ID: ${c.regNum}</div>
+                                </div>
+                                <div style="font-size:1.5rem;">${c.symbol || '⭐'}</div>
+                            </label>
+                        `).join('');
+                    }
+                    html += `</div>`;
+                }
+
+                html += `
+                    <div style="text-align:right; margin-top:1.5rem;">
+                        <button type="submit" class="vd-action-btn" style="background:var(--neon-cyan); color:#000; font-weight:bold;">Submit Secure Ballot</button>
+                    </div>
+                </form>`;
+
+                content.innerHTML = html;
+
+            } catch (e) {
+                content.innerHTML = `<div style="color:var(--danger); padding:1rem;">Error loading ballot: ${e.message}</div>`;
+            }
+        }
+
+        async function submitVote(e, electionId) {
+            e.preventDefault();
+            const form = document.getElementById('ballot-form');
+            const formData = new FormData(form);
+            const votes = {};
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('cat_')) {
+                    votes[key.replace('cat_', '')] = value;
+                }
+            }
+
+            if (Object.keys(votes).length === 0) {
+                return alert('Please select candidates before voting.');
+            }
+
+            if (!confirm('Are you sure you want to cast this ballot? This action is irreversible.')) return;
+
+            try {
+                const secureHash = 'TXN-' + Math.random().toString(36).substring(2, 15).toUpperCase();
+                
+                await fetchApi('/vote', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        voterRegNum: currentUser.regNum,
+                        candidateRegNum: votes,
+                        votePhoto: null,
+                        secureHash: secureHash,
+                        fp: window.deviceFP || 'unknown',
+                        timestamp: new Date().toISOString(),
+                        institution: currentUser.institution,
+                        electionCode: electionId
+                    })
+                });
+
+                document.getElementById('modal-content').innerHTML = `
+                    <div style="text-align:center; padding:2rem;">
+                        <div style="font-size:3rem; margin-bottom:1rem;">✅</div>
+                        <h3 style="color:var(--neon-cyan);">Vote Cast Successfully</h3>
+                        <p style="color:var(--muted); margin-bottom:1rem;">Your ballot has been cryptographically secured.</p>
+                        <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px; font-family:monospace; color:var(--gold); word-break:break-all;">
+                            Receipt: ${secureHash}
+                        </div>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    closeModal();
+                    window.location.reload();
+                }, 3000);
+
+            } catch (err) {
+                alert('Vote failed: ' + err.message);
+            }
+        }
+
+        async function viewResults(id, name) {
+            const modal = document.getElementById('vote-modal');
+            const title = document.getElementById('modal-title');
+            const content = document.getElementById('modal-content');
+            
+            title.innerText = `Results: ${name}`;
+            content.innerHTML = 'Loading live tally...';
+            modal.classList.add('open');
+            
+            try {
+                const res = await fetchApi(`/voters/results?electionId=${id}`);
+                content.innerHTML = res.map(cat => `
+                    <div style="margin-bottom:1.5rem;">
+                        <h4 style="color:var(--neon-cyan); margin-bottom:0.5rem;">${cat.category}</h4>
+                        ${cat.results.map(r => `
+                            <div style="margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                                    <span>${r.name}</span>
+                                    <span>${r.votes} votes</span>
+                                </div>
+                                <div style="height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+                                    <div style="width:${r.percentage}%; height:100%; background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue));"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('') || "No results tallied yet.";
+            } catch(e) { content.innerHTML = "Error loading results."; }
+        }
+
+        function closeModal() { document.getElementById('vote-modal').classList.remove('open'); }
+        function logout() { StorageManager.logout(); window.location.href = 'login.html'; }
+
+        init();
+    
